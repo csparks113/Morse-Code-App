@@ -1,56 +1,82 @@
-import { Link } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
-import colors from '../../constants/colors';
-import { useLessonStore } from '../../store/lessonStore';
-import { useSettingsStore } from '../../store/settingsStore';
+// app/(tabs)/index.tsx
+import React from "react";
+import { View, StyleSheet, FlatList, Pressable, Text } from "react-native";
+import { Link /* add this type for clarity */, type Href } from "expo-router";
+import { theme } from "../../constants/theme";
+import HeaderGroupPicker from "../../components/HeaderGroupPicker";
+import { LESSON_GROUPS } from "../../data/lessons";
+import { useSettingsStore } from "../../store/useSettingsStore";
 
-export default function HomeScreen() {
-  const completed = useLessonStore((s) => s.completedLevelIds.size);
-  const language = useSettingsStore((s) => s.language);
+export default function LessonsScreen() {
+  const [groupId, setGroupId] = React.useState(LESSON_GROUPS[0].id);
+  const group = LESSON_GROUPS.find((g) => g.id === groupId)!;
+  const receiveOnly = useSettingsStore((s) => s.receiveOnly);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Morse Code Master</Text>
-      <Text style={styles.subtitle}>Language: {language.toUpperCase()}</Text>
-      <View style={{ height: 16 }} />
-      <Link href="/(tabs)/lessons" style={styles.cta}>
-        Start Lessons
-      </Link>
-      <Link href="/(tabs)/practice" style={styles.secondary}>
-        Free Practice
-      </Link>
-      <Text style={styles.footer}>Levels completed: {completed}</Text>
+      <HeaderGroupPicker groupId={groupId} onChange={setGroupId} />
+
+      <FlatList
+        contentContainerStyle={{ gap: theme.spacing(3), paddingBottom: theme.spacing(10) }}
+        data={group.lessons}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => {
+          // ✅ Strongly-typed hrefs
+          const receiveHref: Href = {
+            pathname: "/lessons/[group]/[lessonId]/receive",
+            params: { group: group.id, lessonId: item.id },
+          };
+          const sendHref: Href = {
+            pathname: "/lessons/[group]/[lessonId]/send",
+            params: { group: group.id, lessonId: item.id },
+          };
+
+          return (
+            <View style={styles.card}>
+              <View style={{ gap: theme.spacing(1) }}>
+                <Text style={styles.label}>{item.label}</Text>
+                <Text style={styles.chars}>{item.chars.join(", ")}</Text>
+              </View>
+
+              <View style={styles.actions}>
+                <Link href={receiveHref} asChild>
+                  <Pressable style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
+                    <Text style={styles.btnText}>Receive</Text>
+                  </Pressable>
+                </Link>
+
+                {!receiveOnly && (
+                  <Link href={sendHref} asChild>
+                    <Pressable style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}>
+                      <Text style={styles.btnText}>Send</Text>
+                    </Pressable>
+                  </Link>
+                )}
+              </View>
+            </View>
+          );
+        }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    gap: 12,
-    backgroundColor: colors.background,
+  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing(4) },
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing(4),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    ...theme.shadow.card,
+    gap: theme.spacing(3),
   },
-  title: { fontSize: 28, fontWeight: '700', color: colors.accent },
-  subtitle: { fontSize: 14, color: colors.muted },
-  cta: {
-    color: colors.background,
-    backgroundColor: colors.accent,
-    paddingVertical: 12,
-    textAlign: 'center',
-    borderRadius: 12,
-    fontWeight: '600',
-    overflow: 'hidden',
-  },
-  secondary: {
-    color: colors.text,
-    backgroundColor: colors.surface,
-    paddingVertical: 12,
-    textAlign: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.accent,
-    overflow: 'hidden',
-  },
-  footer: { marginTop: 24, color: colors.muted },
+  label: { color: theme.colors.textPrimary, fontSize: theme.typography.subtitle, fontWeight: "700" },
+  chars: { color: theme.colors.muted, fontSize: theme.typography.body, letterSpacing: 1 },
+  actions: { flexDirection: "row", gap: theme.spacing(2) },
+  btn: { flex: 1, backgroundColor: theme.colors.accent, borderRadius: theme.radius.md, paddingVertical: theme.spacing(3), alignItems: "center" },
+  btnSecondary: { flex: 1, backgroundColor: theme.colors.textSecondary, borderRadius: theme.radius.md, paddingVertical: theme.spacing(3), alignItems: "center" },
+  btnPressed: { opacity: 0.9 },
+  btnText: { color: theme.colors.background, fontWeight: "700" },
 });

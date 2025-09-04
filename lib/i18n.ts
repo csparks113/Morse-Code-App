@@ -2,7 +2,7 @@ import en from '../constants/locales/en.json';
 import es from '../constants/locales/es.json';
 import fr from '../constants/locales/fr.json';
 import de from '../constants/locales/de.json';
-import { useSettingsStore } from '../store/settingsStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 const bundles = { en, es, fr, de } as const;
 

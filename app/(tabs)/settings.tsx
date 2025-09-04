@@ -1,85 +1,53 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import colors from '../../constants/colors';
-import { useSettingsStore } from '../../store/settingsStore';
+// app/(tabs)/settings.tsx
+// -----------------------
+// Settings screen with the "Receive-only" toggle. When enabled, Send buttons are hidden everywhere.
+
+import React from "react";
+import { View, Text, StyleSheet, Switch } from "react-native";
+import { theme } from "../../constants/theme";
+import { useSettingsStore } from "../../store/useSettingsStore";
 
 export default function SettingsScreen() {
-  const { language, setLanguage, wpm, setWpm, soundOn, toggleSound } =
-    useSettingsStore();
+  const receiveOnly = useSettingsStore((s) => s.receiveOnly);
+  const setReceiveOnly = useSettingsStore((s) => s.setReceiveOnly);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Settings</Text>
 
-      <Text style={styles.label}>Language</Text>
       <View style={styles.row}>
-        {['en', 'es', 'fr', 'de'].map((lng) => (
-          <TouchableOpacity
-            key={lng}
-            style={[styles.pill, language === lng && styles.pillActive]}
-            onPress={() => setLanguage(lng as any)}
-          >
-            <Text
-              style={[
-                styles.pillText,
-                language === lng && styles.pillTextActive,
-              ]}
-            >
-              {lng.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <View style={{ flex: 1 }}>
+          <Text style={styles.rowTitle}>Receive-only mode</Text>
+          <Text style={styles.rowSub}>Only show Receive lessons (hide Send)</Text>
+        </View>
+        <Switch
+          value={receiveOnly}
+          onValueChange={setReceiveOnly}
+          trackColor={{ true: theme.colors.textSecondary, false: theme.colors.border }}
+          thumbColor={receiveOnly ? theme.colors.accent : "#888"}
+        />
       </View>
 
-      <Text style={styles.label}>Sound</Text>
-      <TouchableOpacity style={styles.toggle} onPress={toggleSound}>
-        <Text style={styles.toggleText}>{soundOn ? 'On' : 'Off'}</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.label}>Speed (WPM)</Text>
-      <View style={styles.row}>
-        {[10, 15, 20, 25].map((n) => (
-          <TouchableOpacity
-            key={n}
-            style={[styles.pill, wpm === n && styles.pillActive]}
-            onPress={() => setWpm(n)}
-          >
-            <Text style={[styles.pillText, wpm === n && styles.pillTextActive]}>
-              {n}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Placeholders for future toggles (audio/light/haptics) */}
+      {/* <SettingsToggle label="Audio" /> etc. */}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: colors.background,
-    gap: 12,
+  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing(4), gap: theme.spacing(4) },
+  title: { color: theme.colors.textPrimary, fontSize: theme.typography.title, fontWeight: "800" },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing(4),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    ...theme.shadow.card,
+    gap: theme.spacing(2),
   },
-  title: { fontSize: 22, color: colors.accent, fontWeight: '700' },
-  label: { color: colors.muted, marginTop: 8 },
-  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  pill: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.muted,
-  },
-  pillActive: { borderColor: colors.accent },
-  pillText: { color: colors.text },
-  pillTextActive: { color: colors.accent, fontWeight: '700' },
-  toggle: {
-    backgroundColor: colors.surface,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.accent,
-  },
-  toggleText: { color: colors.text, textAlign: 'center', fontWeight: '700' },
+  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700" },
+  rowSub: { color: theme.colors.muted, marginTop: theme.spacing(1), fontSize: theme.typography.small },
 });

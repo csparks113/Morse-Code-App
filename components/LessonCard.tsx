@@ -1,49 +1,40 @@
-import { View, Text, StyleSheet } from 'react-native';
-import colors from '../constants/colors';
-import { Level } from '../types';
-import { Link, Href } from 'expo-router';
-import { useLessonStore } from '../store/lessonStore';
-import { useMemo } from 'react';
+// components/LessonCard.tsx
+// -------------------------
+// Displays a single lesson: label, the characters covered, and Send/Receive buttons.
+// The card hides the "Send" button automatically if settings.receiveOnly === true.
 
-export default function LessonCard({ level }: { level: Level }) {
-  // IMPORTANT: don't return new objects from the selector; it causes infinite re-renders.
-  const charProgress = useLessonStore((s) => s.progress[level.id]);
+import React from "react";
+import { View, Text, StyleSheet, Pressable } from "react-native";
+import { theme } from "../constants/theme";
+import { useSettingsStore } from "../store/useSettingsStore";
 
-  const doneCount = useMemo(() => {
-    const obj = charProgress ?? {};
-    return Object.values(obj).filter((n) => n >= 3).length;
-  }, [charProgress]);
+type Props = {
+  label: string;
+  chars: string[];
+  onPressReceive: () => void;
+  onPressSend: () => void;
+};
+
+export default function LessonCard({ label, chars, onPressReceive, onPressSend }: Props) {
+  const receiveOnly = useSettingsStore((s) => s.receiveOnly);
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{level.title}</Text>
-      <Text style={styles.subtitle}>Chars: {level.chars.join(' ')}</Text>
-      <Text style={styles.progress}>
-        Progress: {doneCount}/{level.chars.length} mastered
-      </Text>
-      <View style={styles.row}>
-        <Link
-          style={styles.btn}
-          href={
-            {
-              pathname: '/lesson/[lessonId]/receive',
-              params: { lessonId: level.id },
-            } satisfies Href
-          }
-        >
+      <View style={{ gap: theme.spacing(1) }}>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.chars}>{chars.join(", ")}</Text>
+      </View>
+
+      <View style={styles.actions}>
+        <Pressable onPress={onPressReceive} style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
           <Text style={styles.btnText}>Receive</Text>
-        </Link>
-        <Link
-          style={[styles.btn, styles.btnGhost]}
-          href={
-            {
-              pathname: '/lesson/[lessonId]/send',
-              params: { lessonId: level.id },
-            } satisfies Href
-          }
-        >
-          <Text style={styles.btnGhostText}>Send</Text>
-        </Link>
+        </Pressable>
+
+        {!receiveOnly && (
+          <Pressable onPress={onPressSend} style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}>
+            <Text style={styles.btnText}>Send</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -51,28 +42,47 @@ export default function LessonCard({ level }: { level: Level }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.accent,
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    gap: 6,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing(4),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    ...theme.shadow.card,
+    gap: theme.spacing(3),
   },
-  title: { color: colors.text, fontWeight: '800', fontSize: 16 },
-  subtitle: { color: colors.muted },
-  progress: { color: colors.muted },
-  row: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  label: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.subtitle,
+    fontWeight: "700",
+  },
+  chars: {
+    color: theme.colors.muted,
+    fontSize: theme.typography.body,
+    letterSpacing: 1,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: theme.spacing(2),
+  },
   btn: {
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    flex: 1,
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing(3),
+    alignItems: "center",
   },
-  btnText: { color: colors.background, fontWeight: '700' },
-  btnGhost: {
-    backgroundColor: 'transparent',
-    borderColor: colors.accent,
-    borderWidth: 1,
+  btnSecondary: {
+    flex: 1,
+    backgroundColor: theme.colors.textSecondary,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing(3),
+    alignItems: "center",
   },
-  btnGhostText: { color: colors.accent, fontWeight: '700' },
+  btnPressed: {
+    opacity: 0.9,
+  },
+  btnText: {
+    color: theme.colors.background,
+    fontWeight: "700",
+  },
 });
