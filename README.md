@@ -76,7 +76,3 @@ assets/
 tones/
 dot.wav
 dash.wav
-
-```
-
-```
