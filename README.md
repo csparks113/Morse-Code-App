@@ -31,49 +31,52 @@ A premium dark-themed Expo React Native app for learning, practicing, and master
 npx expo start
 ```
 
-## Folder Structure
-
-```
-app/
-  (tabs)/
-    _layout.tsx
-    index.tsx                  ← Home: Lessons
-    practice.tsx               ← Practice tab
-    settings.tsx               ← Settings tab (Receive‑only toggle)
-    lessons/
-      [group]/
-        [lessonId]/
-          receive.tsx          ← Individual Receive lesson
-          send.tsx             ← Individual Send lesson
-        overview.tsx            ← Lesson overview for group
-  _layout.tsx                  ← Root layout
-  +not-found.tsx
-
-components/
-  HeaderGroupPicker.tsx
-  LessonCard.tsx
-  ProgressBar.tsx
-
-constants/
-  theme.ts
-
-data/
-  lessons.ts
-
-store/
-  useSettingsStore.ts          ← Zustand store (receiveOnly, etc.)
-
-assets/
-  tones/
-    dot.wav
-    dash.wav
-
-
 ## Project Documentation
 
 We maintain a master specification and code index in ChatGPT:
 
 👉 [Morse Code Master — Living Spec & Code Index](https://chat.openai.com/c/68ba2d82c54481918f76e07b99235977)
 
+```
+
+## Folder Structure
+
+```
+
+app/
+(tabs)/
+\_layout.tsx
+index.tsx ← Home: Lessons
+practice.tsx ← Practice tab
+settings.tsx ← Settings tab (Receive‑only toggle)
+lessons/
+[group]/
+[lessonId]/
+receive.tsx ← Individual Receive lesson
+send.tsx ← Individual Send lesson
+overview.tsx ← Lesson overview for group
+\_layout.tsx ← Root layout
++not-found.tsx
+
+components/
+HeaderGroupPicker.tsx
+LessonCard.tsx
+ProgressBar.tsx
+
+constants/
+theme.ts
+
+data/
+lessons.ts
+
+store/
+useSettingsStore.ts ← Zustand store (receiveOnly, etc.)
+
+assets/
+tones/
+dot.wav
+dash.wav
+
+```
 
 ```
