@@ -35,33 +35,45 @@ npx expo start
 
 ```
 app/
-  _layout.tsx
   (tabs)/
     _layout.tsx
-    lessons.tsx
-    practice.tsx
-    progress.tsx
-    settings.tsx
-  onboarding/
-    index.tsx
-  lesson/
-    [lessonId].tsx
+    index.tsx                  ← Home: Lessons
+    practice.tsx               ← Practice tab
+    settings.tsx               ← Settings tab (Receive‑only toggle)
+    lessons/
+      [group]/
+        [lessonId]/
+          receive.tsx          ← Individual Receive lesson
+          send.tsx             ← Individual Send lesson
+        overview.tsx            ← Lesson overview for group
+  _layout.tsx                  ← Root layout
+  +not-found.tsx
+
 components/
+  HeaderGroupPicker.tsx
   LessonCard.tsx
-  ReceiveKeyboard.tsx
-  SendKeyer.tsx
-  ProgressBadge.tsx
-  HeaderMenu.tsx
-  Paywall.tsx
-lib/
-  audio.ts
-  morse.ts
-  store.ts
-  i18n.ts
+  ProgressBar.tsx
+
+constants/
+  theme.ts
+
+data/
   lessons.ts
-  utils.ts
+
+store/
+  useSettingsStore.ts          ← Zustand store (receiveOnly, etc.)
+
 assets/
   tones/
-  icons/
-  fonts/
+    dot.wav
+    dash.wav
+
+
+## Project Documentation
+
+We maintain a master specification and code index in ChatGPT:
+
+👉 [Morse Code Master — Living Spec & Code Index](https://chat.openai.com/c/68ba2d82c54481918f76e07b99235977)
+
+
 ```
