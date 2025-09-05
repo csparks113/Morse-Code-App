@@ -1,19 +1,21 @@
+import React from 'react';
 import { Stack } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
-import colors from '../constants/colors';
+import { theme } from '../constants/theme';
 
 export default function RootLayout() {
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar style="light" />
+    <SafeAreaProvider>
+      {/* Light icons for battery / Wi-Fi / signal */}
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.text,
-          contentStyle: { backgroundColor: colors.background },
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.colors.background },
         }}
       />
-    </View>
+    </SafeAreaProvider>
   );
 }

@@ -15,8 +15,8 @@ export type Lesson = {
 };
 
 export type LessonGroup = {
-  id: string;      // used in routes (e.g., "alphabet")
-  title: string;   // displayed in the header
+  id: string; // used in routes (e.g., "alphabet")
+  title: string; // displayed in the header
   lessons: Lesson[];
 };
 
@@ -24,23 +24,23 @@ export type LessonGroup = {
 // following the same pattern, and add a "numbers" group as well.
 export const LESSON_GROUPS: LessonGroup[] = [
   {
-    id: "alphabet",
-    title: "Alphabet",
+    id: 'alphabet',
+    title: 'Alphabet',
     lessons: [
-      { id: "1", label: "Lesson 1", chars: ["E", "T"] }, // basic single tones
-      { id: "2", label: "Lesson 2", chars: ["A", "N"] },
-      { id: "3", label: "Lesson 3", chars: ["I", "M"] },
-      { id: "4", label: "Lesson 4", chars: ["S", "O"] },
-      { id: "5", label: "Lesson 5", chars: ["H", "K"] },
+      { id: '1', label: 'Lesson 1', chars: ['E', 'T'] }, // basic single tones
+      { id: '2', label: 'Lesson 2', chars: ['A', 'N'] },
+      { id: '3', label: 'Lesson 3', chars: ['I', 'M'] },
+      { id: '4', label: 'Lesson 4', chars: ['S', 'O'] },
+      { id: '5', label: 'Lesson 5', chars: ['H', 'K'] },
     ],
   },
   {
-    id: "numbers",
-    title: "Numbers",
+    id: 'numbers',
+    title: 'Numbers',
     lessons: [
-      { id: "1", label: "Lesson 1", chars: ["1", "2"] },
-      { id: "2", label: "Lesson 2", chars: ["3", "4"] },
-      { id: "3", label: "Lesson 3", chars: ["5", "6"] },
+      { id: '1', label: 'Lesson 1', chars: ['1', '2'] },
+      { id: '2', label: 'Lesson 2', chars: ['3', '4'] },
+      { id: '3', label: 'Lesson 3', chars: ['5', '6'] },
     ],
   },
 ];
@@ -51,7 +51,10 @@ export function getGroupById(groupId: string): LessonGroup | undefined {
 }
 
 // Helper to get lesson by group + lessonId
-export function getLesson(groupId: string, lessonId: string): Lesson | undefined {
+export function getLesson(
+  groupId: string,
+  lessonId: string,
+): Lesson | undefined {
   const group = getGroupById(groupId);
   return group?.lessons.find((l) => l.id === lessonId);
 }

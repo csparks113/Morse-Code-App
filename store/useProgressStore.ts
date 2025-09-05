@@ -3,13 +3,17 @@
 // Tracks lesson progress separately for send/receive completions.
 // Structure: progress[groupId][lessonId] = { send: boolean, receive: boolean }
 
-import { create } from "zustand";
+import { create } from 'zustand';
 
 type LessonProgress = { send: boolean; receive: boolean };
 type GroupProgress = Record<string, LessonProgress>;
 type ProgressState = {
   progress: Record<string, GroupProgress>;
-  markComplete: (groupId: string, lessonId: string, kind: "send" | "receive") => void;
+  markComplete: (
+    groupId: string,
+    lessonId: string,
+    kind: 'send' | 'receive',
+  ) => void;
   getCompletionRatio: (groupId: string, totalLessons: number) => number;
 };
 

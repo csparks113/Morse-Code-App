@@ -1,21 +1,27 @@
-// app/(tabs)/_layout.tsx
-// ----------------------
-// Defines the 3-tab layout using Expo Router's <Tabs />. The "index" route
-// (Lessons) is the HOME tab.
-
-import React from "react";
-import { Tabs } from "expo-router";
-import { theme } from "../../constants/theme";
-import { Text } from "react-native";
+import React from 'react';
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { theme } from '../../constants/theme';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const baseHeight = 56; // your desired bar height without insets
+  const barHeight = baseHeight + insets.bottom;
+  const padBottom = Math.max(0, insets.bottom); // keeps icons off the edge
+
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: theme.colors.background },
-        headerTitleStyle: { color: theme.colors.textPrimary },
-        headerShadowVisible: false,
-        tabBarStyle: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border },
+        headerShown: false,
+        tabBarShowLabel: false,
+        tabBarHideOnKeyboard: true, // avoids keyboard overlap on Android
+        tabBarStyle: {
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.border,
+          height: barHeight,
+          paddingBottom: padBottom,
+        },
         tabBarActiveTintColor: theme.colors.textSecondary,
         tabBarInactiveTintColor: theme.colors.muted,
       }}
@@ -23,26 +29,25 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarLabel: "Home",
-          tabBarIcon: ({ color }) => <Text style={{ color }}>●</Text>,
-          headerTitle: "Lessons",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book-outline" color={color} size={size + 2} />
+          ),
         }}
       />
       <Tabs.Screen
         name="practice"
         options={{
-          title: "Practice",
-          tabBarLabel: "Practice",
-          tabBarIcon: ({ color }) => <Text style={{ color }}>▲</Text>,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flash-outline" color={color} size={size + 2} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
-          tabBarLabel: "Settings",
-          tabBarIcon: ({ color }) => <Text style={{ color }}>⚙︎</Text>,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" color={color} size={size + 4} />
+          ),
         }}
       />
     </Tabs>

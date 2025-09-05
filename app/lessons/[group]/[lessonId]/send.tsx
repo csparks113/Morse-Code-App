@@ -1,35 +1,37 @@
-// app/lessons/[group]/[lessonId]/send.tsx
-// ---------------------------------------
-// Send lesson flow (MVP): show a target character; the user "keys" it by tapping.
-// We measure press duration to classify dot/dash with a simple threshold and compare
-// to the expected pattern. If it matches, we mark "send" complete.
+import React from 'react';
+import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { theme } from '../../../../constants/theme';
+import { getLesson } from '../../../../data/lessons';
+import { toMorse } from '../../../../utils/morse';
+import { useProgressStore } from '../../../../store/useProgressStore';
+import { useSettingsStore } from '../../../../store/useSettingsStore';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import React from "react";
-import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { theme } from "../../../../constants/theme";
-import { getLesson } from "../../../../data/lessons";
-import { toMorse } from "../../../../utils/morse";
-import { useProgressStore } from "../../../../store/useProgressStore";
-
-type Stroke = "." | "-";
+type Stroke = '.' | '-';
 
 export default function SendLessonScreen() {
-  const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
+  const { group, lessonId } = useLocalSearchParams<{
+    group: string;
+    lessonId: string;
+  }>();
   const lesson = getLesson(group!, lessonId!);
   const router = useRouter();
   const markComplete = useProgressStore((s) => s.markComplete);
+  const { hapticsEnabled } = useSettingsStore();
 
   const [target, setTarget] = React.useState<string | null>(null);
-  const [expected, setExpected] = React.useState<string>(""); // target as morse code
+  const [expected, setExpected] = React.useState<string>('');
   const [strokes, setStrokes] = React.useState<Stroke[]>([]);
   const [pressStart, setPressStart] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     if (lesson) {
-      const rand = lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
+      const rand =
+        lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
       setTarget(rand);
-      setExpected(toMorse(rand) ?? "");
+      setExpected(toMorse(rand) ?? '');
       setStrokes([]);
     }
   }, [lesson]);
@@ -42,97 +44,148 @@ export default function SendLessonScreen() {
     );
   }
 
-  // Simple threshold: <= 170ms = dot, > 170ms = dash.
-  const classifyDuration = (ms: number): Stroke => (ms <= 170 ? "." : "-") as Stroke;
+  const classifyDuration = (ms: number): Stroke => (ms <= 170 ? '.' : '-');
 
-  const onPressIn = () => setPressStart(Date.now());
+  const onPressIn = async () => {
+    setPressStart(Date.now());
+    if (hapticsEnabled) {
+      // Quick tick on touch-down for tactile feel
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
   const onPressOut = () => {
     if (pressStart == null) return;
     const elapsed = Date.now() - pressStart;
     const s = classifyDuration(elapsed);
-    setStrokes((prev) => [...prev, s]);
+    setStrokes((prev) => [...prev, s as Stroke]);
     setPressStart(null);
   };
 
-  const onSubmit = () => {
-    const produced = strokes.join("");
+  const onSubmit = async () => {
+    const produced = strokes.join('');
     if (produced === expected) {
-      markComplete(group!, lessonId!, "send");
-      Alert.alert("Great keying!", `Matched ${target} (${expected})`, [
-        { text: "Back to Lessons", onPress: () => router.back() },
+      if (hapticsEnabled) {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
+      }
+      markComplete(group!, lessonId!, 'send');
+      Alert.alert('Great keying!', `Matched ${target} (${expected})`, [
+        { text: 'Back to Lessons', onPress: () => router.back() },
         {
-          text: "Try another",
+          text: 'Try another',
           onPress: () => {
-            // re-roll a new target in the same lesson
-            const rand = lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
+            const rand =
+              lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
             setTarget(rand);
-            setExpected(toMorse(rand) ?? "");
+            setExpected(toMorse(rand) ?? '');
             setStrokes([]);
           },
         },
       ]);
     } else {
-      Alert.alert("Not quite", `You keyed "${produced}" but expected "${expected}".`, [
-        { text: "OK", onPress: () => {} },
-      ]);
+      if (hapticsEnabled) {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      Alert.alert(
+        'Not quite',
+        `You keyed "${produced}" but expected "${expected}".`,
+      );
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{lesson.label} • Send</Text>
-      <Text style={styles.sub}>Target: {target} ({expected || "?"})</Text>
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.container}>
+        <Text style={styles.title}>{lesson.label} • Send</Text>
+        <Text style={styles.sub}>
+          Target: {target} ({expected || '?'})
+        </Text>
 
-      <Pressable
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        style={({ pressed }) => [styles.keyer, pressed && styles.keyerPressed]}
-      >
-        <Text style={styles.keyerText}>Tap & Hold to Key</Text>
-      </Pressable>
+        {/* Filler pushes controls to bottom */}
+        <View style={{ flex: 1 }} />
 
-      <Text style={styles.strokes}>You keyed: {strokes.join(" ") || "—"}</Text>
+        {/* Buttons above the keyer */}
+        <View style={styles.rowButtons}>
+          <Pressable
+            onPress={onSubmit}
+            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+          >
+            <Text style={styles.btnText}>Submit</Text>
+          </Pressable>
 
-      <Pressable onPress={onSubmit} style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
-        <Text style={styles.btnText}>Submit</Text>
-      </Pressable>
+          <Pressable
+            onPress={() => setStrokes([])}
+            style={({ pressed }) => [
+              styles.btnSecondary,
+              pressed && styles.btnPressed,
+            ]}
+          >
+            <Text style={styles.btnText}>Clear</Text>
+          </Pressable>
+        </View>
 
-      <Pressable onPress={() => setStrokes([])} style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}>
-        <Text style={styles.btnText}>Clear</Text>
-      </Pressable>
-    </View>
+        {/* Bottom keyer */}
+        <Pressable
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          style={({ pressed }) => [
+            styles.keyer,
+            pressed && styles.keyerPressed,
+          ]}
+        >
+          <Text style={styles.keyerText}>Tap & Hold to Key</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing(4), gap: theme.spacing(3) },
-  title: { color: theme.colors.textPrimary, fontSize: theme.typography.title, fontWeight: "800" },
+  safe: { flex: 1, backgroundColor: theme.colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    padding: theme.spacing(4),
+    gap: theme.spacing(3),
+  },
+  rowButtons: { flexDirection: 'row', gap: theme.spacing(2) },
+  title: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.title,
+    fontWeight: '800',
+  },
   sub: { color: theme.colors.muted },
   keyer: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.xl,
     height: 160,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 2,
     borderColor: theme.colors.textSecondary,
     ...theme.shadow.card,
   },
-  keyerPressed: { backgroundColor: "#1F1A12" },
-  keyerText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 0.5 },
+  keyerPressed: { backgroundColor: '#1F1A12' },
+  keyerText: {
+    color: theme.colors.textPrimary,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
   strokes: { color: theme.colors.textPrimary },
   btn: {
     backgroundColor: theme.colors.accent,
     borderRadius: theme.radius.lg,
     paddingVertical: theme.spacing(4),
-    alignItems: "center",
+    alignItems: 'center',
   },
   btnSecondary: {
     backgroundColor: theme.colors.textSecondary,
     borderRadius: theme.radius.lg,
     paddingVertical: theme.spacing(4),
-    alignItems: "center",
+    alignItems: 'center',
   },
   btnPressed: { opacity: 0.9 },
-  btnText: { color: theme.colors.background, fontWeight: "800" },
+  btnText: { color: theme.colors.background, fontWeight: '800' },
 });
