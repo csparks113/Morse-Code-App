@@ -2,7 +2,6 @@
 import React from "react";
 import { View, StyleSheet, FlatList, Pressable, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
 import { theme } from "../../constants/theme";
 import HeaderGroupPicker from "../../components/HeaderGroupPicker";
@@ -16,7 +15,7 @@ export default function LessonsScreen() {
   const receiveOnly = useSettingsStore((s) => s.receiveOnly);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         {/* Header row (no card) */}
         <HeaderGroupPicker groupId={groupId} onChange={setGroupId} />
@@ -26,8 +25,8 @@ export default function LessonsScreen() {
 
         <FlatList
           contentContainerStyle={{
-            gap: theme.spacing(3),
-            paddingBottom: theme.spacing(10),
+            gap: theme.spacing(4),
+            paddingBottom: theme.spacing(1),
           }}
           data={group.lessons}
           keyExtractor={(item) => item.id}
@@ -49,29 +48,35 @@ export default function LessonsScreen() {
                   <Text style={styles.chars}>{item.chars.join(", ")}</Text>
                 </View>
 
-                {/* Right: real, styled buttons (no Link asChild) */}
+                {/* Right: two equal buttons (Receive / Send), same shape */}
                 <View style={styles.actions}>
-                  {/* RECEIVE = circular button */}
+                  {/* RECEIVE */}
                   <Pressable
                     onPress={() => router.push(receiveHref)}
-                    style={({ pressed }) => [styles.receiveCircle, pressed && styles.pressed]}
+                    style={({ pressed }) => [
+                      styles.actionBtn,
+                      styles.receiveBtn,
+                      pressed && styles.pressed,
+                    ]}
                     accessibilityRole="button"
                     accessibilityLabel="Receive lesson"
                   >
-                    <Ionicons name="play" size={20} color={theme.colors.background} />
                     <Text style={styles.btnText}>Receive</Text>
                   </Pressable>
 
-                  {/* SEND = rectangular pill */}
+                  {/* SEND */}
                   {!receiveOnly && (
                     <Pressable
                       onPress={() => router.push(sendHref)}
-                      style={({ pressed }) => [styles.sendRect, pressed && styles.pressed]}
+                      style={({ pressed }) => [
+                        styles.actionBtn,
+                        styles.sendBtn,
+                        pressed && styles.pressed,
+                      ]}
                       accessibilityRole="button"
                       accessibilityLabel="Send lesson"
                     >
                       <Text style={styles.btnText}>Send</Text>
-                      <Ionicons name="radio-outline" size={18} color={theme.colors.background} />
                     </Pressable>
                   )}
                 </View>
@@ -90,8 +95,8 @@ const styles = StyleSheet.create({
 
   // divider under header
   headerDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: theme.colors.border,
+    height: 2,
+    backgroundColor: theme.colors.textSecondary,
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(3),
   },
@@ -100,7 +105,9 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.xl,
-    padding: theme.spacing(4),
+    paddingVertical: theme.spacing(4),
+    paddingHorizontal: theme.spacing(4),
+    minHeight: 100,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.colors.border,
     ...theme.shadow.card,
@@ -122,42 +129,31 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing(3),
-    paddingLeft: theme.spacing(2),
+    gap: theme.spacing(2.5),
+    paddingLeft: 0,
+    marginRight: theme.spacing(4),
   },
 
-  // RECEIVE = circular, filled button
-  receiveCircle: {
-    backgroundColor: theme.colors.textSecondary, // Desert Sand
-    borderRadius: 999,
-    width: 84,
-    height: 84,
+  // Shared rectangular buttons
+  actionBtn: {
+    backgroundColor: theme.colors.accent, // base, overridden per button
+    borderRadius: theme.radius.pill,
+    paddingVertical: theme.spacing(3),
+    paddingHorizontal: theme.spacing(3),
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
     elevation: 3, // Android
     shadowColor: "#000",
     shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
+    minWidth: 92,
   },
-
-  // SEND = rectangular pill
-  sendRect: {
-    backgroundColor: theme.colors.accent, // Rich Bronze
-    borderRadius: theme.radius.pill,
-    paddingVertical: theme.spacing(3),
-    paddingHorizontal: theme.spacing(5),
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: theme.spacing(2),
-    minWidth: 118,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+  receiveBtn: {
+    backgroundColor: theme.colors.textSecondary, // Receive = Desert Sand
+  },
+  sendBtn: {
+    backgroundColor: theme.colors.accent, // Send = Rich Bronze
   },
 
   // shared button text

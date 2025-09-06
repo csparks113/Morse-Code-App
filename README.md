@@ -7,22 +7,18 @@ A premium dark-themed Expo React Native app for learning, practicing, and master
 - Koch-style lessons for alphabet and numbers
 - Practice sending and receiving Morse
 - Track progress and mastery
-- Adjustable WPM, tone, and input modes
-- Internationalization (EN/ES/FR/DE)
-- AsyncStorage persistence
-- Zustand state management
+- Adjustable WPM and input mode toggles (audio/light/haptics)
+- Zustand state management with AsyncStorage persistence
 - Expo Router navigation
-- Paywall stub for future premium features
+- Paywall stub for future premium features (planned)
 
 ## Architecture Overview
 
 - **Expo + React Native + TypeScript**: Fast development, cross-platform
 - **Expo Router**: File-based navigation, tabs for main screens
-- **Zustand**: Global state for settings, progress, lesson mode
-- **AsyncStorage**: Persistent user data
-- **i18next**: UI translations
+- **Zustand + persist (AsyncStorage)**: Global state with persistence
 - **expo-av**: Audio playback for Morse tones
-- **Component-based UI**: LessonCard, ReceiveKeyboard, SendKeyer, ProgressBadge, HeaderMenu, Paywall
+- **Component-based UI**: HeaderGroupPicker, ProgressBar, lesson list cards
 - **Theme**: Charcoal/black background, neon blue accents, gold for completion
 
 ## Run Instructions
@@ -33,46 +29,46 @@ npx expo start
 
 ## Project Documentation
 
-We maintain a master specification and code index in ChatGPT:
-
-👉 [Morse Code Master — Living Spec & Code Index](https://chat.openai.com/c/68ba2d82c54481918f76e07b99235977)
-
-```
+We maintain a master specification:
+- Local: `docs/living-spec.md`
+- ChatGPT (reference-only): https://chat.openai.com/c/68ba2d82c54481918f76e07b99235977
 
 ## Folder Structure
 
 ```
-
 app/
-(tabs)/
-\_layout.tsx
-index.tsx ← Home: Lessons
-practice.tsx ← Practice tab
-settings.tsx ← Settings tab (Receive‑only toggle)
-lessons/
-[group]/
-[lessonId]/
-receive.tsx ← Individual Receive lesson
-send.tsx ← Individual Send lesson
-overview.tsx ← Lesson overview for group
-\_layout.tsx ← Root layout
-+not-found.tsx
+  _layout.tsx
+  +not-found.tsx
+  (tabs)/
+    _layout.tsx
+    index.tsx           # Home: Lessons
+    practice.tsx        # Practice tab
+    settings.tsx        # Settings tab (receive-only, audio/light/haptics, WPM)
+  lessons/
+    [group]/
+      overview.tsx      # Group overview
+      [lessonId]/
+        receive.tsx     # Individual Receive lesson
+        send.tsx        # Individual Send lesson
 
 components/
-HeaderGroupPicker.tsx
-LessonCard.tsx
-ProgressBar.tsx
+  HeaderGroupPicker.tsx
+  ProgressBar.tsx
 
 constants/
-theme.ts
+  theme.ts
 
 data/
-lessons.ts
+  lessons.ts
 
 store/
-useSettingsStore.ts ← Zustand store (receiveOnly, etc.)
+  useSettingsStore.ts
+  useProgressStore.ts
+
+utils/
+  morse.ts
+  audio.ts
 
 assets/
-tones/
-dot.wav
-dash.wav
+  images/, fonts/ (tones are generated at runtime)
+```

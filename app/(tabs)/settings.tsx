@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Switch } from 'react-native';
+import { View, Text, StyleSheet, Switch, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../constants/theme';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -37,16 +37,21 @@ export default function SettingsScreen() {
     audioEnabled,
     lightEnabled,
     hapticsEnabled,
+    wpm,
+    toneHz,
     setReceiveOnly,
     setAudioEnabled,
     setLightEnabled,
     setHapticsEnabled,
+    setWpm,
+    setToneHz,
   } = useSettingsStore();
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         <Text style={styles.title}>Settings</Text>
+        <View style={styles.headerDivider} />
 
         <Row
           title="Receive-only mode"
@@ -75,6 +80,58 @@ export default function SettingsScreen() {
           value={hapticsEnabled}
           onChange={setHapticsEnabled}
         />
+
+        {/* WPM control */}
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Speed (WPM)</Text>
+            <Text style={styles.rowSub}>
+              Controls Morse timing (dot = 1200 / WPM ms)
+            </Text>
+          </View>
+          <View style={styles.stepper}>
+            <Pressable
+              accessibilityLabel="Decrease WPM"
+              onPress={() => setWpm(Math.max(5, wpm - 1))}
+              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
+            >
+              <Text style={styles.stepText}>-</Text>
+            </Pressable>
+            <Text style={styles.stepValue}>{wpm}</Text>
+            <Pressable
+              accessibilityLabel="Increase WPM"
+              onPress={() => setWpm(Math.min(60, wpm + 1))}
+              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
+            >
+              <Text style={styles.stepText}>+</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Tone pitch control */}
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Tone Pitch</Text>
+            <Text style={styles.rowSub}>Adjust audio tone frequency (Hz)</Text>
+          </View>
+          <View style={styles.stepper}>
+            <Pressable
+              accessibilityLabel="Decrease tone pitch"
+              onPress={() => setToneHz(Math.max(200, toneHz - 10))}
+              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
+            >
+              <Text style={styles.stepText}>-</Text>
+            </Pressable>
+            <Text style={styles.stepValue}>{toneHz} Hz</Text>
+            <Pressable
+              accessibilityLabel="Increase tone pitch"
+              onPress={() => setToneHz(Math.min(1200, toneHz + 10))}
+              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
+            >
+              <Text style={styles.stepText}>+</Text>
+            </Pressable>
+          </View>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -92,6 +149,12 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: theme.typography.title,
     fontWeight: '800',
+  },
+  headerDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.border,
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(3),
   },
   row: {
     flexDirection: 'row',
@@ -114,4 +177,29 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing(1),
     fontSize: theme.typography.small,
   },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(2),
+  },
+  step: {
+    backgroundColor: theme.colors.textSecondary,
+    borderRadius: theme.radius.pill,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepText: {
+    color: theme.colors.background,
+    fontWeight: '800',
+    fontSize: 18,
+  },
+  stepValue: {
+    color: theme.colors.textPrimary,
+    fontWeight: '800',
+    minWidth: 36,
+    textAlign: 'center',
+  },
+  pressed: { opacity: 0.92 },
 });

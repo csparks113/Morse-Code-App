@@ -32,6 +32,14 @@ export const LESSON_GROUPS: LessonGroup[] = [
       { id: '3', label: 'Lesson 3', chars: ['I', 'M'] },
       { id: '4', label: 'Lesson 4', chars: ['S', 'O'] },
       { id: '5', label: 'Lesson 5', chars: ['H', 'K'] },
+      { id: '6', label: 'Lesson 6', chars: ['R', 'U'] },
+      { id: '7', label: 'Lesson 7', chars: ['W', 'G'] },
+      { id: '8', label: 'Lesson 8', chars: ['L', 'F'] },
+      { id: '9', label: 'Lesson 9', chars: ['P', 'J'] },
+      { id: '10', label: 'Lesson 10', chars: ['B', 'D'] },
+      { id: '11', label: 'Lesson 11', chars: ['C', 'Y'] },
+      { id: '12', label: 'Lesson 12', chars: ['Q', 'X'] },
+      { id: '13', label: 'Lesson 13', chars: ['V', 'Z'] },
     ],
   },
   {
@@ -41,6 +49,8 @@ export const LESSON_GROUPS: LessonGroup[] = [
       { id: '1', label: 'Lesson 1', chars: ['1', '2'] },
       { id: '2', label: 'Lesson 2', chars: ['3', '4'] },
       { id: '3', label: 'Lesson 3', chars: ['5', '6'] },
+      { id: '4', label: 'Lesson 4', chars: ['7', '8'] },
+      { id: '5', label: 'Lesson 5', chars: ['9', '0'] },
     ],
   },
 ];

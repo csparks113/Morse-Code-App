@@ -38,7 +38,7 @@ export default function HeaderGroupPicker({ groupId, onChange }: Props) {
       {/* Simple header row (no card) with title on the left and icons on the right */}
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>
-          {current?.title ?? 'Select Group'}
+          {`Lessons: ${current?.title ?? 'Select Group'}`}
         </Text>
         <View style={styles.headerActions}>
           <Pressable
@@ -131,10 +131,12 @@ export default function HeaderGroupPicker({ groupId, onChange }: Props) {
 
 const styles = StyleSheet.create({
   headerRow: {
-    paddingVertical: theme.spacing(3),
+    paddingVertical: theme.spacing(4),
     paddingHorizontal: 0,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: theme.spacing(1),
   },
   headerTitle: {
     flex: 1,
@@ -145,13 +147,14 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: 'row',
-    gap: theme.spacing(2),
+    gap: theme.spacing(4),
+    marginRight: theme.spacing(1.5),
   },
   iconBtn: {
     backgroundColor: theme.colors.textSecondary, // Desert Sand pill
     borderRadius: theme.radius.pill,
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },

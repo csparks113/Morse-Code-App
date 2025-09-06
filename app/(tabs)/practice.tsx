@@ -9,9 +9,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PracticeScreen() {
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         <Text style={styles.title}>Practice</Text>
+        <View style={styles.headerDivider} />
         <Text style={styles.subtitle}>
           Free practice and drills coming soon.
         </Text>
@@ -31,6 +32,12 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: theme.typography.title,
     fontWeight: '800',
+  },
+  headerDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.border,
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(3),
   },
   subtitle: { color: theme.colors.muted, marginTop: theme.spacing(2) },
 });

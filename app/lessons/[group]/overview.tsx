@@ -26,7 +26,7 @@ export default function GroupOverviewScreen() {
       <View style={styles.container}>
         <Text style={styles.title}>{g.title} Overview</Text>
         <Text style={styles.sub}>
-          You’ll learn to recognize and key these characters:
+          You'll learn to recognize and key these characters:
         </Text>
         <View style={styles.pillRow}>
           {allChars.map((c) => (
@@ -96,3 +96,4 @@ const styles = StyleSheet.create({
   lessonTitle: { color: theme.colors.textPrimary, fontWeight: '700' },
   lessonChars: { color: theme.colors.muted, marginTop: 4 },
 });
+

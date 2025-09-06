@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../../../constants/theme';
 import { getLesson } from '../../../../data/lessons';
 import { toMorse } from '../../../../utils/morse';
+import { getMorseUnitMs } from '../../../../utils/audio';
 import { useProgressStore } from '../../../../store/useProgressStore';
 import { useSettingsStore } from '../../../../store/useSettingsStore';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +24,7 @@ export default function SendLessonScreen() {
 
   const [target, setTarget] = React.useState<string | null>(null);
   const [expected, setExpected] = React.useState<string>('');
+  const [status, setStatus] = React.useState<'idle' | 'success'>('idle');
   const [strokes, setStrokes] = React.useState<Stroke[]>([]);
   const [pressStart, setPressStart] = React.useState<number | null>(null);
 
@@ -44,7 +46,11 @@ export default function SendLessonScreen() {
     );
   }
 
-  const classifyDuration = (ms: number): Stroke => (ms <= 170 ? '.' : '-');
+  const classifyDuration = (ms: number): Stroke => {
+    const unit = getMorseUnitMs();
+    const threshold = 2 * unit; // <= 2 units = dot, else dash
+    return ms <= threshold ? '.' : '-';
+  };
 
   const onPressIn = async () => {
     setPressStart(Date.now());
@@ -58,72 +64,60 @@ export default function SendLessonScreen() {
     if (pressStart == null) return;
     const elapsed = Date.now() - pressStart;
     const s = classifyDuration(elapsed);
-    setStrokes((prev) => [...prev, s as Stroke]);
-    setPressStart(null);
-  };
-
-  const onSubmit = async () => {
-    const produced = strokes.join('');
-    if (produced === expected) {
-      if (hapticsEnabled) {
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success,
-        );
-      }
-      markComplete(group!, lessonId!, 'send');
-      Alert.alert('Great keying!', `Matched ${target} (${expected})`, [
-        { text: 'Back to Lessons', onPress: () => router.back() },
-        {
-          text: 'Try another',
-          onPress: () => {
+    setStrokes((prev) => {
+      const next = [...prev, s as Stroke];
+      const produced = next.join('');
+      if (expected.startsWith(produced)) {
+        if (produced.length === expected.length) {
+          // success
+          (async () => {
+            if (hapticsEnabled) {
+              await Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
+            }
+          })();
+          setStatus('success');
+          markComplete(group!, lessonId!, 'send');
+          setTimeout(() => {
             const rand =
-              lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
+              lesson!.chars[Math.floor(Math.random() * lesson!.chars.length)];
             setTarget(rand);
             setExpected(toMorse(rand) ?? '');
             setStrokes([]);
-          },
-        },
-      ]);
-    } else {
-      if (hapticsEnabled) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            setStatus('idle');
+          }, 700);
+        }
+        return next;
+      } else {
+        // wrong path; reset for retry with error haptic
+        (async () => {
+          if (hapticsEnabled) {
+            await Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Error,
+            );
+          }
+        })();
+        return [];
       }
-      Alert.alert(
-        'Not quite',
-        `You keyed "${produced}" but expected "${expected}".`,
-      );
-    }
+    });
+    setPressStart(null);
   };
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <Text style={styles.title}>{lesson.label} • Send</Text>
-        <Text style={styles.sub}>
-          Target: {target} ({expected || '?'})
-        </Text>
-
-        {/* Filler pushes controls to bottom */}
-        <View style={{ flex: 1 }} />
-
-        {/* Buttons above the keyer */}
-        <View style={styles.rowButtons}>
-          <Pressable
-            onPress={onSubmit}
-            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
-          >
-            <Text style={styles.btnText}>Submit</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => setStrokes([])}
-            style={({ pressed }) => [
-              styles.btnSecondary,
-              pressed && styles.btnPressed,
+        <Text style={styles.title}>{lesson.label} - Send</Text>
+        {/* Big target letter */}
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text
+            style={[
+              styles.targetBig,
+              status === 'success' && { color: theme.colors.success },
             ]}
           >
-            <Text style={styles.btnText}>Clear</Text>
-          </Pressable>
+            {target}
+          </Text>
         </View>
 
         {/* Bottom keyer */}
@@ -150,13 +144,18 @@ const styles = StyleSheet.create({
     padding: theme.spacing(4),
     gap: theme.spacing(3),
   },
-  rowButtons: { flexDirection: 'row', gap: theme.spacing(2) },
   title: {
     color: theme.colors.textPrimary,
     fontSize: theme.typography.title,
     fontWeight: '800',
   },
   sub: { color: theme.colors.muted },
+  targetBig: {
+    color: theme.colors.textPrimary,
+    fontWeight: '800',
+    fontSize: 72,
+    letterSpacing: 2,
+  },
   keyer: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.xl,
@@ -174,18 +173,5 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   strokes: { color: theme.colors.textPrimary },
-  btn: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius.lg,
-    paddingVertical: theme.spacing(4),
-    alignItems: 'center',
-  },
-  btnSecondary: {
-    backgroundColor: theme.colors.textSecondary,
-    borderRadius: theme.radius.lg,
-    paddingVertical: theme.spacing(4),
-    alignItems: 'center',
-  },
   btnPressed: { opacity: 0.9 },
-  btnText: { color: theme.colors.background, fontWeight: '800' },
 });

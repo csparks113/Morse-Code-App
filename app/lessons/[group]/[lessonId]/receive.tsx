@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../../../constants/theme';
 import {
@@ -17,7 +18,7 @@ import {
   getGroupById,
   LESSON_GROUPS,
 } from '../../../../data/lessons';
-import { playMorseForText, MORSE_UNIT_MS } from '../../../../utils/audio';
+import { playMorseForText, getMorseUnitMs } from '../../../../utils/audio';
 import { useProgressStore } from '../../../../store/useProgressStore';
 import { useSettingsStore } from '../../../../store/useSettingsStore';
 
@@ -34,29 +35,48 @@ export default function ReceiveLessonScreen() {
 
   const [target, setTarget] = React.useState<string | null>(null);
   const [choices, setChoices] = React.useState<string[]>([]); // 4 options
+  const [feedback, setFeedback] = React.useState<null | 'correct' | 'incorrect'>(null);
+
+  // autoplay timer
+  const autoplayRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Flash overlay animation value (0..1)
   const flash = React.useRef(new Animated.Value(0)).current;
 
+  const rollNext = React.useCallback(
+    (initial?: string) => {
+      if (!lesson) return;
+      const rand = initial ?? lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
+      setTarget(rand);
+      setFeedback(null);
+
+      // build 3 decoys
+      const pool =
+        groupObj?.lessons.flatMap((l) => l.chars).filter((c) => c !== rand) ??
+        Array.from(new Set(LESSON_GROUPS.flatMap((g) => g.lessons.flatMap((l) => l.chars))))
+          .filter((c) => c !== rand);
+
+      const shuffled = [...new Set(pool)].sort(() => 0.5 - Math.random());
+      const decoys = shuffled.slice(0, 3);
+      const four = [...decoys, rand].sort(() => 0.5 - Math.random());
+      setChoices(four);
+
+      // Autoplay after 2s
+      if (autoplayRef.current) clearTimeout(autoplayRef.current);
+      autoplayRef.current = setTimeout(() => {
+        playNow(rand);
+      }, 2000);
+    },
+    [groupObj, lesson],
+  );
+
   React.useEffect(() => {
     if (!lesson) return;
-    const rand = lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
-    setTarget(rand);
-
-    // build 3 decoys
-    const pool =
-      groupObj?.lessons.flatMap((l) => l.chars).filter((c) => c !== rand) ??
-      Array.from(
-        new Set(
-          LESSON_GROUPS.flatMap((g) => g.lessons.flatMap((l) => l.chars)),
-        ),
-      ).filter((c) => c !== rand);
-
-    const shuffled = [...new Set(pool)].sort(() => 0.5 - Math.random());
-    const decoys = shuffled.slice(0, 3);
-    const four = [...decoys, rand].sort(() => 0.5 - Math.random());
-    setChoices(four);
-  }, [lesson]);
+    rollNext();
+    return () => {
+      if (autoplayRef.current) clearTimeout(autoplayRef.current);
+    };
+  }, [lesson, rollNext]);
 
   if (!lesson) {
     return (
@@ -94,51 +114,26 @@ export default function ReceiveLessonScreen() {
     else await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
-  const onPlay = async () => {
-    if (!target) return;
-    await playMorseForText(target, MORSE_UNIT_MS, {
+  const playNow = async (ch: string) => {
+    await playMorseForText(ch, getMorseUnitMs(), {
       onSymbolStart: (symbol, durationMs) => {
         pulseFlash(durationMs);
         hapticTick(symbol);
       },
     });
   };
+  const onPlay = async () => {
+    if (!target) return;
+    await playNow(target);
+  };
 
   const onAnswer = (choice: string) => {
     if (!target) return;
     const correct = choice.toUpperCase() === target.toUpperCase();
-    if (correct) {
-      markComplete(group!, lessonId!, 'receive');
-      Alert.alert('Nice!', `Correct: ${target}`, [
-        { text: 'Back to Lessons', onPress: () => router.back() },
-        {
-          text: 'Next',
-          onPress: () => {
-            // roll a new target & options
-            const rand =
-              lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
-            setTarget(rand);
-            const pool =
-              groupObj?.lessons
-                .flatMap((l) => l.chars)
-                .filter((c) => c !== rand) ??
-              Array.from(
-                new Set(
-                  LESSON_GROUPS.flatMap((g) =>
-                    g.lessons.flatMap((l) => l.chars),
-                  ),
-                ),
-              ).filter((c) => c !== rand);
-            const shuffled = [...new Set(pool)].sort(() => 0.5 - Math.random());
-            const decoys = shuffled.slice(0, 3);
-            const four = [...decoys, rand].sort(() => 0.5 - Math.random());
-            setChoices(four);
-          },
-        },
-      ]);
-    } else {
-      Alert.alert('Try again', `You chose "${choice}". Not this time.`);
-    }
+    setFeedback(correct ? 'correct' : 'incorrect');
+    if (correct) markComplete(group!, lessonId!, 'receive');
+    // brief pause then next
+    setTimeout(() => rollNext(), 900);
   };
 
   return (
@@ -165,16 +160,26 @@ export default function ReceiveLessonScreen() {
         {/* Spacer */}
         <View style={{ flex: 1 }} />
 
-        {/* Play button centered */}
-        <Pressable
-          onPress={onPlay}
-          style={({ pressed }) => [
-            styles.playBtn,
-            pressed && styles.btnPressed,
-          ]}
-        >
-          <Text style={styles.playText}>Play Tone</Text>
-        </Pressable>
+        {/* Feedback and Play icon */}
+        <View style={styles.feedbackRow}>
+          <Text
+            style={[
+              styles.feedbackText,
+              feedback === 'correct' && { color: theme.colors.success },
+              feedback === 'incorrect' && { color: theme.colors.error },
+            ]}
+          >
+            {feedback === 'correct' && 'Correct'}
+            {feedback === 'incorrect' && 'Incorrect'}
+          </Text>
+          <Pressable
+            onPress={onPlay}
+            style={({ pressed }) => [styles.iconPlay, pressed && styles.btnPressed]}
+            accessibilityLabel="Play tone"
+          >
+            <Ionicons name="play" size={20} color={theme.colors.background} />
+          </Pressable>
+        </View>
 
         {/* 2x2 Multiple-choice grid at bottom */}
         <View style={styles.choiceGrid}>
@@ -213,14 +218,25 @@ const styles = StyleSheet.create({
   },
   sub: { color: theme.colors.muted },
 
-  playBtn: {
-    alignSelf: 'center',
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius.pill,
-    paddingVertical: theme.spacing(3),
-    paddingHorizontal: theme.spacing(5),
+  feedbackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing(3),
   },
-  playText: { color: theme.colors.background, fontWeight: '800' },
+  feedbackText: {
+    color: theme.colors.muted,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  iconPlay: {
+    backgroundColor: theme.colors.textSecondary,
+    borderRadius: theme.radius.pill,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   choiceGrid: {
     marginTop: theme.spacing(3),
