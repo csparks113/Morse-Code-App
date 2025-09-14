@@ -16,9 +16,14 @@ export default function LessonNode({ data }: { data: LessonNodeData }) {
           : 'gray';
 
   const isActive = data.completion === 'active';
-
-  const isInactive =
-    data.completion === 'locked' ? palette.grayMuted : '#FFFFFF';
+  const ringHex =
+    color === 'blue'
+      ? palette.blue
+      : color === 'green'
+        ? palette.green
+        : color === 'gold'
+          ? palette.gold
+          : palette.grayMuted;
 
   return (
     <View accessible accessibilityRole="button" accessibilityLabel={data.title}>
@@ -40,7 +45,7 @@ export default function LessonNode({ data }: { data: LessonNodeData }) {
       )} */}
       <Coin color={color as any} kind="lesson" glow={isActive}>
         {data.completion === 'locked' ? (
-          <Text style={{ color: isInactive, fontSize: 30, fontWeight: '900' }}>
+          <Text style={{ color: ringHex, fontSize: 30, fontWeight: '900' }}>
             ?
           </Text>
         ) : (
@@ -48,8 +53,8 @@ export default function LessonNode({ data }: { data: LessonNodeData }) {
             {!!data.subtitle && (
               <Text
                 style={{
-                  color: isInactive,
-                  fontSize: 20,
+                  color: ringHex,
+                  fontSize: 22,
                   fontWeight: '700',
                   textAlign: 'center',
                 }}

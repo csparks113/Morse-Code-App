@@ -194,8 +194,6 @@ export default function LessonPath({ groupId, lessons }: Props) {
                   )}
                 </Pressable>
               </View>
-              {/* Segment below node (not after last) */}
-              {i < derivedNodes.length - 1 && <View style={styles.segment} />}
               {openIndex === i && (
                 <LessonPromptCard
                   groupId={groupId}
@@ -208,6 +206,8 @@ export default function LessonPath({ groupId, lessons }: Props) {
                   disableActions={n.kind === 'challenge'}
                 />
               )}
+              {/* Segment below node (not after last) */}
+              {i < derivedNodes.length - 1 && <View style={styles.segment} />}
             </View>
           );
         })}
