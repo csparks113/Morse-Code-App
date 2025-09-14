@@ -4,7 +4,14 @@
 // Left button opens the groups modal; right button opens the overview.
 // The middle shows the current section and group title.
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, FlatList } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Modal,
+  FlatList,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { colors, glow, radii, spacing } from '../theme/lessonTheme';
@@ -19,8 +26,15 @@ type Props = {
 export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
-  const group = React.useMemo(() => LESSON_GROUPS.find((g) => g.id === groupId)!, [groupId]);
-  const sectionIndex = Math.max(0, LESSON_GROUPS.findIndex((g) => g.id === groupId)) + 1;
+  const group = React.useMemo(
+    () => LESSON_GROUPS.find((g) => g.id === groupId)!,
+    [groupId],
+  );
+  const sectionIndex =
+    Math.max(
+      0,
+      LESSON_GROUPS.findIndex((g) => g.id === groupId),
+    ) + 1;
   const getCompletionRatio = useProgressStore((s) => s.getCompletionRatio);
 
   const overviewHref: Href = {
@@ -35,7 +49,10 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
           <View style={styles.side}>
             <Pressable
               onPress={() => setOpen(true)}
-              style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                pressed && styles.pressed,
+              ]}
               accessibilityLabel="Open groups"
             >
               <Ionicons name="menu" size={24} color={colors.bg} />
@@ -48,7 +65,10 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
           <View style={styles.side}>
             <Pressable
               onPress={() => router.push(overviewHref)}
-              style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                pressed && styles.pressed,
+              ]}
               accessibilityLabel="Help"
             >
               <Ionicons name="help" size={24} color={colors.bg} />
@@ -57,33 +77,59 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
         </View>
       </View>
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOpen(false)}
+      >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Lesson Groups</Text>
             <FlatList
               data={LESSON_GROUPS}
               keyExtractor={(item) => item.id}
-              ItemSeparatorComponent={() => <View style={{ height: spacing(2) }} />}
+              ItemSeparatorComponent={() => (
+                <View style={{ height: spacing(2) }} />
+              )}
               renderItem={({ item }) => {
                 const ratio = getCompletionRatio(item.id, item.lessons.length);
                 return (
                   <Pressable
-                    onPress={() => { onChangeGroup(item.id); setOpen(false); }}
-                    style={({ pressed }) => [styles.groupRow, pressed && { opacity: 0.92 }]}
+                    onPress={() => {
+                      onChangeGroup(item.id);
+                      setOpen(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.groupRow,
+                      pressed && { opacity: 0.92 },
+                    ]}
                   >
                     <View style={{ flex: 1 }}>
                       <Text style={styles.groupTitle}>{item.title}</Text>
                       <View style={styles.progressTrack}>
-                        <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
+                        <View
+                          style={[
+                            styles.progressFill,
+                            { width: `${ratio * 100}%` },
+                          ]}
+                        />
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color={colors.neonTeal} />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={18}
+                      color={colors.neonTeal}
+                    />
                   </Pressable>
                 );
               }}
             />
-            <Pressable onPress={() => setOpen(false)} style={styles.closeBtn} accessibilityLabel="Close">
+            <Pressable
+              onPress={() => setOpen(false)}
+              style={styles.closeBtn}
+              accessibilityLabel="Close"
+            >
               <Text style={styles.closeBtnText}>Close</Text>
             </Pressable>
           </View>
@@ -114,7 +160,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     borderWidth: 2,
     borderColor: colors.border,
-    paddingVertical: spacing(3.5),
+    paddingVertical: spacing(3),
     paddingHorizontal: spacing(4),
     alignSelf: 'stretch',
     // Fit within screen with a small margin relative to outer padding
@@ -125,16 +171,52 @@ const styles = StyleSheet.create({
   section: { color: colors.textDim, fontSize: 15, marginBottom: 4 },
   title: { color: colors.text, fontWeight: '800', fontSize: 28 },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: spacing(4) },
-  modalCard: { backgroundColor: '#101010', borderRadius: radii.xl, padding: spacing(3), gap: spacing(2) },
-  modalTitle: { color: colors.text, fontWeight: '800', marginBottom: spacing(1) },
-  groupRow: { flexDirection: 'row', alignItems: 'center', gap: spacing(2), paddingVertical: spacing(1.5) },
-  groupTitle: { color: colors.text, fontWeight: '700', marginBottom: spacing(1) },
-  progressTrack: { height: 10, backgroundColor: '#1F2A2A', borderRadius: 999, overflow: 'hidden' },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    padding: spacing(4),
+  },
+  modalCard: {
+    backgroundColor: '#101010',
+    borderRadius: radii.xl,
+    padding: spacing(3),
+    gap: spacing(2),
+  },
+  modalTitle: {
+    color: colors.text,
+    fontWeight: '800',
+    marginBottom: spacing(1),
+  },
+  groupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(2),
+    paddingVertical: spacing(1.5),
+  },
+  groupTitle: {
+    color: colors.text,
+    fontWeight: '700',
+    marginBottom: spacing(1),
+  },
+  progressTrack: {
+    height: 10,
+    backgroundColor: '#1F2A2A',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
   progressFill: { height: '100%', backgroundColor: colors.neonTeal },
-  chevron: { color: colors.neonTeal, fontSize: 28, paddingHorizontal: spacing(2) },
-  closeBtn: { alignSelf: 'center', backgroundColor: colors.neonTeal, borderRadius: 999, paddingHorizontal: spacing(4), paddingVertical: spacing(2) },
+  chevron: {
+    color: colors.neonTeal,
+    fontSize: 28,
+    paddingHorizontal: spacing(2),
+  },
+  closeBtn: {
+    alignSelf: 'center',
+    backgroundColor: colors.neonTeal,
+    borderRadius: 999,
+    paddingHorizontal: spacing(4),
+    paddingVertical: spacing(2),
+  },
   closeBtnText: { color: colors.bg, fontWeight: '800' },
 });
-
-

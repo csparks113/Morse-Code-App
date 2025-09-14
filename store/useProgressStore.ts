@@ -110,13 +110,20 @@ export const useProgressStore = create<ProgressState>()(
         return Math.max(0, Math.min(1, sum / totalLessons));
       },
       getCountsGlobal: () => {
-        const out = { lessonReceive: 0, lessonBoth: 0, challengeReceive: 0, challengeBoth: 0 };
+        const out = {
+          lessonReceive: 0,
+          lessonBoth: 0,
+          challengeReceive: 0,
+          challengeBoth: 0,
+        };
         const all = get().progress;
         for (const groupId of Object.keys(all)) {
           const group = all[groupId] ?? {};
           for (const [id, lp] of Object.entries(group)) {
-            const receive = (lp.receiveScore ?? (lp.receive ? 100 : 0)) >= thresholds.receive;
-            const send = (lp.sendScore ?? (lp.send ? 100 : 0)) >= thresholds.send;
+            const receive =
+              (lp.receiveScore ?? (lp.receive ? 100 : 0)) >= thresholds.receive;
+            const send =
+              (lp.sendScore ?? (lp.send ? 100 : 0)) >= thresholds.send;
             const both = receive && send;
             const isChallenge = id.startsWith('ch-');
             if (isChallenge) {

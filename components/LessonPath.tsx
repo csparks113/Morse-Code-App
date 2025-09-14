@@ -6,7 +6,13 @@
 //  - Tapping a node reveals a prompt card under it
 // The component is pure layout/interaction; progression state comes from the store.
 import React from 'react';
-import { View, ScrollView, StyleSheet, Dimensions, Pressable } from 'react-native';
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  Dimensions,
+  Pressable,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, thresholds } from '../theme/lessonTheme';
 // Card that appears under a node with actions (Receive/Send)
@@ -45,18 +51,46 @@ export default function LessonPath({ groupId, lessons }: Props) {
   // Build a derived sequence that inserts a Challenge node after every 2 lessons.
   // Challenge N reviews all characters learned so far (cumulative recap).
   type Node =
-    | { kind: 'lesson'; key: string; index: number; label: string; chars: string[]; id: string }
-    | { kind: 'challenge'; key: string; index: number; label: string; chars: string[]; id: string };
+    | {
+        kind: 'lesson';
+        key: string;
+        index: number;
+        label: string;
+        chars: string[];
+        id: string;
+      }
+    | {
+        kind: 'challenge';
+        key: string;
+        index: number;
+        label: string;
+        chars: string[];
+        id: string;
+      };
 
   const derivedNodes: Node[] = React.useMemo(() => {
     const out: Node[] = [];
     let cumulativeChars: string[] = [];
     lessons.forEach((l, i) => {
-      out.push({ kind: 'lesson', key: `l-${l.id}`, index: out.length, label: l.label, chars: l.chars, id: l.id });
+      out.push({
+        kind: 'lesson',
+        key: `l-${l.id}`,
+        index: out.length,
+        label: l.label,
+        chars: l.chars,
+        id: l.id,
+      });
       cumulativeChars = Array.from(new Set([...cumulativeChars, ...l.chars]));
       if (i % 2 === 1) {
         const chId = `ch-${Math.ceil((i + 1) / 2)}`;
-        out.push({ kind: 'challenge', key: chId, index: out.length, label: 'Challenge', chars: cumulativeChars, id: chId });
+        out.push({
+          kind: 'challenge',
+          key: chId,
+          index: out.length,
+          label: 'Challenge',
+          chars: cumulativeChars,
+          id: chId,
+        });
       }
     });
     return out;
@@ -122,13 +156,14 @@ export default function LessonPath({ groupId, lessons }: Props) {
   return (
     <ScrollView contentContainerStyle={contentStyle}>
       <View style={styles.col}>
+        {openIndex !== null && (
+          <Pressable style={styles.overlay} onPress={() => setOpenIndex(null)} />
+        )}
         <View style={{ height: firstPad }} />
         {derivedNodes.map((n, i) => {
           const status = statuses[i];
           const isLesson = n.kind === 'lesson';
-          const morseLines = isLesson
-            ? n.chars.map((c) => (toMorse(c) || '').replace(/\./g, '·').replace(/-/g, '—'))
-            : [];
+          const morseLines = isLesson ? n.chars.map((c) => toMorse(c) ?? '') : [];
           return (
             <View key={n.key} style={{ marginBottom: 0 }}>
               {/* Node */}
@@ -150,7 +185,11 @@ export default function LessonPath({ groupId, lessons }: Props) {
                     />
                   ) : (
                     <CoinChallengeNode
-                      data={{ id: String(n.id), title: 'Challenge', completion: status as ChallengeCompletion }}
+                      data={{
+                        id: String(n.id),
+                        title: 'Challenge',
+                        completion: status as ChallengeCompletion,
+                      }}
                     />
                   )}
                 </Pressable>
@@ -163,7 +202,9 @@ export default function LessonPath({ groupId, lessons }: Props) {
                   lessonId={String(n.id)}
                   label={n.label}
                   chars={n.chars}
-                  canSend={getLessonProgress(n.id).receiveScore >= thresholds.receive}
+                  canSend={
+                    getLessonProgress(n.id).receiveScore >= thresholds.receive
+                  }
                   disableActions={n.kind === 'challenge'}
                 />
               )}
@@ -175,6 +216,14 @@ export default function LessonPath({ groupId, lessons }: Props) {
   );
 }
 const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
   col: {
     width: '100%',
     paddingHorizontal: spacing(4),
@@ -194,7 +243,3 @@ const styles = StyleSheet.create({
 function formatChars(chars: string[]) {
   return chars.join(' & ');
 }
-
-
-
-

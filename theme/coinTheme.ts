@@ -26,11 +26,20 @@ export const coinShadow = {
 export const theme = {
   bg: { app: '#0B0B0F', card: '#111218' },
   text: { primary: '#FFFFFF', secondary: '#B8C1CC' },
-  blue:  { ring: '#00B3FF' },                 // active
+  blue: { ring: '#00B3FF' }, // active
   green: { fill: '#22C55E', outline: '#166534' }, // receive complete
-  gold:  { fill: '#F5C542', outline: '#B8860B', icon: '#8B6B00' }, // send complete
-  line:  '#00A3C4',
-  glow:  'rgba(0,179,255,0.35)',
+  gold: { fill: '#F5C542', outline: '#B8860B', icon: '#8B6B00' }, // send complete
+  line: '#00A3C4',
+  glow: 'rgba(0,179,255,0.35)',
 };
-export type LessonStatus = 'locked'|'active'|'receiveComplete'|'sendComplete';
-export interface LessonMeta { id: string; title: string; subtitle: string; status: LessonStatus; }
+export type LessonStatus =
+  | 'locked'
+  | 'active'
+  | 'receiveComplete'
+  | 'sendComplete';
+export interface LessonMeta {
+  id: string;
+  title: string;
+  subtitle: string;
+  status: LessonStatus;
+}

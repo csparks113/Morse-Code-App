@@ -102,7 +102,8 @@ export default function SendLessonScreen() {
     markComplete(group!, lessonId!, 'send');
 
     const t = setTimeout(() => {
-      const rand = lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
+      const rand =
+        lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
       setTarget(rand);
       setExpected(toMorse(rand) ?? '');
       setStrokes([]);
@@ -111,19 +112,20 @@ export default function SendLessonScreen() {
     return () => clearTimeout(t);
   }, [status, lesson, hapticsEnabled, group, lessonId, markComplete]);
 
-  return (
-    !lesson ? (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.container}>
-          <Text style={styles.title}>Lesson not found</Text>
-        </View>
-      </SafeAreaView>
-    ) : (
+  return !lesson ? (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Lesson not found</Text>
+      </View>
+    </SafeAreaView>
+  ) : (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <Text style={styles.title}>{lesson.label} - Send</Text>
         {/* Big target letter */}
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <View
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        >
           <Text
             style={[
               styles.targetBig,
@@ -147,7 +149,6 @@ export default function SendLessonScreen() {
         </Pressable>
       </View>
     </SafeAreaView>
-    )
   );
 }
 
@@ -190,4 +191,3 @@ const styles = StyleSheet.create({
   strokes: { color: theme.colors.textPrimary },
   btnPressed: { opacity: 0.9 },
 });
-

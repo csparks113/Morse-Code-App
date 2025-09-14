@@ -26,7 +26,8 @@ type PlayOpts = {
 
 // Simple base64 encoder for Uint8Array (no external deps)
 function bytesToBase64(bytes: Uint8Array): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
   let output = '';
   for (let i = 0; i < bytes.length; i += 3) {
     const b1 = bytes[i] ?? 0;
@@ -34,9 +35,13 @@ function bytesToBase64(bytes: Uint8Array): string {
     const b3 = bytes[i + 2];
     const enc1 = b1 >> 2;
     const enc2 = ((b1 & 3) << 4) | ((b2 ?? 0) >> 4);
-    const enc3 = b2 === undefined ? 64 : (((b2 & 15) << 2) | ((b3 ?? 0) >> 6));
-    const enc4 = b3 === undefined ? 64 : (b3 & 63);
-    output += chars.charAt(enc1) + chars.charAt(enc2) + chars.charAt(enc3) + chars.charAt(enc4);
+    const enc3 = b2 === undefined ? 64 : ((b2 & 15) << 2) | ((b3 ?? 0) >> 6);
+    const enc4 = b3 === undefined ? 64 : b3 & 63;
+    output +=
+      chars.charAt(enc1) +
+      chars.charAt(enc2) +
+      chars.charAt(enc3) +
+      chars.charAt(enc4);
   }
   return output;
 }
@@ -55,7 +60,8 @@ function generateSineWavBytes(
   const view = new DataView(buffer);
 
   const writeString = (offset: number, str: string) => {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    for (let i = 0; i < str.length; i++)
+      view.setUint8(offset + i, str.charCodeAt(i));
   };
 
   // RIFF header
@@ -90,24 +96,39 @@ function generateSineWavBytes(
 
 async function ensureGenerated(hz: number, unitMs: number) {
   if (genDot && genDash && currentHz === hz && currentUnit === unitMs) return;
-  try { await genDot?.unloadAsync(); } catch {}
-  try { await genDash?.unloadAsync(); } catch {}
-  genDot = null; genDash = null;
+  try {
+    await genDot?.unloadAsync();
+  } catch {}
+  try {
+    await genDash?.unloadAsync();
+  } catch {}
+  genDot = null;
+  genDash = null;
 
   const dotBytes = generateSineWavBytes(hz, unitMs);
   const dashBytes = generateSineWavBytes(hz, unitMs * 3);
   const dotB64 = bytesToBase64(dotBytes);
   const dashB64 = bytesToBase64(dashBytes);
-  const dir = (FileSystem as any).cacheDirectory ?? (FileSystem as any).documentDirectory ?? '';
+  const dir =
+    (FileSystem as any).cacheDirectory ??
+    (FileSystem as any).documentDirectory ??
+    '';
   const dotUri = dir + `morse-dot-${hz}-${unitMs}.wav`;
   const dashUri = dir + `morse-dash-${hz}-${unitMs}.wav`;
-  await FileSystem.writeAsStringAsync(dotUri, dotB64, { encoding: 'base64' as any });
-  await FileSystem.writeAsStringAsync(dashUri, dashB64, { encoding: 'base64' as any });
+  await FileSystem.writeAsStringAsync(dotUri, dotB64, {
+    encoding: 'base64' as any,
+  });
+  await FileSystem.writeAsStringAsync(dashUri, dashB64, {
+    encoding: 'base64' as any,
+  });
   const [d1, d2] = await Promise.all([
     Audio.Sound.createAsync({ uri: dotUri }),
     Audio.Sound.createAsync({ uri: dashUri }),
   ]);
-  genDot = d1.sound; genDash = d2.sound; currentHz = hz; currentUnit = unitMs;
+  genDot = d1.sound;
+  genDash = d2.sound;
+  currentHz = hz;
+  currentUnit = unitMs;
 }
 
 export async function playMorseCode(

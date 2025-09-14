@@ -23,14 +23,16 @@ export default function LessonsScreen() {
   // Using two selectors keeps the subscription stable and avoids loops.
   const progress = useProgressStore((s) => s.progress);
   const getCountsGlobal = useProgressStore((s) => s.getCountsGlobal);
-  const counts = React.useMemo(() => getCountsGlobal(), [getCountsGlobal, progress]);
+  const counts = React.useMemo(
+    () => getCountsGlobal(),
+    [getCountsGlobal, progress],
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         <ProgressBar counts={counts} />
         <NeonHeaderCard groupId={groupId} onChangeGroup={setGroupId} />
-        <View style={{ height: spacing(0) }} />
         <LessonPath groupId={group.id} lessons={group.lessons} />
       </View>
     </SafeAreaView>
@@ -39,5 +41,10 @@ export default function LessonsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  container: { flex: 1, backgroundColor: colors.bg, paddingTop: spacing(4), paddingHorizontal: spacing(4)},
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    paddingTop: spacing(4),
+    paddingHorizontal: spacing(4),
+  },
 });

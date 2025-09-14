@@ -2,7 +2,14 @@
 // Picks a target letter from the lesson, plays its Morse, and asks the user to pick.
 // When the answer is correct we mark 'receive' complete in the progress store.
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Animated,
+  Easing,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,7 +36,9 @@ export default function ReceiveLessonScreen() {
 
   const [target, setTarget] = React.useState<string | null>(null);
   const [choices, setChoices] = React.useState<string[]>([]); // 4 options
-  const [feedback, setFeedback] = React.useState<null | 'correct' | 'incorrect'>(null);
+  const [feedback, setFeedback] = React.useState<
+    null | 'correct' | 'incorrect'
+  >(null);
 
   // autoplay timer
   const autoplayRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -38,54 +47,68 @@ export default function ReceiveLessonScreen() {
   const flash = React.useRef(new Animated.Value(0)).current;
 
   // Visual flash overlay (if enabled)
-  const pulseFlash = React.useCallback((durationMs: number) => {
-    if (!lightEnabled) return;
-    flash.setValue(0);
-    Animated.sequence([
-      Animated.timing(flash, {
-        toValue: 0.9,
-        duration: Math.min(80, durationMs / 3),
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(flash, {
-        toValue: 0,
-        duration: Math.max(80, durationMs / 2),
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [lightEnabled, flash]);
+  const pulseFlash = React.useCallback(
+    (durationMs: number) => {
+      if (!lightEnabled) return;
+      flash.setValue(0);
+      Animated.sequence([
+        Animated.timing(flash, {
+          toValue: 0.9,
+          duration: Math.min(80, durationMs / 3),
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flash, {
+          toValue: 0,
+          duration: Math.max(80, durationMs / 2),
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    },
+    [lightEnabled, flash],
+  );
 
   // Haptic feedback for dot/dash (if enabled)
-  const hapticTick = React.useCallback(async (symbol: '.' | '-') => {
-    if (!hapticsEnabled) return;
-    if (symbol === '.')
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    else await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  }, [hapticsEnabled]);
+  const hapticTick = React.useCallback(
+    async (symbol: '.' | '-') => {
+      if (!hapticsEnabled) return;
+      if (symbol === '.')
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      else await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    },
+    [hapticsEnabled],
+  );
 
-  const playNow = React.useCallback(async (ch: string) => {
-    await playMorseForText(ch, getMorseUnitMs(), {
-      onSymbolStart: (symbol, durationMs) => {
-        pulseFlash(durationMs);
-        hapticTick(symbol);
-      },
-    });
-  }, [pulseFlash, hapticTick]);
+  const playNow = React.useCallback(
+    async (ch: string) => {
+      await playMorseForText(ch, getMorseUnitMs(), {
+        onSymbolStart: (symbol, durationMs) => {
+          pulseFlash(durationMs);
+          hapticTick(symbol);
+        },
+      });
+    },
+    [pulseFlash, hapticTick],
+  );
 
   const rollNext = React.useCallback(
     (initial?: string) => {
       if (!lesson) return;
-      const rand = initial ?? lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
+      const rand =
+        initial ??
+        lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
       setTarget(rand);
       setFeedback(null);
 
       // build 3 decoys
       const pool =
         groupObj?.lessons.flatMap((l) => l.chars).filter((c) => c !== rand) ??
-        Array.from(new Set(LESSON_GROUPS.flatMap((g) => g.lessons.flatMap((l) => l.chars))))
-          .filter((c) => c !== rand);
+        Array.from(
+          new Set(
+            LESSON_GROUPS.flatMap((g) => g.lessons.flatMap((l) => l.chars)),
+          ),
+        ).filter((c) => c !== rand);
 
       const shuffled = [...new Set(pool)].sort(() => 0.5 - Math.random());
       const decoys = shuffled.slice(0, 3);
@@ -96,7 +119,7 @@ export default function ReceiveLessonScreen() {
       if (autoplayRef.current) clearTimeout(autoplayRef.current);
       autoplayRef.current = setTimeout(() => {
         playNow(rand);
-      }, 2000);
+      }, 600);
     },
     [groupObj, lesson, playNow],
   );
@@ -122,7 +145,11 @@ export default function ReceiveLessonScreen() {
       setFeedback('correct');
       // celebratory haptic
       (async () => {
-        try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+        try {
+          await Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success,
+          );
+        } catch {}
       })();
       // mark receive complete for this lesson
       markComplete(group!, lessonId!, 'receive');
@@ -131,7 +158,11 @@ export default function ReceiveLessonScreen() {
     } else {
       setFeedback('incorrect');
       (async () => {
-        try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
+        try {
+          await Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Error,
+          );
+        } catch {}
       })();
     }
   };
@@ -184,7 +215,10 @@ export default function ReceiveLessonScreen() {
           </Text>
           <Pressable
             onPress={onPlay}
-            style={({ pressed }) => [styles.iconPlay, pressed && styles.btnPressed]}
+            style={({ pressed }) => [
+              styles.iconPlay,
+              pressed && styles.btnPressed,
+            ]}
             accessibilityLabel="Play tone"
           >
             <Ionicons name="play" size={20} color={theme.colors.background} />

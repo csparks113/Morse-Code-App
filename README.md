@@ -26,7 +26,7 @@ A premium dark-themed Expo React Native app for learning, practicing, and master
 ```sh
 npx expo start
 ```
- 
+
 ## Getting Started
 
 - Prerequisites: Node 18+, npm 9+, Android Studio (Android), Xcode (iOS), and Expo Go on your device if you’re testing on hardware.
@@ -57,6 +57,7 @@ npx expo start
 ## Project Documentation
 
 We maintain a master specification:
+
 - Local: `docs/living-spec.md`
 - ChatGPT (reference-only): https://chat.openai.com/c/68ba2d82c54481918f76e07b99235977
 

@@ -7,31 +7,61 @@ import { LessonNodeData } from '@/types/progress';
 
 export default function LessonNode({ data }: { data: LessonNodeData }) {
   const color =
-    data.completion === 'active' ? 'blue' :
-    data.completion === 'receiveComplete' ? 'green' :
-    data.completion === 'bothComplete' ? 'purple' : 'gray';
+    data.completion === 'active'
+      ? 'blue'
+      : data.completion === 'receiveComplete'
+        ? 'green'
+        : data.completion === 'bothComplete'
+          ? 'gold'
+          : 'gray';
 
   const isActive = data.completion === 'active';
 
-  const morseColor = data.completion === 'locked' ? palette.grayMuted : '#FFFFFF';
+  const isInactive =
+    data.completion === 'locked' ? palette.grayMuted : '#FFFFFF';
 
   return (
     <View accessible accessibilityRole="button" accessibilityLabel={data.title}>
-      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 20, textAlign: 'center', marginBottom: 6 }}>
+      <Text
+        style={{
+          color: '#fff',
+          fontWeight: '700',
+          fontSize: 20,
+          textAlign: 'center',
+          marginBottom: 8,
+        }}
+      >
         {data.title}
       </Text>
-      {!!data.subtitle && (
+      {/* {!!data.subtitle && (
         <Text style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginBottom: 8}}>
           {data.subtitle}
         </Text>
-      )}
+      )} */}
       <Coin color={color as any} kind="lesson" glow={isActive}>
-        {/* Render Morse code (stack vertically if >2) */}
-        <View style={{ gap: 0 }}>
-          {data.morse.map((m, i) => (
-            <Text key={i} style={{ color: morseColor, fontSize: 30, fontWeight: '900', textAlign: 'center' }}>{m}</Text>
-          ))}
-        </View>
+        {data.completion === 'locked' ? (
+          <Text style={{ color: isInactive, fontSize: 30, fontWeight: '900' }}>
+            ?
+          </Text>
+        ) : (
+          <View>
+            {!!data.subtitle && (
+              <Text
+                style={{
+                  color: isInactive,
+                  fontSize: 20,
+                  fontWeight: '700',
+                  textAlign: 'center',
+                }}
+              >
+                {data.subtitle}
+              </Text>
+            )}
+            {/* {data.morse.map((m, i) => (
+              <Text key={i} style={{ color: isInactive, fontSize: 30, fontWeight: '900', textAlign: 'center' }}>{m}</Text>
+            ))} */}
+          </View>
+        )}
       </Coin>
     </View>
   );

@@ -11,6 +11,7 @@ import { useRouter, type Href } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { colors, glow, radii, spacing } from '../theme/lessonTheme';
 import { toMorse } from '../utils/morse';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 type Props = {
   groupId: string;
@@ -21,18 +22,31 @@ type Props = {
   disableActions?: boolean; // when true, both buttons are disabled (used for challenge placeholder)
 };
 
-export default function LessonPromptCard({ groupId, lessonId, label, chars, canSend, disableActions }: Props) {
+export default function LessonPromptCard({
+  groupId,
+  lessonId,
+  label,
+  chars,
+  canSend,
+  disableActions,
+}: Props) {
   const router = useRouter();
   const opacity = React.useRef(new Animated.Value(0)).current;
   const scale = React.useRef(new Animated.Value(0.96)).current;
 
   React.useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 160, useNativeDriver: true }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 160,
+        useNativeDriver: true,
+      }),
       Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
     ]).start();
     (async () => {
-      try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+      try {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
     })();
   }, [opacity, scale]);
 
@@ -46,56 +60,76 @@ export default function LessonPromptCard({ groupId, lessonId, label, chars, canS
   };
 
   return (
-    <Animated.View style={[styles.card, { opacity, transform: [{ scale }] }]}>
-      <Text style={styles.title}>{label}</Text>
-      <View style={styles.charsRow}>
-        {chars.map((c) => (
-          <View key={c} style={styles.pill}>
-            <Text style={styles.pillText}>{c}</Text>
-            <Text style={styles.pillCode}>{toMorse(c)}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.actionsRow}>
-        <Pressable
-          disabled={!!disableActions}
-          onPress={() => router.push(receiveHref)}
-          style={({ pressed }) => [
-            styles.btn,
-            styles.btnReceive,
-            !!disableActions && styles.btnDisabled,
-            pressed && styles.pressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={disableActions ? 'Receive (unavailable)' : 'Start Receive'}
-          hitSlop={8}
-        >
-          <Text style={styles.btnLabelDark}>Receive</Text>
-        </Pressable>
-        <Pressable
-          disabled={!canSend}
-          onPress={() => router.push(sendHref)}
-          style={({ pressed }) => [
-            styles.btn,
-            styles.btnSend,
-            !canSend && styles.btnDisabled,
-            pressed && styles.pressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={canSend ? 'Start Send' : 'Send locked until Receive complete'}
-          hitSlop={8}
-        >
-          <Text style={styles.btnLabel}>{canSend ? 'Send' : 'Send (locked)'}</Text>
-        </Pressable>
+    <Animated.View style={[styles.wrap, { opacity, transform: [{ scale }] }]}> 
+      <View style={styles.arrow} />
+      <View style={styles.card}>
+        <View style={styles.charsRow}>
+          {chars.map((c) => (
+            <View key={c} style={styles.pill}>
+              <Text style={styles.pillText}>{c}</Text>
+              <Text style={styles.pillCode}>{toMorse(c)}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={styles.actionsRow}>
+          <Pressable
+            disabled={!!disableActions}
+            onPress={() => router.push(receiveHref)}
+            style={({ pressed }) => [
+              styles.btn,
+              styles.btnReceive,
+              !!disableActions && styles.btnDisabled,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={
+              disableActions ? 'Receive (unavailable)' : 'Start Receive'
+            }
+            hitSlop={8}
+          >
+            <Ionicons name="radio" size={18} color="#0D0D0D" />
+            <Text style={styles.btnLabelDark}>Receive</Text>
+          </Pressable>
+          <Pressable
+            disabled={!canSend}
+            onPress={() => router.push(sendHref)}
+            style={({ pressed }) => [
+              styles.btn,
+              styles.btnSend,
+              !canSend && styles.btnDisabled,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={
+              canSend ? 'Start Send' : 'Send locked until Receive complete'
+            }
+            hitSlop={8}
+          >
+            <MaterialCommunityIcons name="antenna" size={18} color="#0D0D0D" />
+            <Text style={styles.btnLabelDark}>{canSend ? 'Send' : 'Locked'}</Text>
+          </Pressable>
+        </View>
       </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: { alignSelf: 'stretch', marginTop: spacing(2), alignItems: 'center', zIndex: 2 },
+  arrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderBottomWidth: 12,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: colors.border,
+  },
   card: {
-    marginTop: spacing(2),
+    marginTop: -1,
+    alignSelf: 'stretch',
+    marginHorizontal: spacing(2),
     backgroundColor: colors.card,
     borderRadius: radii.xl,
     borderWidth: 2,
@@ -103,28 +137,37 @@ const styles = StyleSheet.create({
     padding: spacing(3),
     ...glow.medium,
   },
-  title: { color: colors.text, fontWeight: '800', marginBottom: spacing(2) },
-  charsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing(1.5), marginBottom: spacing(2) },
+  charsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing(2.5),
+    marginBottom: spacing(3),
+    justifyContent: 'space-evenly',
+  },
   pill: {
     backgroundColor: '#151515',
     borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: spacing(1),
-    paddingHorizontal: spacing(1.5),
+    paddingVertical: spacing(2),
+    paddingHorizontal: spacing(2.5),
+    minWidth: 90,
+    alignItems: 'center',
   },
-  pillText: { color: colors.text, fontWeight: '800' },
-  pillCode: { color: colors.textDim, fontSize: 12 },
-  actionsRow: { flexDirection: 'row', gap: spacing(2) },
+  pillText: { color: colors.text, fontWeight: '900', fontSize: 22 },
+  pillCode: { color: colors.textDim, fontSize: 16, marginTop: 4 },
+  actionsRow: { flexDirection: 'row', gap: spacing(2), justifyContent: 'space-evenly' },
   btn: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
     borderRadius: radii.xl,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing(1),
   },
-  btnReceive: { backgroundColor: colors.neonTeal },
-  btnSend: { backgroundColor: colors.green },
+  btnReceive: { backgroundColor: colors.green },
+  btnSend: { backgroundColor: colors.gold },
   btnDisabled: { opacity: 0.5 },
   btnLabel: { color: colors.text, fontWeight: '800' },
   btnLabelDark: { color: '#0D0D0D', fontWeight: '800' },

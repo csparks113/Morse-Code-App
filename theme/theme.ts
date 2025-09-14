@@ -11,14 +11,14 @@
 export const theme = {
   colors: {
     background: '#0D0D0D', // black background
-    surface: '#121212',    // slightly lighter for cards/surfaces
+    surface: '#121212', // slightly lighter for cards/surfaces
     textPrimary: '#EAEAEA', // primary text (white)
     textSecondary: '#B9C0C7', // secondary text (light grey)
     muted: '#9BA0A6', // tertiary labels
     accent: '#00E5FF', // neon blue accent
     border: '#1E2430', // subtle teal-blue divider
     disabled: '#2A2F36',
-    success: '#39FF14',   // for quick affordances
+    success: '#39FF14', // for quick affordances
     error: '#FF6B6B',
   },
   spacing: (n: number) => 4 * n, // 4dp grid. spacing(4) = 16
@@ -47,4 +47,3 @@ export const theme = {
     },
   },
 } as const;
-
