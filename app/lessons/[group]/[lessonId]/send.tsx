@@ -5,7 +5,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { theme } from '../../../../constants/theme';
+import { theme } from '../../../../theme/theme';
 import { getLesson } from '../../../../data/lessons';
 import { toMorse } from '../../../../utils/morse';
 import { getMorseUnitMs } from '../../../../utils/audio';

@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { theme } from '../../constants/theme';
+import { theme } from '../../theme/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PracticeScreen() {

@@ -7,7 +7,7 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
-import { theme } from '../../../constants/theme';
+import { theme } from '../../../theme/theme';
 import { getGroupById } from '../../../data/lessons';
 
 export default function GroupOverviewScreen() {

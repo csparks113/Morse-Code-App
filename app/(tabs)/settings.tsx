@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Switch, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme } from '../../constants/theme';
+import { theme } from '../../theme/theme';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 type RowProps = {

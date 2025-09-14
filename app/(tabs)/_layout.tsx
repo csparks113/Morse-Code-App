@@ -2,7 +2,7 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '../../constants/theme';
+import { theme } from '../../theme/theme';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();

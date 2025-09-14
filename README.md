@@ -87,11 +87,9 @@ components/
   NeonHeaderCard.tsx    # Header with group picker modal
   ProgressBar.tsx       # Compact coin summary row
 
-constants/
+theme/
   theme.ts              # App shell theme (tabs, settings, etc.)
   coinTheme.ts          # Palette for coin visuals
-
-theme/
   lessonTheme.ts        # Neon theme tokens used by lesson screens
 
 data/
