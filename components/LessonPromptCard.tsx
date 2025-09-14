@@ -21,6 +21,7 @@ type Props = {
   chars: string[];
   canSend: boolean;
   disableActions?: boolean; // when true, both buttons are disabled (used for challenge placeholder)
+  locked?: boolean; // when true, render a simple locked state
 };
 
 export default function LessonPromptCard({
@@ -30,6 +31,7 @@ export default function LessonPromptCard({
   chars,
   canSend,
   disableActions,
+  locked,
 }: Props) {
   const router = useRouter();
   const opacity = React.useRef(new Animated.Value(0)).current;
@@ -64,7 +66,7 @@ export default function LessonPromptCard({
     <Animated.View style={[styles.wrap, { opacity, transform: [{ scale }] }]}> 
       <View style={styles.arrow} />
       <View style={styles.card}>
-        {!disableActions && (
+        {!locked && !disableActions && (
           <View style={styles.charsRow}>
             {chars.map((c) => (
               <View key={c} style={styles.pill}>
@@ -74,6 +76,11 @@ export default function LessonPromptCard({
             ))}
           </View>
         )}
+        {locked ? (
+          <View style={styles.lockedRow}>
+            <Text style={styles.lockedText}>Locked</Text>
+          </View>
+        ) : (
         <View style={styles.actionsRow}>
           <Pressable
             disabled={!!disableActions}
@@ -111,7 +118,7 @@ export default function LessonPromptCard({
             <MaterialCommunityIcons name="antenna" size={18} color="#FFFFFF" />
             <Text style={styles.btnLabelLight}>{canSend ? 'Send' : 'Send (locked)'}</Text>
           </Pressable>
-        </View>
+        </View> )}
       </View>
     </Animated.View>
   );
@@ -141,43 +148,43 @@ const styles = StyleSheet.create({
   card: {
     marginTop: -1,
     alignSelf: 'stretch',
-    marginHorizontal: spacing(0.5),
+    marginHorizontal: spacing(0.25),
     backgroundColor: colors.card,
     borderRadius: radii.xl,
     borderWidth: 2,
     borderColor: colors.border,
-    padding: spacing(2),
+    padding: spacing(4.5),
     ...glow.medium,
   },
   charsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing(1),
-    marginBottom: spacing(2),
-    justifyContent: 'space-evenly',
+    gap: spacing(3),
+    marginBottom: spacing(4),
+    justifyContent: 'space-between',
   },
   pill: {
     backgroundColor: '#151515',
     borderRadius: radii.xl,
     borderWidth: 1.5,
     borderColor: colors.border,
-    paddingVertical: spacing(1),
-    paddingHorizontal: spacing(1),
-    width: '36%',
+    paddingVertical: spacing(2),
+    paddingHorizontal: spacing(3),
+    width: '44%',
     alignItems: 'center',
   },
   pillText: { color: colors.text, fontWeight: '900', fontSize: 22 },
   pillCode: { color: colors.textDim, fontSize: 16, marginTop: 4 },
-  actionsRow: { flexDirection: 'row', gap: spacing(2), justifyContent: 'space-evenly' },
+  actionsRow: { flexDirection: 'row', gap: spacing(3), justifyContent: 'space-between' },
   btn: {
     flex: 1,
-    minHeight: 56,
+    minHeight: 60,
     borderRadius: radii.xl,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: spacing(1),
-    paddingHorizontal: spacing(1),
+    gap: spacing(1.5),
+    paddingHorizontal: spacing(7.5),
   },
   btnReceive: { backgroundColor: colors.green },
   btnSend: { backgroundColor: colors.gold },
@@ -186,4 +193,6 @@ const styles = StyleSheet.create({
   btnLabelDark: { color: '#0D0D0D', fontWeight: '800' },
   btnLabelLight: { color: '#FFFFFF', fontWeight: '800' },
   pressed: { opacity: 0.92 },
+  lockedRow: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing(3) },
+  lockedText: { color: colors.text, fontWeight: '800' },
 });

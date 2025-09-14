@@ -204,6 +204,7 @@ export default function LessonPath({ groupId, lessons }: Props) {
                     getLessonProgress(n.id).receiveScore >= thresholds.receive
                   }
                   disableActions={n.kind === 'challenge'}
+                  locked={status === 'locked'}
                 />
               )}
               {/* Segment below node (not after last) */}
