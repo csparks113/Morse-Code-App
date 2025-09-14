@@ -11,6 +11,7 @@ import { useRouter, type Href } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { colors, glow, radii, spacing } from '../theme/lessonTheme';
 import { toMorse } from '../utils/morse';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 // icons not used for buttons after reverting styles
 
 type Props = {
@@ -87,7 +88,8 @@ export default function LessonPromptCard({
             }
             hitSlop={8}
           >
-            <Text style={styles.btnLabelDark}>Receive</Text>
+            <Ionicons name="radio" size={18} color="#FFFFFF" />
+            <Text style={styles.btnLabelLight}>Receive</Text>
           </Pressable>
           <Pressable
             disabled={!canSend}
@@ -104,7 +106,8 @@ export default function LessonPromptCard({
             }
             hitSlop={8}
           >
-            <Text style={styles.btnLabel}>{canSend ? 'Send' : 'Send (locked)'}</Text>
+            <MaterialCommunityIcons name="antenna" size={18} color="#FFFFFF" />
+            <Text style={styles.btnLabelLight}>{canSend ? 'Send' : 'Send (locked)'}</Text>
           </Pressable>
         </View>
       </View>
@@ -136,20 +139,20 @@ const styles = StyleSheet.create({
   card: {
     marginTop: -1,
     alignSelf: 'stretch',
-    marginHorizontal: spacing(1),
+    marginHorizontal: spacing(0.5),
     backgroundColor: colors.card,
     borderRadius: radii.xl,
     borderWidth: 2,
     borderColor: colors.border,
-    padding: spacing(3),
+    padding: spacing(4),
     ...glow.medium,
   },
   charsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing(2.5),
-    marginBottom: spacing(3),
-    justifyContent: 'space-evenly',
+    gap: spacing(3),
+    marginBottom: spacing(4),
+    justifyContent: 'space-between',
   },
   pill: {
     backgroundColor: '#151515',
@@ -157,13 +160,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingVertical: spacing(2),
-    paddingHorizontal: spacing(2.5),
-    minWidth: 90,
+    paddingHorizontal: spacing(3),
+    width: '44%',
     alignItems: 'center',
   },
   pillText: { color: colors.text, fontWeight: '900', fontSize: 22 },
   pillCode: { color: colors.textDim, fontSize: 16, marginTop: 4 },
-  actionsRow: { flexDirection: 'row', gap: spacing(3), justifyContent: 'space-evenly' },
+  actionsRow: { flexDirection: 'row', gap: spacing(3), justifyContent: 'space-between' },
   btn: {
     flex: 1,
     minHeight: 56,
@@ -174,10 +177,11 @@ const styles = StyleSheet.create({
     gap: spacing(1.5),
     paddingHorizontal: spacing(6),
   },
-  btnReceive: { backgroundColor: colors.neonTeal },
-  btnSend: { backgroundColor: colors.green },
+  btnReceive: { backgroundColor: colors.green },
+  btnSend: { backgroundColor: colors.gold },
   btnDisabled: { opacity: 0.5 },
   btnLabel: { color: colors.text, fontWeight: '800' },
   btnLabelDark: { color: '#0D0D0D', fontWeight: '800' },
+  btnLabelLight: { color: '#FFFFFF', fontWeight: '800' },
   pressed: { opacity: 0.92 },
 });
