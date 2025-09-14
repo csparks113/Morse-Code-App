@@ -12,8 +12,8 @@ import { colors, spacing, thresholds } from '../../theme/lessonTheme';
 // Card that appears under a node with actions (Receive/Send)
 import LessonPromptCard from './LessonPromptCard';
 import { useProgressStore } from '../../store/useProgressStore';
-import CoinLessonNode from '../../app/components/LessonNode';
-import CoinChallengeNode from '../../app/components/ChallengeNode';
+import CoinLessonNode from './LessonNode';
+import CoinChallengeNode from './ChallengeNode';
 import { LessonCompletion, ChallengeCompletion } from '@/types/progress';
 import { toMorse } from '../../utils/morse';
 
@@ -194,7 +194,6 @@ const styles = StyleSheet.create({
 function formatChars(chars: string[]) {
   return chars.join(' & ');
 }
-
 
 
 
