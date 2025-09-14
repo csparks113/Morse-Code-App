@@ -3,7 +3,7 @@
 // On success we mark 'send' complete in the progress store and roll to another target.
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../../../constants/theme';
 import { getLesson } from '../../../../data/lessons';
@@ -21,7 +21,6 @@ export default function SendLessonScreen() {
     lessonId: string;
   }>();
   const lesson = getLesson(group!, lessonId!);
-  const router = useRouter();
   const markComplete = useProgressStore((s) => s.markComplete);
   const { hapticsEnabled } = useSettingsStore();
 
@@ -41,13 +40,7 @@ export default function SendLessonScreen() {
     }
   }, [lesson]);
 
-  if (!lesson) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Lesson not found</Text>
-      </View>
-    );
-  }
+  // Note: keep hooks above; guard rendering below to satisfy hooks rules
 
   const classifyDuration = (ms: number): Stroke => {
     const unit = getMorseUnitMs();
@@ -72,24 +65,8 @@ export default function SendLessonScreen() {
       const produced = next.join('');
       if (expected.startsWith(produced)) {
         if (produced.length === expected.length) {
-          // success
-          (async () => {
-            if (hapticsEnabled) {
-              await Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Success,
-              );
-            }
-          })();
+          // success: transition state; side-effects handled in useEffect
           setStatus('success');
-          markComplete(group!, lessonId!, 'send');
-          setTimeout(() => {
-            const rand =
-              lesson!.chars[Math.floor(Math.random() * lesson!.chars.length)];
-            setTarget(rand);
-            setExpected(toMorse(rand) ?? '');
-            setStrokes([]);
-            setStatus('idle');
-          }, 700);
         }
         return next;
       } else {
@@ -107,7 +84,41 @@ export default function SendLessonScreen() {
     setPressStart(null);
   };
 
+  // Handle success side-effects outside of state reducer to avoid cross-component
+  // updates during render. This marks progress and rolls a new target.
+  React.useEffect(() => {
+    if (status !== 'success' || !lesson) return;
+    (async () => {
+      try {
+        if (hapticsEnabled) {
+          await Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success,
+          );
+        }
+      } catch {}
+    })();
+
+    // Mark send complete in store (may re-render other screens subscribed to store)
+    markComplete(group!, lessonId!, 'send');
+
+    const t = setTimeout(() => {
+      const rand = lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
+      setTarget(rand);
+      setExpected(toMorse(rand) ?? '');
+      setStrokes([]);
+      setStatus('idle');
+    }, 700);
+    return () => clearTimeout(t);
+  }, [status, lesson, hapticsEnabled, group, lessonId, markComplete]);
+
   return (
+    !lesson ? (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.container}>
+          <Text style={styles.title}>Lesson not found</Text>
+        </View>
+      </SafeAreaView>
+    ) : (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <Text style={styles.title}>{lesson.label} - Send</Text>
@@ -136,6 +147,7 @@ export default function SendLessonScreen() {
         </Pressable>
       </View>
     </SafeAreaView>
+    )
   );
 }
 

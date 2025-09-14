@@ -35,6 +35,13 @@ type ProgressState = {
     score: number,
   ) => void;
   getCompletionRatio: (groupId: string, totalLessons: number) => number;
+  // Counts for progress bar (completed-only states)
+  getCountsGlobal: () => {
+    lessonReceive: number;
+    lessonBoth: number;
+    challengeReceive: number;
+    challengeBoth: number;
+  };
 };
 
 export const useProgressStore = create<ProgressState>()(
@@ -101,6 +108,27 @@ export const useProgressStore = create<ProgressState>()(
           return acc + perLesson;
         }, 0);
         return Math.max(0, Math.min(1, sum / totalLessons));
+      },
+      getCountsGlobal: () => {
+        const out = { lessonReceive: 0, lessonBoth: 0, challengeReceive: 0, challengeBoth: 0 };
+        const all = get().progress;
+        for (const groupId of Object.keys(all)) {
+          const group = all[groupId] ?? {};
+          for (const [id, lp] of Object.entries(group)) {
+            const receive = (lp.receiveScore ?? (lp.receive ? 100 : 0)) >= thresholds.receive;
+            const send = (lp.sendScore ?? (lp.send ? 100 : 0)) >= thresholds.send;
+            const both = receive && send;
+            const isChallenge = id.startsWith('ch-');
+            if (isChallenge) {
+              if (both) out.challengeBoth += 1;
+              else if (receive) out.challengeReceive += 1;
+            } else {
+              if (both) out.lessonBoth += 1;
+              else if (receive) out.lessonReceive += 1;
+            }
+          }
+        }
+        return out;
       },
     }),
     {

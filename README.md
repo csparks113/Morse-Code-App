@@ -18,7 +18,7 @@ A premium dark-themed Expo React Native app for learning, practicing, and master
 - **Expo Router**: File-based navigation, tabs for main screens
 - **Zustand + persist (AsyncStorage)**: Global state with persistence
 - **expo-av**: Audio playback for Morse tones
-- **Component-based UI**: HeaderGroupPicker, ProgressBar, lesson list cards
+- **Component-based UI**: NeonHeaderCard, coin-style LessonPath, ProgressBar
 - **Theme**: Charcoal/black background, neon blue accents, gold for completion
 
 ## Run Instructions
@@ -50,13 +50,23 @@ app/
       [lessonId]/
         receive.tsx     # Individual Receive lesson
         send.tsx        # Individual Send lesson
+  components/
+    Coin.tsx            # coin visuals (used by Lesson/Challenge nodes)
+    LessonNode.tsx      # coin-based lesson node
+    ChallengeNode.tsx   # coin-based challenge node
+    ProgressBar.tsx     # compact coin summary row
 
 components/
-  HeaderGroupPicker.tsx
-  ProgressBar.tsx
+  lessons/
+    NeonHeaderCard.tsx  # header with group picker modal
+    LessonPath.tsx      # vertical path of nodes + prompts
+    LessonPromptCard.tsx# actions under selected node
 
 constants/
-  theme.ts
+  theme.ts              # app shell theme
+
+theme/
+  lessonTheme.ts        # neon theme for lessons path
 
 data/
   lessons.ts

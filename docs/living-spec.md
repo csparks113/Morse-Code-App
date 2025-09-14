@@ -14,4 +14,5 @@ Suggested sections:
 - Internationalization plan (if any)
 - Monetization & paywall plan
 
-Link this file from README has been added.
+This file is linked from the README.
+

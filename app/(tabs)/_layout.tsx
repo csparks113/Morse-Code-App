@@ -6,7 +6,7 @@ import { theme } from '../../constants/theme';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const baseHeight = 56; // your desired bar height without insets
+  const baseHeight = 46; // your desired bar height without insets
   const barHeight = baseHeight + insets.bottom;
   const padBottom = Math.max(0, insets.bottom); // keeps icons off the edge
 

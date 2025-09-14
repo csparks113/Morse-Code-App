@@ -2,17 +2,9 @@
 // Picks a target letter from the lesson, plays its Morse, and asks the user to pick.
 // When the answer is correct we mark 'receive' complete in the progress store.
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Alert,
-  Animated,
-  Easing,
-} from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../../../constants/theme';
@@ -32,7 +24,6 @@ export default function ReceiveLessonScreen() {
   }>();
   const lesson = getLesson(group!, lessonId!);
   const groupObj = getGroupById(group || 'alphabet');
-  const router = useRouter();
   const markComplete = useProgressStore((s) => s.markComplete);
   const { lightEnabled, hapticsEnabled } = useSettingsStore();
 
@@ -45,6 +36,43 @@ export default function ReceiveLessonScreen() {
 
   // Flash overlay animation value (0..1)
   const flash = React.useRef(new Animated.Value(0)).current;
+
+  // Visual flash overlay (if enabled)
+  const pulseFlash = React.useCallback((durationMs: number) => {
+    if (!lightEnabled) return;
+    flash.setValue(0);
+    Animated.sequence([
+      Animated.timing(flash, {
+        toValue: 0.9,
+        duration: Math.min(80, durationMs / 3),
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(flash, {
+        toValue: 0,
+        duration: Math.max(80, durationMs / 2),
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [lightEnabled, flash]);
+
+  // Haptic feedback for dot/dash (if enabled)
+  const hapticTick = React.useCallback(async (symbol: '.' | '-') => {
+    if (!hapticsEnabled) return;
+    if (symbol === '.')
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    else await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }, [hapticsEnabled]);
+
+  const playNow = React.useCallback(async (ch: string) => {
+    await playMorseForText(ch, getMorseUnitMs(), {
+      onSymbolStart: (symbol, durationMs) => {
+        pulseFlash(durationMs);
+        hapticTick(symbol);
+      },
+    });
+  }, [pulseFlash, hapticTick]);
 
   const rollNext = React.useCallback(
     (initial?: string) => {
@@ -70,7 +98,7 @@ export default function ReceiveLessonScreen() {
         playNow(rand);
       }, 2000);
     },
-    [groupObj, lesson],
+    [groupObj, lesson, playNow],
   );
 
   React.useEffect(() => {
@@ -81,6 +109,33 @@ export default function ReceiveLessonScreen() {
     };
   }, [lesson, rollNext]);
 
+  // Note: keep hooks above; guard rendering below to satisfy hooks rules
+
+  const onPlay = async () => {
+    if (!target) return;
+    await playNow(target);
+  };
+
+  const onAnswer = async (pick: string) => {
+    if (!target) return;
+    if (pick === target) {
+      setFeedback('correct');
+      // celebratory haptic
+      (async () => {
+        try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+      })();
+      // mark receive complete for this lesson
+      markComplete(group!, lessonId!, 'receive');
+      // roll to a new target in ~600ms
+      setTimeout(() => rollNext(), 600);
+    } else {
+      setFeedback('incorrect');
+      (async () => {
+        try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
+      })();
+    }
+  };
+
   if (!lesson) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -90,54 +145,6 @@ export default function ReceiveLessonScreen() {
       </SafeAreaView>
     );
   }
-
-  const pulseFlash = (durationMs: number) => {
-    if (!lightEnabled) return;
-    flash.setValue(0);
-    Animated.sequence([
-      Animated.timing(flash, {
-        toValue: 0.9,
-        duration: Math.min(80, durationMs / 3),
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(flash, {
-        toValue: 0,
-        duration: Math.max(80, durationMs / 2),
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const hapticTick = async (symbol: '.' | '-') => {
-    if (!hapticsEnabled) return;
-    if (symbol === '.')
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    else await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  };
-
-  const playNow = async (ch: string) => {
-    await playMorseForText(ch, getMorseUnitMs(), {
-      onSymbolStart: (symbol, durationMs) => {
-        pulseFlash(durationMs);
-        hapticTick(symbol);
-      },
-    });
-  };
-  const onPlay = async () => {
-    if (!target) return;
-    await playNow(target);
-  };
-
-  const onAnswer = (choice: string) => {
-    if (!target) return;
-    const correct = choice.toUpperCase() === target.toUpperCase();
-    setFeedback(correct ? 'correct' : 'incorrect');
-    if (correct) markComplete(group!, lessonId!, 'receive');
-    // brief pause then next
-    setTimeout(() => rollNext(), 900);
-  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -157,7 +164,7 @@ export default function ReceiveLessonScreen() {
           ]}
         />
 
-        <Text style={styles.title}>{lesson.label} • Receive</Text>
+        <Text style={styles.title}>{lesson.label} - Receive</Text>
         <Text style={styles.sub}>Characters: {lesson.chars.join(', ')}</Text>
 
         {/* Spacer */}
@@ -203,8 +210,6 @@ export default function ReceiveLessonScreen() {
     </SafeAreaView>
   );
 }
-
-const BOX = 64;
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.background },
@@ -267,4 +272,3 @@ const styles = StyleSheet.create({
   choicePressed: { backgroundColor: '#081018' },
   btnPressed: { opacity: 0.92 },
 });
-

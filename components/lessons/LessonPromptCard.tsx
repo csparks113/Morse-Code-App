@@ -34,7 +34,7 @@ export default function LessonPromptCard({ groupId, lessonId, label, chars, canS
     (async () => {
       try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
     })();
-  }, []);
+  }, [opacity, scale]);
 
   const receiveHref: Href = {
     pathname: '/lessons/[group]/[lessonId]/receive',

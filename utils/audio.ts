@@ -1,6 +1,8 @@
 // utils/audio.ts
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+// Use legacy API to preserve current behavior on SDK 54
+// (avoids runtime error thrown by new API wrapper)
+import * as FileSystem from 'expo-file-system/legacy';
 import { toMorse } from './morse';
 import { useSettingsStore } from '../store/useSettingsStore';
 
@@ -96,11 +98,11 @@ async function ensureGenerated(hz: number, unitMs: number) {
   const dashBytes = generateSineWavBytes(hz, unitMs * 3);
   const dotB64 = bytesToBase64(dotBytes);
   const dashB64 = bytesToBase64(dashBytes);
-  const dir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? '';
+  const dir = (FileSystem as any).cacheDirectory ?? (FileSystem as any).documentDirectory ?? '';
   const dotUri = dir + `morse-dot-${hz}-${unitMs}.wav`;
   const dashUri = dir + `morse-dash-${hz}-${unitMs}.wav`;
-  await FileSystem.writeAsStringAsync(dotUri, dotB64, { encoding: FileSystem.EncodingType.Base64 });
-  await FileSystem.writeAsStringAsync(dashUri, dashB64, { encoding: FileSystem.EncodingType.Base64 });
+  await FileSystem.writeAsStringAsync(dotUri, dotB64, { encoding: 'base64' as any });
+  await FileSystem.writeAsStringAsync(dashUri, dashB64, { encoding: 'base64' as any });
   const [d1, d2] = await Promise.all([
     Audio.Sound.createAsync({ uri: dotUri }),
     Audio.Sound.createAsync({ uri: dashUri }),
@@ -148,4 +150,3 @@ export async function playMorseForText(
     await new Promise((r) => setTimeout(r, unitGapMs * 3));
   }
 }
-

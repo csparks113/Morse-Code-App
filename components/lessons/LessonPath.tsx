@@ -6,12 +6,16 @@
 //  - Tapping a node reveals a prompt card under it
 // The component is pure layout/interaction; progression state comes from the store.
 import React from 'react';
-import { View, ScrollView, StyleSheet, Text, Dimensions } from 'react-native';
+import { View, ScrollView, StyleSheet, Dimensions, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, thresholds } from '../../theme/lessonTheme';
-import LessonNode, { NodeStatus } from './LessonNode';
+// Card that appears under a node with actions (Receive/Send)
 import LessonPromptCard from './LessonPromptCard';
 import { useProgressStore } from '../../store/useProgressStore';
+import CoinLessonNode from '../../app/components/LessonNode';
+import CoinChallengeNode from '../../app/components/ChallengeNode';
+import { LessonCompletion, ChallengeCompletion } from '@/types/progress';
+import { toMorse } from '../../utils/morse';
 
 type Lesson = { id: string; label: string; chars: string[] };
 
@@ -69,131 +73,108 @@ export default function LessonPath({ groupId, lessons }: Props) {
   const contentStyle = React.useMemo(
     () => ({
       paddingTop: spacing(2),
-      // Keep last node clear of the tab bar without a tall black band
-      paddingBottom: insets.bottom + spacing(1),
+      // Keep last node clear of the tab bar; include base tab height
+      paddingBottom: insets.bottom + spacing(10),
     }),
     [insets.bottom],
   );
+
+  // Precompute completion categories and assign a single active node
+  const statuses = React.useMemo(() => {
+    const out: (LessonCompletion | ChallengeCompletion)[] = [];
+    let activeAssigned = false;
+    derivedNodes.forEach((n) => {
+      const p = getLessonProgress(n.id);
+      const receive = p.receiveScore >= thresholds.receive;
+      const send = p.sendScore >= thresholds.send;
+      const both = receive && send;
+
+      const available = (() => {
+        if (n.kind === 'lesson') {
+          const pos = lessons.findIndex((l) => l.id === n.id);
+          if (pos <= 0) return true;
+          const prevId = lessons[pos - 1].id;
+          return getLessonProgress(prevId).receiveScore >= thresholds.receive;
+        } else {
+          const nStr = String(n.id).replace('ch-', '');
+          const idx = parseInt(nStr, 10);
+          const prevIdx = Math.min(idx * 2 - 1, lessons.length - 1);
+          if (prevIdx < 0) return false;
+          const prevId = lessons[prevIdx].id;
+          return getLessonProgress(prevId).receiveScore >= thresholds.receive;
+        }
+      })();
+
+      let status: LessonCompletion | ChallengeCompletion;
+      if (both) status = 'bothComplete';
+      else if (receive) status = 'receiveComplete';
+      else if (available && !activeAssigned) {
+        status = 'active';
+        activeAssigned = true;
+      } else {
+        status = 'locked';
+      }
+      out.push(status);
+    });
+    return out;
+  }, [derivedNodes, lessons, getLessonProgress]);
 
   return (
     <ScrollView contentContainerStyle={contentStyle}>
       <View style={styles.col}>
         <View style={{ height: firstPad }} />
-        {derivedNodes.map((n, i) => (
-          <View key={n.key} style={{ marginBottom: 0 }}>
-            {/* Node */}
-            <View style={{ alignItems: 'center' }}>
-              <Text style={styles.lessonLabel}>{n.label}</Text>
-              {n.kind === 'lesson' && (
-                <Text style={styles.lessonChars}>{formatChars(n.chars)}</Text>
+        {derivedNodes.map((n, i) => {
+          const status = statuses[i];
+          const isLesson = n.kind === 'lesson';
+          const morseLines = isLesson
+            ? n.chars.map((c) => (toMorse(c) || '').replace(/\./g, '·').replace(/-/g, '—'))
+            : [];
+          return (
+            <View key={n.key} style={{ marginBottom: 0 }}>
+              {/* Node */}
+              <View style={{ alignItems: 'center' }}>
+                <Pressable
+                  onPress={() => setOpenIndex((cur) => (cur === i ? null : i))}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${isLesson ? 'Lesson' : 'Challenge'} - ${n.label}`}
+                >
+                  {isLesson ? (
+                    <CoinLessonNode
+                      data={{
+                        id: String(n.id),
+                        title: n.label,
+                        subtitle: isLesson ? formatChars(n.chars) : undefined,
+                        morse: morseLines,
+                        completion: status as LessonCompletion,
+                      }}
+                    />
+                  ) : (
+                    <CoinChallengeNode
+                      data={{ id: String(n.id), title: 'Challenge', completion: status as ChallengeCompletion }}
+                    />
+                  )}
+                </Pressable>
+              </View>
+              {/* Segment below node (not after last) */}
+              {i < derivedNodes.length - 1 && <View style={styles.segment} />}
+              {openIndex === i && (
+                <LessonPromptCard
+                  groupId={groupId}
+                  lessonId={String(n.id)}
+                  label={n.label}
+                  chars={n.chars}
+                  canSend={getLessonProgress(n.id).receiveScore >= thresholds.receive}
+                  disableActions={n.kind === 'challenge'}
+                />
               )}
-              {renderNode({
-                node: n,
-                index: i,
-                openIndex,
-                setOpenIndex,
-                groupId,
-                getLessonProgress,
-                lessons,
-              })}
             </View>
-            {/* Segment below node (not after last) */}
-            {i < derivedNodes.length - 1 && <View style={styles.segment} />}
-            {openIndex === i && (
-              <LessonPromptCard
-                groupId={groupId}
-                lessonId={String(n.id)}
-                label={n.label}
-                chars={n.chars}
-                canSend={getLessonProgress(n.id).receiveScore >= thresholds.receive}
-                disableActions={n.kind === 'challenge'}
-              />
-            )}
-          </View>
-        ))}
+          );
+        })}
       </View>
     </ScrollView>
   );
 }
-
-// Render a single node with computed status and accessibility label
-function renderNode({ node, index, openIndex, setOpenIndex, groupId, getLessonProgress, lessons }: {
-  node: { kind: 'lesson' | 'challenge'; id: string };
-  index: number;
-  openIndex: number | null;
-  setOpenIndex: React.Dispatch<React.SetStateAction<number | null>>;
-  groupId: string;
-  getLessonProgress: (lessonId: string) => { receiveScore: number; sendScore: number };
-  lessons: Lesson[];
-}) {
-  const isChallenge = node.kind === 'challenge';
-
-  // Availability rules
-  let available = true;
-  if (!isChallenge) {
-    const pos = lessons.findIndex((l) => l.id === node.id);
-    if (pos > 0) {
-      const prevId = lessons[pos - 1].id;
-      available = getLessonProgress(prevId).receiveScore >= thresholds.receive;
-    }
-  } else {
-    const nStr = node.id.replace('ch-', '');
-    const n = parseInt(nStr, 10);
-    const prevIdx = Math.min(n * 2 - 1, lessons.length - 1);
-    if (prevIdx >= 0) {
-      const prevId = lessons[prevIdx].id;
-      available = getLessonProgress(prevId).receiveScore >= thresholds.receive;
-    }
-  }
-
-  const p = getLessonProgress(node.id);
-  const status: NodeStatus = isChallenge
-    ? p.sendScore >= thresholds.send
-      ? 'CHALLENGE_MASTERED'
-      : p.receiveScore >= thresholds.receive
-      ? 'CHALLENGE_RECEIVE_DONE'
-      : available
-      ? 'CHALLENGE_AVAILABLE'
-      : 'LOCKED'
-    : p.sendScore >= thresholds.send
-    ? 'MASTERED'
-    : p.receiveScore >= thresholds.receive
-    ? 'RECEIVE_DONE'
-    : available
-    ? 'AVAILABLE'
-    : 'LOCKED';
-
-  return (
-    <LessonNode
-      index={index}
-      isChallenge={isChallenge}
-      status={status}
-      onPress={() => setOpenIndex((cur) => (cur === index ? null : index))}
-      open={openIndex === index}
-      accessibilityLabel={buildA11yLabel(isChallenge, status)}
-    />
-  );
-}
-
-function buildA11yLabel(isChallenge: boolean, status: NodeStatus) {
-  const base = isChallenge ? "Challenge" : "Lesson";
-  const map: Record<NodeStatus, string> = {
-    LOCKED: "Locked",
-    AVAILABLE: "Available",
-    RECEIVE_DONE: "Receive complete. Send locked.",
-    MASTERED: "Mastered.",
-    CHALLENGE_AVAILABLE: "Challenge available",
-    CHALLENGE_RECEIVE_DONE: "Challenge receive complete. Send locked.",
-    CHALLENGE_MASTERED: "Challenge mastered.",
-  };
-  return `${base} - ${map[status]}`;
-}
-
 const styles = StyleSheet.create({
-  content: {
-    paddingTop: spacing(2),
-    paddingBottom: spacing(8),
-  },
   col: {
     width: '100%',
     paddingHorizontal: spacing(4),
@@ -208,19 +189,11 @@ const styles = StyleSheet.create({
     marginTop: 0,
     marginBottom: 0,
   },
-  lessonLabel: { color: colors.text, fontWeight: '800', marginBottom: spacing(0.25), fontSize: 18 },
-  lessonChars: { color: colors.textDim, marginBottom: spacing(1), fontSize: 14 },
 });
 
 function formatChars(chars: string[]) {
   return chars.join(' & ');
 }
-
-
-
-
-
-
 
 
 

@@ -101,8 +101,8 @@ const styles = StyleSheet.create({
   },
   side: { width: 50, alignItems: 'center', justifyContent: 'center' },
   iconBtn: {
-    width: 50,
-    height: 50,
+    width: 46,
+    height: 46,
     borderRadius: 999,
     backgroundColor: colors.neonTeal,
     alignItems: 'center',
