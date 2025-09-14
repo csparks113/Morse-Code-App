@@ -17,7 +17,7 @@ A premium dark-themed Expo React Native app for learning, practicing, and master
 - **Expo + React Native + TypeScript**: Fast development, cross-platform
 - **Expo Router**: File-based navigation, tabs for main screens
 - **Zustand + persist (AsyncStorage)**: Global state with persistence
-- **expo-av**: Audio playback for Morse tones
+- **expo-av**: Audio playback for Morse tones (SDK 54 deprecates this; we shim FS writes via `expo-file-system/legacy` and can migrate to `expo-audio` later)
 - **Component-based UI**: NeonHeaderCard, coin-style LessonPath, ProgressBar
 - **Theme**: Charcoal/black background, neon blue accents, gold for completion
 
@@ -48,25 +48,24 @@ app/
     [group]/
       overview.tsx      # Group overview
       [lessonId]/
-        receive.tsx     # Individual Receive lesson
-        send.tsx        # Individual Send lesson
-  components/
-    Coin.tsx            # coin visuals (used by Lesson/Challenge nodes)
-    LessonNode.tsx      # coin-based lesson node
-    ChallengeNode.tsx   # coin-based challenge node
-    ProgressBar.tsx     # compact coin summary row
+        receive.tsx     # Receive lesson (multiple-choice listen)
+        send.tsx        # Send lesson (tap/hold keyer)
 
 components/
-  lessons/
-    NeonHeaderCard.tsx  # header with group picker modal
-    LessonPath.tsx      # vertical path of nodes + prompts
-    LessonPromptCard.tsx# actions under selected node
+  Coin.tsx              # Coin visuals (used by Lesson/Challenge nodes)
+  LessonNode.tsx        # Coin-based lesson node
+  ChallengeNode.tsx     # Coin-based challenge node
+  LessonPath.tsx        # Vertical path of nodes + prompts
+  LessonPromptCard.tsx  # Actions under selected node
+  NeonHeaderCard.tsx    # Header with group picker modal
+  ProgressBar.tsx       # Compact coin summary row
 
 constants/
-  theme.ts              # app shell theme
+  theme.ts              # App shell theme (tabs, settings, etc.)
+  coinTheme.ts          # Palette for coin visuals
 
 theme/
-  lessonTheme.ts        # neon theme for lessons path
+  lessonTheme.ts        # Neon theme tokens used by lesson screens
 
 data/
   lessons.ts
@@ -74,6 +73,9 @@ data/
 store/
   useSettingsStore.ts
   useProgressStore.ts
+
+types/
+  progress.ts
 
 utils/
   morse.ts
