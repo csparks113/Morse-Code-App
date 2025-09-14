@@ -109,7 +109,7 @@ export default function HeaderGroupPicker({ groupId, onChange }: Props) {
                         {Math.round(ratio * 100)}% complete
                       </Text>
                     </View>
-                    <Text style={styles.chevron}>›</Text>
+                    <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
                   </Pressable>
                 );
               }}
@@ -221,3 +221,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
+

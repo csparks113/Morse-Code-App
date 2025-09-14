@@ -1,3 +1,6 @@
+// Receive lesson screen: multiple-choice listening exercise.
+// Picks a target letter from the lesson, plays its Morse, and asks the user to pick.
+// When the answer is correct we mark 'receive' complete in the progress store.
 import React from 'react';
 import {
   View,
@@ -230,7 +233,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   iconPlay: {
-    backgroundColor: theme.colors.textSecondary,
+    backgroundColor: theme.colors.accent,
     borderRadius: theme.radius.pill,
     width: 44,
     height: 44,
@@ -253,7 +256,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: theme.colors.textSecondary,
+    borderColor: theme.colors.accent,
   },
   choiceText: {
     color: theme.colors.textPrimary,
@@ -261,6 +264,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  choicePressed: { backgroundColor: '#1E1A12' },
+  choicePressed: { backgroundColor: '#081018' },
   btnPressed: { opacity: 0.92 },
 });
+

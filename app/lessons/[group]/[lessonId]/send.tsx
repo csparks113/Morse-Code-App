@@ -1,3 +1,6 @@
+// Send lesson screen: keying exercise.
+// The user taps/holds to produce dots and dashes until it matches the target letter.
+// On success we mark 'send' complete in the progress store and roll to another target.
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -163,10 +166,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: theme.colors.textSecondary,
+    borderColor: theme.colors.accent,
     ...theme.shadow.card,
   },
-  keyerPressed: { backgroundColor: '#1F1A12' },
+  keyerPressed: { backgroundColor: '#081018' },
   keyerText: {
     color: theme.colors.textPrimary,
     fontWeight: '800',
@@ -175,3 +178,4 @@ const styles = StyleSheet.create({
   strokes: { color: theme.colors.textPrimary },
   btnPressed: { opacity: 0.9 },
 });
+

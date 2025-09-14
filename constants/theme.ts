@@ -1,22 +1,25 @@
 // constants/theme.ts
 // ------------------
-// Centralized Warm Luxe theme tokens so all screens/components can stay consistent.
-// Using simple JS objects (no theming lib required). If you later adopt NativeWind
-// or a UI kit, you can map these tokens into that system.
+// App-wide theme for non-lessons screens (tabs, receive/send screens, etc.).
+// This is the "neon dark" app shell theme the rest of the UI references.
+// - background: deep black
+// - textPrimary: white text for high contrast
+// - textSecondary/muted: greys used for secondary labels
+// - accent: neon blue used for emphasis (active tab, buttons)
+// We intentionally keep this small and framework-agnostic.
 
 export const theme = {
   colors: {
-    // Warm Luxe palette we agreed on:
-    background: '#121212', // Obsidian Black
-    surface: '#1A1A1A', // Slightly lighter than background for cards
-    textPrimary: '#FAF3E0', // Champagne White
-    textSecondary: '#E5C07B', // Desert Sand (also used for progress fill)
-    accent: '#B8860B', // Rich Bronze (for active states/buttons)
-    border: '#2A2A2A', // Subtle borders/dividers
-    muted: '#9E8F6B', // Muted bronze/sand for secondary UI
-    disabled: '#3A3A3A',
-    success: '#7FB77E',
-    error: '#C85C5C',
+    background: '#0D0D0D', // black background
+    surface: '#121212',    // slightly lighter for cards/surfaces
+    textPrimary: '#EAEAEA', // primary text (white)
+    textSecondary: '#B9C0C7', // secondary text (light grey)
+    muted: '#9BA0A6', // tertiary labels
+    accent: '#00E5FF', // neon blue accent
+    border: '#1E2430', // subtle teal-blue divider
+    disabled: '#2A2F36',
+    success: '#39FF14',   // for quick affordances
+    error: '#FF6B6B',
   },
   spacing: (n: number) => 4 * n, // 4dp grid. spacing(4) = 16
   radius: {
@@ -35,12 +38,13 @@ export const theme = {
   },
   shadow: {
     card: {
-      // Cross-platform shadow look (Android elevation + iOS shadow)
+      // Cross-platform shadow (Android elevation + iOS shadow)
       elevation: 4,
       shadowColor: '#000',
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
     },
   },
 } as const;
+

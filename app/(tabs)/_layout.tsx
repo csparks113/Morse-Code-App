@@ -15,15 +15,15 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarHideOnKeyboard: true, // avoids keyboard overlap on Android
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.colors.background,
           borderTopColor: theme.colors.border,
           height: barHeight,
           paddingBottom: padBottom,
         },
-        tabBarActiveTintColor: theme.colors.textSecondary,
-        tabBarInactiveTintColor: theme.colors.muted,
+        tabBarActiveTintColor: theme.colors.accent,
+        tabBarInactiveTintColor: theme.colors.textSecondary,
       }}
     >
       <Tabs.Screen

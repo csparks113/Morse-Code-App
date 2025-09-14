@@ -1,3 +1,8 @@
+// Group Overview screen
+// ---------------------
+// Shows a quick summary of a lesson group: title, all unique characters
+// taught inside the group, and a simple list of lessons. This view is
+// accessed via the help button in the lessons header.
 import React from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -96,4 +101,3 @@ const styles = StyleSheet.create({
   lessonTitle: { color: theme.colors.textPrimary, fontWeight: '700' },
   lessonChars: { color: theme.colors.muted, marginTop: 4 },
 });
-
