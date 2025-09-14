@@ -165,7 +165,7 @@ export default function LessonPath({ groupId, lessons }: Props) {
           const isLesson = n.kind === 'lesson';
           const morseLines = isLesson ? n.chars.map((c) => toMorse(c) ?? '') : [];
           return (
-            <View key={n.key} style={{ marginBottom: 0 }}>
+            <View key={n.key} style={{ marginBottom: 0, position: 'relative' }}>
               {/* Node */}
               <View style={{ alignItems: 'center' }}>
                 <Pressable

@@ -45,7 +45,7 @@ export default function LessonNode({ data }: { data: LessonNodeData }) {
       )} */}
       <Coin color={color as any} kind="lesson" glow={isActive}>
         {data.completion === 'locked' ? (
-          <Text style={{ color: ringHex, fontSize: 30, fontWeight: '900' }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 30, fontWeight: '900' }}>
             ?
           </Text>
         ) : (
@@ -53,7 +53,11 @@ export default function LessonNode({ data }: { data: LessonNodeData }) {
             {!!data.subtitle && (
               <Text
                 style={{
-                  color: ringHex,
+                  color:
+                    data.completion === 'active' ||
+                    data.completion === 'receiveComplete'
+                      ? '#FFFFFF'
+                      : ringHex,
                   fontSize: 22,
                   fontWeight: '700',
                   textAlign: 'center',

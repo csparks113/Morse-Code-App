@@ -11,7 +11,7 @@ import { useRouter, type Href } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { colors, glow, radii, spacing } from '../theme/lessonTheme';
 import { toMorse } from '../utils/morse';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+// icons not used for buttons after reverting styles
 
 type Props = {
   groupId: string;
@@ -87,7 +87,6 @@ export default function LessonPromptCard({
             }
             hitSlop={8}
           >
-            <Ionicons name="radio" size={18} color="#0D0D0D" />
             <Text style={styles.btnLabelDark}>Receive</Text>
           </Pressable>
           <Pressable
@@ -105,8 +104,7 @@ export default function LessonPromptCard({
             }
             hitSlop={8}
           >
-            <MaterialCommunityIcons name="antenna" size={18} color="#0D0D0D" />
-            <Text style={styles.btnLabelDark}>{canSend ? 'Send' : 'Locked'}</Text>
+            <Text style={styles.btnLabel}>{canSend ? 'Send' : 'Send (locked)'}</Text>
           </Pressable>
         </View>
       </View>
@@ -115,7 +113,16 @@ export default function LessonPromptCard({
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignSelf: 'stretch', marginTop: spacing(2), alignItems: 'center', zIndex: 2 },
+  wrap: {
+    alignSelf: 'stretch',
+    marginTop: spacing(2),
+    alignItems: 'center',
+    zIndex: 3,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: spacing(10), // just beneath the coin circle
+  },
   arrow: {
     width: 0,
     height: 0,
@@ -167,8 +174,8 @@ const styles = StyleSheet.create({
     gap: spacing(1.5),
     paddingHorizontal: spacing(6),
   },
-  btnReceive: { backgroundColor: colors.green },
-  btnSend: { backgroundColor: colors.gold },
+  btnReceive: { backgroundColor: colors.neonTeal },
+  btnSend: { backgroundColor: colors.green },
   btnDisabled: { opacity: 0.5 },
   btnLabel: { color: colors.text, fontWeight: '800' },
   btnLabelDark: { color: '#0D0D0D', fontWeight: '800' },
