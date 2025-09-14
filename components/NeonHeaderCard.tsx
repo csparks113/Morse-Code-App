@@ -7,9 +7,9 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
-import { colors, glow, radii, spacing } from '../../theme/lessonTheme';
-import { LESSON_GROUPS } from '../../data/lessons';
-import { useProgressStore } from '../../store/useProgressStore';
+import { colors, glow, radii, spacing } from '../theme/lessonTheme';
+import { LESSON_GROUPS } from '../data/lessons';
+import { useProgressStore } from '../store/useProgressStore';
 
 type Props = {
   groupId: string;

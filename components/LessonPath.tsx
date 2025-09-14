@@ -8,14 +8,14 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, Dimensions, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, thresholds } from '../../theme/lessonTheme';
+import { colors, spacing, thresholds } from '../theme/lessonTheme';
 // Card that appears under a node with actions (Receive/Send)
 import LessonPromptCard from './LessonPromptCard';
-import { useProgressStore } from '../../store/useProgressStore';
+import { useProgressStore } from '../store/useProgressStore';
 import CoinLessonNode from './LessonNode';
 import CoinChallengeNode from './ChallengeNode';
 import { LessonCompletion, ChallengeCompletion } from '@/types/progress';
-import { toMorse } from '../../utils/morse';
+import { toMorse } from '../utils/morse';
 
 type Lesson = { id: string; label: string; chars: string[] };
 

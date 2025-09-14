@@ -11,9 +11,9 @@ import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LESSON_GROUPS } from '../../data/lessons';
 import { colors, spacing } from '../../theme/lessonTheme';
-import NeonHeaderCard from '../../components/lessons/NeonHeaderCard';
-import LessonPath from '../../components/lessons/LessonPath';
-import ProgressBar from '@/components/lessons/ProgressBar';
+import NeonHeaderCard from '@/components/NeonHeaderCard';
+import LessonPath from '@/components/LessonPath';
+import ProgressBar from '@/components/ProgressBar';
 import { useProgressStore } from '../../store/useProgressStore';
 
 export default function LessonsScreen() {

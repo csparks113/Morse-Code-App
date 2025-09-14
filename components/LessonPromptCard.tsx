@@ -9,8 +9,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { colors, glow, radii, spacing } from '../../theme/lessonTheme';
-import { toMorse } from '../../utils/morse';
+import { colors, glow, radii, spacing } from '../theme/lessonTheme';
+import { toMorse } from '../utils/morse';
 
 type Props = {
   groupId: string;
