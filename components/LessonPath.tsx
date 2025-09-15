@@ -207,9 +207,18 @@ export default function LessonPath({ groupId, lessons }: Props) {
                   locked={status === 'locked'}
                 />
               )}
-              {/* Segment below node (not after last) */}
+              {/* Segment below node (not after last). Color is based on the NEXT node */}
               {i < derivedNodes.length - 1 && (
-                <Segment active={status === 'active'} />
+                <Segment
+                  color={(() => {
+                    const nextStatus = statuses[i + 1];
+                    const isNextActiveOrDone =
+                      nextStatus === 'active' ||
+                      nextStatus === 'receiveComplete' ||
+                      nextStatus === 'bothComplete';
+                    return isNextActiveOrDone ? colors.bg : '#2A2F36';
+                  })()}
+                />
               )}
             </View>
           );
@@ -254,25 +263,16 @@ function formatChars(chars: string[]) {
   return chars.join(' & ');
 }
 
-// Vertical dotâ€“dashâ€“dotâ€“dash connector segment
-function Segment({ active }: { active: boolean }) {
-  const activeColor = colors.border; // match header/outline
-  const inactiveColor = '#2A2F36'; // gray for inactive connectors
-  const glowStyle = active
-    ? {
-        shadowColor: activeColor as any,
-        shadowOpacity: 0.7,
-        shadowRadius: 10,
-      }
-    : null;
 
-  const fill = active ? activeColor : inactiveColor;
+// Vertical dot–dash–dot–dash connector segment
+function Segment({ color }: { color: string }) {
+  const fill = color;
   return (
-    <View style={[styles.segmentWrap, glowStyle as any]}>
-      <View style={[styles.dot, { backgroundColor: fill }]} />
-      <View style={[styles.dash, { backgroundColor: fill }]} />
-      <View style={[styles.dot, { backgroundColor: fill }]} />
-      <View style={[styles.dash, { backgroundColor: fill }]} />
+    <View style={styles.segmentWrap}>
+      <View style={[styles.dot, { backgroundColor: fill, width: 6, height: 6, borderRadius: 3, marginVertical: 2 }]} />
+      <View style={[styles.dash, { backgroundColor: fill, width: 5, height: 14, borderRadius: 2.5, marginVertical: 2 }]} />
+      <View style={[styles.dot, { backgroundColor: fill, width: 6, height: 6, borderRadius: 3, marginVertical: 2 }]} />
+      <View style={[styles.dash, { backgroundColor: fill, width: 5, height: 14, borderRadius: 2.5, marginVertical: 2 }]} />
     </View>
   );
 }
