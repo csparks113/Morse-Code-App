@@ -39,7 +39,7 @@ export default function PillLessonNode(p: Props) {
       <View style={styles.pill}>
         {/* Receive half */}
         <Pressable
-          disabled={p.locked || p.receiveDone}
+          disabled={p.locked}
           onPress={p.onReceive}
           style={({ pressed }) => [
             styles.half,
@@ -63,7 +63,7 @@ export default function PillLessonNode(p: Props) {
 
         {/* Send half */}
         <Pressable
-          disabled={p.locked || !p.canSend || p.sendDone === true}
+          disabled={p.locked || !p.canSend}
           onPress={p.onSend}
           style={({ pressed }) => [
             styles.half,
@@ -123,4 +123,3 @@ const styles = StyleSheet.create({
   },
   btnLabel: { color: '#EAEAEA', fontWeight: '800' },
 });
-
