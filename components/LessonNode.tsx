@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import Coin from './Coin';
-import { palette } from '@/theme/coinTheme';
+import { coinPalette as palette } from '@/theme/lessonTheme';
 import { LessonNodeData } from '@/types/progress';
 
 export default function LessonNode({ data }: { data: LessonNodeData }) {

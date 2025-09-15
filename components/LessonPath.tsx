@@ -216,7 +216,7 @@ export default function LessonPath({ groupId, lessons }: Props) {
                       nextStatus === 'active' ||
                       nextStatus === 'receiveComplete' ||
                       nextStatus === 'bothComplete';
-                    return isNextActiveOrDone ? colors.bg : '#2A2F36';
+                    return isNextActiveOrDone ? colors.blue : '#2A2F36';
                   })()}
                 />
               )}
@@ -264,15 +264,17 @@ function formatChars(chars: string[]) {
 }
 
 
-// Vertical dot–dash–dot–dash connector segment
+// Vertical dotï¿½dashï¿½dotï¿½dash connector segment
 function Segment({ color, glow = false }: { color: string; glow?: boolean }) {
   const fill = color;
   return (
     <View style={[styles.segmentWrap, (glow ? { shadowColor: color as any, shadowOpacity: 0.8, shadowRadius: 8 } : null) as any]}>
-      <View style={[styles.dot, { backgroundColor: fill, width: 6, height: 6, borderRadius: 3, marginVertical: 2 }]} />
+      
       <View style={[styles.dash, { backgroundColor: fill, width: 5, height: 14, borderRadius: 2.5, marginVertical: 2 }]} />
       <View style={[styles.dot, { backgroundColor: fill, width: 6, height: 6, borderRadius: 3, marginVertical: 2 }]} />
       <View style={[styles.dash, { backgroundColor: fill, width: 5, height: 14, borderRadius: 2.5, marginVertical: 2 }]} />
-    </View>
+   <View style={[styles.dot, { backgroundColor: fill, width: 6, height: 6, borderRadius: 3, marginVertical: 2 }]} />
+         <View style={[styles.dash, { backgroundColor: fill, width: 5, height: 14, borderRadius: 2.5, marginVertical: 2 }]} />
+   </View>
   );
 }

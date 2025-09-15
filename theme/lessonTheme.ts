@@ -11,10 +11,8 @@ export const colors = {
   line: 'rgba(0,255,224,0.35)', // dotted path
   neonTeal: '#00FFE0',
   blue: '#2F7DFF', // AVAILABLE
-  green: '#39FF14', // RECEIVE_DONE
+  green: '#50C878', // RECEIVE_DONE
   gold: '#FFD700', // MASTERED / crown / star
-  purple: '#9B5CFF', // CHALLENGE_AVAILABLE
-  silver: '#C0C9D6', // CHALLENGE_RECEIVE_DONE
   border: 'rgba(0,255,224,0.55)', // neon outline for cards/nodes
 } as const;
 
@@ -30,3 +28,15 @@ export const glow = {
 export const radii = { xl: 20, full: 999 } as const;
 export const spacing = (n: number) => n * 8;
 export const thresholds = { receive: 80, send: 80 } as const;
+// Coin visuals palette for lesson/challenge nodes and small summary coins.
+// Kept here to avoid a separate coinTheme file.
+export const coinPalette = {
+  blue: colors.blue,
+  green: colors.green,
+  gold: colors.gold,
+  purple: '#8B5CF6',
+  silver: '#BFC7D1',
+  grayCoin: '#2A2E35',
+  grayMuted: '#666A70',
+  white: '#FFFFFF',
+} as const;

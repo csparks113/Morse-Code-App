@@ -1,7 +1,7 @@
 // app/components/Coin.tsx
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { palette } from '@/theme/coinTheme';
+import { coinPalette as palette } from '@/theme/lessonTheme';
 
 type CoinKind = 'lesson' | 'challenge';
 type CoinColor = 'blue' | 'green' | 'purple' | 'gray' | 'silver' | 'gold';
