@@ -1,40 +1,21 @@
 // LessonPath
-// ----------
-// Renders the vertical dotted path of lessons:
-//  - Each node sits on the center line
-//  - A small dotted segment connects nodes (but never above the first)
-//  - Tapping a node reveals a prompt card under it
-// The component is pure layout/interaction; progression state comes from the store.
+// Pill lesson/challenge nodes with receive/send halves and vertical connectors.
 import React from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  Dimensions,
-  Pressable,
-} from 'react-native';
+import { View, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, thresholds } from '../theme/lessonTheme';
-// Card that appears under a node with actions (Receive/Send)
-import LessonPromptCard from './LessonPromptCard';
+import { useRouter } from 'expo-router';
 import { useProgressStore } from '../store/useProgressStore';
-import CoinLessonNode from './LessonNode';
-import CoinChallengeNode from './ChallengeNode';
+import PillLessonNode from './PillLessonNode';
 import { LessonCompletion, ChallengeCompletion } from '@/types/progress';
-import { toMorse } from '../utils/morse';
 
 type Lesson = { id: string; label: string; chars: string[] };
+type Props = { groupId: string; lessons: Lesson[] };
 
-type Props = {
-  groupId: string;
-  lessons: Lesson[];
-};
-
-// The path is purely presentational: it computes availability only for layout.
 export default function LessonPath({ groupId, lessons }: Props) {
   const progress = useProgressStore((s) => s.progress);
   const insets = useSafeAreaInsets();
-  const [openIndex, setOpenIndex] = React.useState<number | null>(null);
+  const router = useRouter();
 
   const getLessonProgress = React.useCallback(
     (lessonId: string) => {
@@ -48,72 +29,34 @@ export default function LessonPath({ groupId, lessons }: Props) {
     [groupId, progress],
   );
 
-  // Build a derived sequence that inserts a Challenge node after every 2 lessons.
-  // Challenge N reviews all characters learned so far (cumulative recap).
   type Node =
-    | {
-        kind: 'lesson';
-        key: string;
-        index: number;
-        label: string;
-        chars: string[];
-        id: string;
-      }
-    | {
-        kind: 'challenge';
-        key: string;
-        index: number;
-        label: string;
-        chars: string[];
-        id: string;
-      };
+    | { kind: 'lesson'; key: string; index: number; label: string; chars: string[]; id: string }
+    | { kind: 'challenge'; key: string; index: number; label: string; chars: string[]; id: string };
 
   const derivedNodes: Node[] = React.useMemo(() => {
     const out: Node[] = [];
     let cumulativeChars: string[] = [];
     lessons.forEach((l, i) => {
-      out.push({
-        kind: 'lesson',
-        key: `l-${l.id}`,
-        index: out.length,
-        label: l.label,
-        chars: l.chars,
-        id: l.id,
-      });
+      out.push({ kind: 'lesson', key: `l-${l.id}`, index: out.length, label: l.label, chars: l.chars, id: l.id });
       cumulativeChars = Array.from(new Set([...cumulativeChars, ...l.chars]));
       if (i % 2 === 1) {
         const chId = `ch-${Math.ceil((i + 1) / 2)}`;
-        out.push({
-          kind: 'challenge',
-          key: chId,
-          index: out.length,
-          label: 'Challenge',
-          chars: cumulativeChars,
-          id: chId,
-        });
+        out.push({ kind: 'challenge', key: chId, index: out.length, label: 'Challenge', chars: cumulativeChars, id: chId });
       }
     });
     return out;
   }, [lessons]);
 
-  // Small top spacer to position the first node higher on screen
   const firstPad = React.useMemo(() => {
     const h = Dimensions.get('window').height;
-    // Move lesson 1 higher (smaller spacer)
     return Math.max(spacing(1.5), Math.floor(h * 0.04));
   }, []);
 
-  // Keep the last node clear of the tab bar without creating a large empty band
   const contentStyle = React.useMemo(
-    () => ({
-      paddingTop: spacing(2),
-      // Keep last node clear of the tab bar; include base tab height
-      paddingBottom: insets.bottom + spacing(10),
-    }),
+    () => ({ paddingTop: spacing(2), paddingBottom: insets.bottom + spacing(10) }),
     [insets.bottom],
   );
 
-  // Precompute completion categories and assign a single active node
   const statuses = React.useMemo(() => {
     const out: (LessonCompletion | ChallengeCompletion)[] = [];
     let activeAssigned = false;
@@ -122,7 +65,6 @@ export default function LessonPath({ groupId, lessons }: Props) {
       const receive = p.receiveScore >= thresholds.receive;
       const send = p.sendScore >= thresholds.send;
       const both = receive && send;
-
       const available = (() => {
         if (n.kind === 'lesson') {
           const pos = lessons.findIndex((l) => l.id === n.id);
@@ -138,16 +80,11 @@ export default function LessonPath({ groupId, lessons }: Props) {
           return getLessonProgress(prevId).receiveScore >= thresholds.receive;
         }
       })();
-
       let status: LessonCompletion | ChallengeCompletion;
       if (both) status = 'bothComplete';
       else if (receive) status = 'receiveComplete';
-      else if (available && !activeAssigned) {
-        status = 'active';
-        activeAssigned = true;
-      } else {
-        status = 'locked';
-      }
+      else if (available && !activeAssigned) { status = 'active'; activeAssigned = true; }
+      else status = 'locked';
       out.push(status);
     });
     return out;
@@ -156,67 +93,31 @@ export default function LessonPath({ groupId, lessons }: Props) {
   return (
     <ScrollView contentContainerStyle={contentStyle}>
       <View style={styles.col}>
-        {openIndex !== null && (
-          <Pressable style={styles.overlay} onPress={() => setOpenIndex(null)} />
-        )}
         <View style={{ height: firstPad }} />
         {derivedNodes.map((n, i) => {
           const status = statuses[i];
           const isLesson = n.kind === 'lesson';
-          const morseLines = isLesson ? n.chars.map((c) => toMorse(c) ?? '') : [];
           return (
-            <View key={n.key} style={{ marginBottom: 0, position: 'relative' }}>
-              {/* Node */}
+            <View key={n.key} style={{ marginBottom: 0 }}>
               <View style={{ alignItems: 'center' }}>
-                <Pressable
-                  onPress={() => setOpenIndex((cur) => (cur === i ? null : i))}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${isLesson ? 'Lesson' : 'Challenge'} - ${n.label}`}
-                >
-                  {isLesson ? (
-                    <CoinLessonNode
-                      data={{
-                        id: String(n.id),
-                        title: n.label,
-                        subtitle: isLesson ? formatChars(n.chars) : undefined,
-                        morse: morseLines,
-                        completion: status as LessonCompletion,
-                      }}
-                    />
-                  ) : (
-                    <CoinChallengeNode
-                      data={{
-                        id: String(n.id),
-                        title: 'Challenge',
-                        completion: status as ChallengeCompletion,
-                      }}
-                    />
-                  )}
-                </Pressable>
-              </View>
-              {openIndex === i && (
-                <LessonPromptCard
-                  groupId={groupId}
-                  lessonId={String(n.id)}
-                  label={n.label}
-                  chars={n.chars}
-                  canSend={
-                    getLessonProgress(n.id).receiveScore >= thresholds.receive
-                  }
-                  disableActions={n.kind === 'challenge'}
+                <PillLessonNode
+                  title={isLesson ? n.label : 'Challenge'}
+                  subtitle={isLesson ? formatChars(n.chars) : undefined}
                   locked={status === 'locked'}
+                  receiveDone={status === 'receiveComplete' || status === 'bothComplete'}
+                  sendDone={status === 'bothComplete'}
+                  isActive={status === 'active'}
+                  canSend={getLessonProgress(n.id).receiveScore >= thresholds.receive}
+                  onReceive={() => router.push({ pathname: '/lessons/[group]/[lessonId]/receive', params: { group: groupId, lessonId: String(n.id) } })}
+                  onSend={() => router.push({ pathname: '/lessons/[group]/[lessonId]/send', params: { group: groupId, lessonId: String(n.id) } })}
                 />
-              )}
-              {/* Segment below node (not after last). Color is based on the NEXT node */}
+              </View>
               {i < derivedNodes.length - 1 && (
                 <Segment
-                  color={(() => {
-                    const nextStatus = statuses[i + 1];
-                    const isNextActiveOrDone =
-                      nextStatus === 'active' ||
-                      nextStatus === 'receiveComplete' ||
-                      nextStatus === 'bothComplete';
-                    return isNextActiveOrDone ? colors.blue : '#2A2F36';
+                  {...(() => {
+                    const next = statuses[i + 1];
+                    const on = next === 'active' || next === 'receiveComplete' || next === 'bothComplete';
+                    return on ? { color: colors.border, glow: true } : { color: '#2A2F36', glow: false };
                   })()}
                 />
               )}
@@ -227,54 +128,26 @@ export default function LessonPath({ groupId, lessons }: Props) {
     </ScrollView>
   );
 }
+
 const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
-  },
-  col: {
-    width: '100%',
-    paddingHorizontal: spacing(4),
-  },
-  segmentWrap: {
-    alignSelf: 'center',
-    height: spacing(6),
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing(0.5),
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  dash: {
-    width: 6,
-    height: 18,
-    borderRadius: 3,
-  },
+  col: { width: '100%', paddingHorizontal: spacing(4) },
+  segmentWrap: { alignSelf: 'center', height: spacing(6), justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing(0.5) },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  dash: { width: 6, height: 18, borderRadius: 3 },
 });
 
-function formatChars(chars: string[]) {
-  return chars.join(' & ');
-}
+function formatChars(chars: string[]) { return chars.join(' & '); }
 
-
-// Vertical dot�dash�dot�dash connector segment
+// Vertical dot–dash–dot–dash connector segment
 function Segment({ color, glow = false }: { color: string; glow?: boolean }) {
   const fill = color;
   return (
     <View style={[styles.segmentWrap, (glow ? { shadowColor: color as any, shadowOpacity: 0.8, shadowRadius: 8 } : null) as any]}>
-      
+      <View style={[styles.dot, { backgroundColor: fill, width: 6, height: 6, borderRadius: 3, marginVertical: 2 }]} />
       <View style={[styles.dash, { backgroundColor: fill, width: 5, height: 14, borderRadius: 2.5, marginVertical: 2 }]} />
       <View style={[styles.dot, { backgroundColor: fill, width: 6, height: 6, borderRadius: 3, marginVertical: 2 }]} />
       <View style={[styles.dash, { backgroundColor: fill, width: 5, height: 14, borderRadius: 2.5, marginVertical: 2 }]} />
-   <View style={[styles.dot, { backgroundColor: fill, width: 6, height: 6, borderRadius: 3, marginVertical: 2 }]} />
-         <View style={[styles.dash, { backgroundColor: fill, width: 5, height: 14, borderRadius: 2.5, marginVertical: 2 }]} />
-   </View>
+    </View>
   );
 }
+
