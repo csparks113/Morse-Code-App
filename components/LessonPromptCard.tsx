@@ -83,22 +83,19 @@ export default function LessonPromptCard({
         ) : (
         <View style={styles.actionsRow}>
           <Pressable
-            disabled={!!disableActions}
+          
             onPress={() => router.push(receiveHref)}
             style={({ pressed }) => [
               styles.btn,
               styles.btnReceive,
-              !!disableActions && styles.btnDisabled,
               pressed && styles.pressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel={
-              disableActions ? 'Receive (unavailable)' : 'Start Receive'
-            }
+            accessibilityLabel={'Start Receive'}
             hitSlop={8}
           >
             <Ionicons name="radio" size={18} color="#FFFFFF" />
-            <Text style={styles.btnLabelLight}>Receive</Text>
+            <Text style={styles.btnLabel}>Receive</Text>
           </Pressable>
           <Pressable
             disabled={!canSend}
@@ -116,7 +113,8 @@ export default function LessonPromptCard({
             hitSlop={8}
           >
             <MaterialCommunityIcons name="antenna" size={18} color="#FFFFFF" />
-            <Text style={styles.btnLabelLight}>{canSend ? 'Send' : 'Send (locked)'}</Text>
+            <Text style={styles.btnLabel}>Send</Text>
+            <Text style={styles.btnLabel}>{canSend ? '' : '(locked)'}</Text>
           </Pressable>
         </View> )}
       </View>
@@ -153,24 +151,24 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     borderWidth: 2,
     borderColor: colors.border,
-    padding: spacing(4.5),
+    padding: spacing(2),
     ...glow.medium,
   },
   charsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing(3),
+    gap: spacing(2),
     marginBottom: spacing(4),
-    justifyContent: 'space-between',
+    justifyContent: 'space-evenly',
   },
   pill: {
     backgroundColor: '#151515',
     borderRadius: radii.xl,
     borderWidth: 1.5,
     borderColor: colors.border,
-    paddingVertical: spacing(2),
-    paddingHorizontal: spacing(3),
-    width: '44%',
+    paddingVertical: spacing(1),
+    paddingHorizontal: spacing(1),
+    width: '36%',
     alignItems: 'center',
   },
   pillText: { color: colors.text, fontWeight: '900', fontSize: 22 },
@@ -178,21 +176,20 @@ const styles = StyleSheet.create({
   actionsRow: { flexDirection: 'row', gap: spacing(3), justifyContent: 'space-between' },
   btn: {
     flex: 1,
-    minHeight: 60,
+    minHeight: 50,
+    minWidth: 90,
     borderRadius: radii.xl,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: spacing(1.5),
-    paddingHorizontal: spacing(7.5),
+    paddingHorizontal: spacing(1),
   },
   btnReceive: { backgroundColor: colors.green },
   btnSend: { backgroundColor: colors.gold },
   btnDisabled: { opacity: 0.5 },
-  btnLabel: { color: colors.text, fontWeight: '800' },
-  btnLabelDark: { color: '#0D0D0D', fontWeight: '800' },
-  btnLabelLight: { color: '#FFFFFF', fontWeight: '800' },
+  btnLabel: { color: '#FFFFFF', fontWeight: '800' },
   pressed: { opacity: 0.92 },
-  lockedRow: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing(3) },
-  lockedText: { color: colors.text, fontWeight: '800' },
+  lockedRow: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing(1) },
+  lockedText: { color: colors.text, fontSize: 16, fontWeight: '800' },
 });

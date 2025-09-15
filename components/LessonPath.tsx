@@ -208,7 +208,9 @@ export default function LessonPath({ groupId, lessons }: Props) {
                 />
               )}
               {/* Segment below node (not after last) */}
-              {i < derivedNodes.length - 1 && <View style={styles.segment} />}
+              {i < derivedNodes.length - 1 && (
+                <Segment active={status === 'active'} />
+              )}
             </View>
           );
         })}
@@ -229,18 +231,48 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: spacing(4),
   },
-  segment: {
+  segmentWrap: {
     alignSelf: 'center',
-    width: 0,
     height: spacing(6),
-    borderLeftWidth: 2,
-    borderColor: colors.line,
-    borderStyle: 'dotted',
-    marginTop: 0,
-    marginBottom: 0,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing(0.5),
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  dash: {
+    width: 6,
+    height: 18,
+    borderRadius: 3,
   },
 });
 
 function formatChars(chars: string[]) {
   return chars.join(' & ');
+}
+
+// Vertical dot–dash–dot–dash connector segment
+function Segment({ active }: { active: boolean }) {
+  const activeColor = colors.border; // match header/outline
+  const inactiveColor = '#2A2F36'; // gray for inactive connectors
+  const glowStyle = active
+    ? {
+        shadowColor: activeColor as any,
+        shadowOpacity: 0.7,
+        shadowRadius: 10,
+      }
+    : null;
+
+  const fill = active ? activeColor : inactiveColor;
+  return (
+    <View style={[styles.segmentWrap, glowStyle as any]}>
+      <View style={[styles.dot, { backgroundColor: fill }]} />
+      <View style={[styles.dash, { backgroundColor: fill }]} />
+      <View style={[styles.dot, { backgroundColor: fill }]} />
+      <View style={[styles.dash, { backgroundColor: fill }]} />
+    </View>
+  );
 }
