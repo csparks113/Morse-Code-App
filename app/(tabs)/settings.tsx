@@ -36,12 +36,14 @@ export default function SettingsScreen() {
     receiveOnly,
     audioEnabled,
     lightEnabled,
+    torchEnabled,
     hapticsEnabled,
     wpm,
     toneHz,
     setReceiveOnly,
     setAudioEnabled,
     setLightEnabled,
+    setTorchEnabled,
     setHapticsEnabled,
     setWpm,
     setToneHz,
@@ -68,10 +70,17 @@ export default function SettingsScreen() {
         />
 
         <Row
-          title="Light (flash)"
+          title="Screen flash"
           sub="Blink a visual overlay with each dot/dash"
           value={lightEnabled}
           onChange={setLightEnabled}
+        />
+
+        <Row
+          title="Flashlight"
+          sub="Use the device torch for output cues"
+          value={torchEnabled}
+          onChange={setTorchEnabled}
         />
 
         <Row
@@ -84,14 +93,14 @@ export default function SettingsScreen() {
         {/* WPM control */}
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Speed (WPM)</Text>
+            <Text style={styles.rowTitle}>Send Speed (WPM)</Text>
             <Text style={styles.rowSub}>
               Controls Morse timing (dot = 1200 / WPM ms)
             </Text>
           </View>
           <View style={styles.stepper}>
             <Pressable
-              accessibilityLabel="Decrease WPM"
+              accessibilityLabel="Decrease send speed"
               onPress={() => setWpm(Math.max(5, wpm - 1))}
               style={({ pressed }) => [styles.step, pressed && styles.pressed]}
             >
@@ -99,7 +108,7 @@ export default function SettingsScreen() {
             </Pressable>
             <Text style={styles.stepValue}>{wpm}</Text>
             <Pressable
-              accessibilityLabel="Increase WPM"
+              accessibilityLabel="Increase send speed"
               onPress={() => setWpm(Math.min(60, wpm + 1))}
               style={({ pressed }) => [styles.step, pressed && styles.pressed]}
             >

@@ -1,12 +1,12 @@
 // LessonPath
-// Pill lesson/challenge nodes with receive/send halves and vertical connectors.
+// Renders lesson and challenge cards in a scrollable list.
 import React from 'react';
 import { View, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, thresholds } from '../theme/lessonTheme';
+import { spacing, thresholds } from '../theme/lessonTheme';
 import { useRouter } from 'expo-router';
 import { useProgressStore } from '../store/useProgressStore';
-import PillLessonNode from './PillLessonNode';
+import LessonCard from './LessonCard';
 import { LessonCompletion, ChallengeCompletion } from '@/types/progress';
 
 type Lesson = { id: string; label: string; chars: string[] };
@@ -53,8 +53,11 @@ export default function LessonPath({ groupId, lessons }: Props) {
   }, []);
 
   const contentStyle = React.useMemo(
-    () => ({ paddingTop: spacing(2), paddingBottom: insets.bottom + spacing(10) }),
-    [insets.bottom],
+    () => ({
+      paddingTop: firstPad,
+      paddingBottom: insets.bottom + spacing(8),
+    }),
+    [firstPad, insets.bottom],
   );
 
   const statuses = React.useMemo(() => {
@@ -64,64 +67,61 @@ export default function LessonPath({ groupId, lessons }: Props) {
       const p = getLessonProgress(n.id);
       const receive = p.receiveScore >= thresholds.receive;
       const send = p.sendScore >= thresholds.send;
-      const both = receive && send;
       const available = (() => {
         if (n.kind === 'lesson') {
-          const pos = lessons.findIndex((l) => l.id === n.id);
+          const pos = lessons.findIndex((lesson) => lesson.id === n.id);
           if (pos <= 0) return true;
           const prevId = lessons[pos - 1].id;
           return getLessonProgress(prevId).receiveScore >= thresholds.receive;
-        } else {
-          const nStr = String(n.id).replace('ch-', '');
-          const idx = parseInt(nStr, 10);
-          const prevIdx = Math.min(idx * 2 - 1, lessons.length - 1);
-          if (prevIdx < 0) return false;
-          const prevId = lessons[prevIdx].id;
-          return getLessonProgress(prevId).receiveScore >= thresholds.receive;
         }
+        const idx = parseInt(String(n.id).replace('ch-', ''), 10);
+        const prevIdx = Math.min(idx * 2 - 1, lessons.length - 1);
+        if (prevIdx < 0) return false;
+        const prevId = lessons[prevIdx].id;
+        return getLessonProgress(prevId).receiveScore >= thresholds.receive;
       })();
       let status: LessonCompletion | ChallengeCompletion;
-      if (both) status = 'bothComplete';
+      if (receive && send) status = 'bothComplete';
       else if (receive) status = 'receiveComplete';
-      else if (available && !activeAssigned) { status = 'active'; activeAssigned = true; }
-      else status = 'locked';
+      else if (available && !activeAssigned) {
+        status = 'active';
+        activeAssigned = true;
+      } else status = 'locked';
       out.push(status);
     });
     return out;
   }, [derivedNodes, lessons, getLessonProgress]);
 
   return (
-    <ScrollView contentContainerStyle={contentStyle}>
-      <View style={styles.col}>
-        <View style={{ height: firstPad }} />
+    <ScrollView contentContainerStyle={contentStyle} showsVerticalScrollIndicator={false}>
+      <View style={styles.list}>
         {derivedNodes.map((n, i) => {
           const status = statuses[i];
           const isLesson = n.kind === 'lesson';
+          const progressState = getLessonProgress(n.id);
+          const receiveDone = status === 'receiveComplete' || status === 'bothComplete';
+          const sendDone = status === 'bothComplete';
+          const canSend = progressState.receiveScore >= thresholds.receive;
+          const locked = status === 'locked';
+
           return (
-            <View key={n.key} style={{ marginBottom: 0 }}>
-              <View style={{ alignItems: 'center' }}>
-                <PillLessonNode
-                  title={isLesson ? n.label : 'Challenge'}
-                  subtitle={isLesson ? formatChars(n.chars) : undefined}
-                  locked={status === 'locked'}
-                  receiveDone={status === 'receiveComplete' || status === 'bothComplete'}
-                  sendDone={status === 'bothComplete'}
-                  isActive={status === 'active'}
-                  canSend={getLessonProgress(n.id).receiveScore >= thresholds.receive}
-                  onReceive={() => router.push({ pathname: '/lessons/[group]/[lessonId]/receive', params: { group: groupId, lessonId: String(n.id) } })}
-                  onSend={() => router.push({ pathname: '/lessons/[group]/[lessonId]/send', params: { group: groupId, lessonId: String(n.id) } })}
-                />
-              </View>
-              {i < derivedNodes.length - 1 && (
-                <Segment
-                  {...(() => {
-                    const next = statuses[i + 1];
-                    const on = next === 'active' || next === 'receiveComplete' || next === 'bothComplete';
-                    return on ? { color: colors.border, glow: true } : { color: '#2A2F36', glow: false };
-                  })()}
-                />
-              )}
-            </View>
+            <LessonCard
+              key={n.key}
+              kind={n.kind}
+              title={isLesson ? n.label : 'Challenge'}
+              subtitle={isLesson ? formatChars(n.chars) : undefined}
+              locked={locked}
+              receiveDone={receiveDone}
+              sendDone={sendDone}
+              isActive={status === 'active'}
+              canSend={canSend}
+              onReceive={() =>
+                router.push({ pathname: '/lessons/[group]/[lessonId]/receive', params: { group: groupId, lessonId: String(n.id) } })
+              }
+              onSend={() =>
+                router.push({ pathname: '/lessons/[group]/[lessonId]/send', params: { group: groupId, lessonId: String(n.id) } })
+              }
+            />
           );
         })}
       </View>
@@ -129,25 +129,12 @@ export default function LessonPath({ groupId, lessons }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  col: { width: '100%', paddingHorizontal: spacing(4) },
-  segmentWrap: { alignSelf: 'center', height: spacing(6), justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing(0.5) },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  dash: { width: 6, height: 18, borderRadius: 3 },
-});
-
-function formatChars(chars: string[]) { return chars.join(' & '); }
-
-// Vertical dot–dash–dot–dash connector segment
-function Segment({ color, glow = false }: { color: string; glow?: boolean }) {
-  const fill = color;
-  return (
-    <View style={[styles.segmentWrap, (glow ? { shadowColor: color as any, shadowOpacity: 0.8, shadowRadius: 8 } : null) as any]}>
-      <View style={[styles.dot, { backgroundColor: fill, width: 6, height: 6, borderRadius: 3, marginVertical: 2 }]} />
-      <View style={[styles.dash, { backgroundColor: fill, width: 5, height: 14, borderRadius: 2.5, marginVertical: 2 }]} />
-      <View style={[styles.dot, { backgroundColor: fill, width: 6, height: 6, borderRadius: 3, marginVertical: 2 }]} />
-      <View style={[styles.dash, { backgroundColor: fill, width: 5, height: 14, borderRadius: 2.5, marginVertical: 2 }]} />
-    </View>
-  );
+function formatChars(chars: string[]) {
+  return chars.join(' & ');
 }
 
+const styles = StyleSheet.create({
+  list: {
+    width: '100%',
+  },
+});

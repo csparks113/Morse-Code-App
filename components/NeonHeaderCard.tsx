@@ -1,6 +1,6 @@
 // NeonHeaderCard
 // --------------
-// Centered header with a neon outline.
+// Centered header with a neon outline and inline progress bar.
 // Left button opens the groups modal; right button opens the overview.
 // The middle shows the current section and group title.
 import React from 'react';
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
-import { colors, glow, radii, spacing } from '../theme/lessonTheme';
+import { colors, glow, radii, spacing, thresholds } from '../theme/lessonTheme';
 import { LESSON_GROUPS } from '../data/lessons';
 import { useProgressStore } from '../store/useProgressStore';
 
@@ -36,6 +36,29 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
       LESSON_GROUPS.findIndex((g) => g.id === groupId),
     ) + 1;
   const getCompletionRatio = useProgressStore((s) => s.getCompletionRatio);
+  const progress = useProgressStore((s) => s.progress);
+
+  const bar = React.useMemo(() => {
+    const g = group;
+    if (!g) return { total: 0, done: 0, ratio: 0 };
+    const lessons = g.lessons;
+    const chCount = Math.floor(lessons.length / 2);
+    const ids = [
+      ...lessons.map((l) => l.id),
+      ...Array.from({ length: chCount }, (_, i) => `ch-${i + 1}`),
+    ];
+    let done = 0;
+    const total = ids.length * 2;
+    const groupProg = progress[g.id] ?? {};
+    ids.forEach((id) => {
+      const p = groupProg[id];
+      const receive = (p?.receiveScore ?? (p?.receive ? 100 : 0)) >= thresholds.receive;
+      const send = (p?.sendScore ?? (p?.send ? 100 : 0)) >= thresholds.send;
+      if (receive) done += 1;
+      if (send) done += 1;
+    });
+    return { total, done, ratio: total === 0 ? 0 : done / total };
+  }, [group, progress]);
 
   const overviewHref: Href = {
     pathname: '/lessons/[group]/overview',
@@ -61,6 +84,14 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
           <View style={styles.centerTextWrap}>
             <Text style={styles.section}>Section {sectionIndex}</Text>
             <Text style={styles.title}>{group.title}</Text>
+            <View
+              style={styles.headerBarTrack}
+              accessibilityRole="progressbar"
+              accessibilityLabel="Section progress"
+              accessibilityValue={{ min: 0, max: bar.total, now: bar.done }}
+            >
+              <View style={[styles.headerBarFill, { width: `${bar.ratio * 100}%` }]} />
+            </View>
           </View>
           <View style={styles.side}>
             <Pressable
@@ -163,14 +194,24 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(3),
     paddingHorizontal: spacing(4),
     alignSelf: 'stretch',
-    // Fit within screen with a small margin relative to outer padding
     marginHorizontal: -spacing(3),
     ...glow.medium,
   },
   centerTextWrap: { alignItems: 'center', justifyContent: 'center', flex: 1 },
   section: { color: colors.textDim, fontSize: 15, marginBottom: 4 },
   title: { color: colors.text, fontWeight: '800', fontSize: 28 },
-
+  headerBarTrack: {
+    height: 6,
+    backgroundColor: '#2A2F36',
+    borderRadius: 999,
+    marginTop: spacing(1.5),
+    width: '70%',
+    overflow: 'hidden',
+  },
+  headerBarFill: {
+    height: '100%',
+    backgroundColor: '#FFD700',
+  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -186,6 +227,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     color: colors.text,
     fontWeight: '800',
+    fontSize: 20,
     marginBottom: spacing(1),
   },
   groupRow: {
