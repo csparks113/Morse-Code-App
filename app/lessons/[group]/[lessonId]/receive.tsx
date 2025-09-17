@@ -1,6 +1,3 @@
-// Receive lesson screen: multiple-choice listening exercise.
-// Picks a target letter from the lesson, plays its Morse, and asks the user to pick.
-// When the answer is correct we mark 'receive' complete in the progress store.
 import React from 'react';
 import {
   View,
@@ -8,301 +5,517 @@ import {
   StyleSheet,
   Pressable,
   Animated,
-  Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { theme } from '../../../../theme/theme';
-import {
-  getLesson,
-  getGroupById,
-  LESSON_GROUPS,
-} from '../../../../data/lessons';
-import { playMorseForText, getMorseUnitMs } from '../../../../utils/audio';
-import { useProgressStore } from '../../../../store/useProgressStore';
-import { useSettingsStore } from '../../../../store/useSettingsStore';
+import SessionHeader from '@/components/session/SessionHeader';
+import ProgressBar from '@/components/session/ProgressBar';
+import ActionButton from '@/components/session/ActionButton';
+import OutputToggle from '@/components/session/OutputToggle';
+import SessionSummary from '@/components/session/SessionSummary';
+import { colors, spacing } from '@/theme/lessonTheme';
+import { toMorse } from '@/utils/morse';
+import { playMorseCode, getMorseUnitMs } from '@/utils/audio';
+import { useProgressStore } from '@/store/useProgressStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { buildSessionMeta } from './sessionMeta';
 
-export default function ReceiveLessonScreen() {
-  const { group, lessonId } = useLocalSearchParams<{
-    group: string;
-    lessonId: string;
-  }>();
-  const lesson = getLesson(group!, lessonId!);
-  const groupObj = getGroupById(group || 'alphabet');
-  const markComplete = useProgressStore((s) => s.markComplete);
-  const { lightEnabled, hapticsEnabled } = useSettingsStore();
+const TOTAL_QUESTIONS = 20;
+const KEYBOARD_LAYOUT = [
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+  ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+  ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+  ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
+];
 
-  const [target, setTarget] = React.useState<string | null>(null);
-  const [choices, setChoices] = React.useState<string[]>([]); // 4 options
-  const [feedback, setFeedback] = React.useState<
-    null | 'correct' | 'incorrect'
-  >(null);
+type Summary = { correct: number; percent: number };
 
-  // autoplay timer
-  const autoplayRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+type FeedbackState = 'idle' | 'correct' | 'wrong';
 
-  // Flash overlay animation value (0..1)
+function formatMorse(code?: string | null) {
+  if (!code) return '';
+  return code.split('').join(' ');
+}
+
+export default function ReceiveSessionScreen() {
+  const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
+  const router = useRouter();
+  const homePath = '../../../../(tabs)/index';
+  const meta = React.useMemo(() => buildSessionMeta(group || 'alphabet', lessonId), [group, lessonId]);
+  const setScore = useProgressStore((s) => s.setScore);
+
+  const {
+    audioEnabled,
+    lightEnabled,
+    torchEnabled,
+    hapticsEnabled,
+    setAudioEnabled,
+    setLightEnabled,
+    setTorchEnabled,
+    setHapticsEnabled,
+  } = useSettingsStore();
+
+  const [started, setStarted] = React.useState(false);
+  const [questions, setQuestions] = React.useState<string[]>([]);
+  const [results, setResults] = React.useState<boolean[]>([]);
+  const [feedback, setFeedback] = React.useState<FeedbackState>('idle');
+  const [showReveal, setShowReveal] = React.useState(false);
+  const [summary, setSummary] = React.useState<Summary | null>(null);
+
   const flash = React.useRef(new Animated.Value(0)).current;
+  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Visual flash overlay (if enabled)
-  const pulseFlash = React.useCallback(
+  const currentIndex = results.length;
+  const currentTarget = questions[currentIndex] ?? null;
+  const currentMorse = currentTarget ? toMorse(currentTarget) ?? '' : '';
+  const learnedSet = React.useMemo(() => new Set(meta.pool.map((c) => c.toUpperCase())), [meta.pool]);
+
+  React.useEffect(() => {
+    return () => {
+      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    };
+  }, []);
+
+  const runFlash = React.useCallback(
     (durationMs: number) => {
       if (!lightEnabled) return;
+      flash.stopAnimation();
       flash.setValue(0);
       Animated.sequence([
         Animated.timing(flash, {
           toValue: 0.9,
-          duration: Math.min(80, durationMs / 3),
-          easing: Easing.out(Easing.cubic),
+          duration: Math.min(120, durationMs * 0.6),
           useNativeDriver: true,
         }),
         Animated.timing(flash, {
           toValue: 0,
-          duration: Math.max(80, durationMs / 2),
-          easing: Easing.in(Easing.cubic),
+          duration: Math.max(120, durationMs * 0.6),
           useNativeDriver: true,
         }),
       ]).start();
     },
-    [lightEnabled, flash],
+    [flash, lightEnabled],
   );
 
-  // Haptic feedback for dot/dash (if enabled)
   const hapticTick = React.useCallback(
     async (symbol: '.' | '-') => {
       if (!hapticsEnabled) return;
-      if (symbol === '.')
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      else await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      try {
+        const style = symbol === '.' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium;
+        await Haptics.impactAsync(style);
+      } catch {
+        // Ignore missing haptics hardware.
+      }
     },
     [hapticsEnabled],
   );
 
-  const playNow = React.useCallback(
-    async (ch: string) => {
-      await playMorseForText(ch, getMorseUnitMs(), {
-        onSymbolStart: (symbol, durationMs) => {
-          pulseFlash(durationMs);
-          hapticTick(symbol);
-        },
-      });
-    },
-    [pulseFlash, hapticTick],
-  );
-
-  const rollNext = React.useCallback(
-    (initial?: string) => {
-      if (!lesson) return;
-      const rand =
-        initial ??
-        lesson.chars[Math.floor(Math.random() * lesson.chars.length)];
-      setTarget(rand);
-      setFeedback(null);
-
-      // build 3 decoys
-      const pool =
-        groupObj?.lessons.flatMap((l) => l.chars).filter((c) => c !== rand) ??
-        Array.from(
-          new Set(
-            LESSON_GROUPS.flatMap((g) => g.lessons.flatMap((l) => l.chars)),
-          ),
-        ).filter((c) => c !== rand);
-
-      const shuffled = [...new Set(pool)].sort(() => 0.5 - Math.random());
-      const decoys = shuffled.slice(0, 3);
-      const four = [...decoys, rand].sort(() => 0.5 - Math.random());
-      setChoices(four);
-
-      // Autoplay after 2s
-      if (autoplayRef.current) clearTimeout(autoplayRef.current);
-      autoplayRef.current = setTimeout(() => {
-        playNow(rand);
-      }, 600);
-    },
-    [groupObj, lesson, playNow],
-  );
+  const playTarget = React.useCallback(async () => {
+    if (!currentMorse) return;
+    await playMorseCode(currentMorse, getMorseUnitMs(), {
+      onSymbolStart: (symbol, duration) => {
+        runFlash(duration);
+        hapticTick(symbol);
+      },
+    });
+  }, [currentMorse, runFlash, hapticTick]);
 
   React.useEffect(() => {
-    if (!lesson) return;
-    rollNext();
-    return () => {
-      if (autoplayRef.current) clearTimeout(autoplayRef.current);
-    };
-  }, [lesson, rollNext]);
+    if (!started || !currentTarget || summary || feedback !== 'idle') return;
+    const timer = setTimeout(() => {
+      playTarget();
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [started, currentTarget, summary, playTarget]);
 
-  // Note: keep hooks above; guard rendering below to satisfy hooks rules
-
-  const onPlay = async () => {
-    if (!target) return;
-    await playNow(target);
-  };
-
-  const onAnswer = async (pick: string) => {
-    if (!target) return;
-    if (pick === target) {
-      setFeedback('correct');
-      // celebratory haptic
-      (async () => {
-        try {
-          await Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success,
-          );
-        } catch {}
-      })();
-      // mark receive complete for this lesson
-      markComplete(group!, lessonId!, 'receive');
-      // roll to a new target in ~600ms
-      setTimeout(() => rollNext(), 600);
-    } else {
-      setFeedback('incorrect');
-      (async () => {
-        try {
-          await Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Error,
-          );
-        } catch {}
-      })();
+  const startSession = React.useCallback(() => {\n    if (!meta.pool.length) return;\n    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    const generated: string[] = [];
+    for (let i = 0; i < TOTAL_QUESTIONS; i += 1) {
+      const pick = meta.pool[Math.floor(Math.random() * meta.pool.length)];
+      generated.push(pick);
     }
-  };
+    setQuestions(generated);
+    setResults([]);
+    setFeedback('idle');
+    setShowReveal(false);
+    setSummary(null);
+    setStarted(true);
+  }, [meta.pool]);
 
-  if (!lesson) {
+  const finishQuestion = React.useCallback(
+    (isCorrect: boolean) => {
+      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+      setFeedback(isCorrect ? 'correct' : 'wrong');
+
+      advanceTimerRef.current = setTimeout(() => {
+        setResults((prev) => {
+          if (prev.length >= TOTAL_QUESTIONS) return prev;
+          const next = [...prev, isCorrect];
+          if (next.length === TOTAL_QUESTIONS) {
+            const correctCount = next.filter(Boolean).length;
+            const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
+            setSummary({ correct: correctCount, percent: pct });
+            setStarted(false);
+            if (group && lessonId) {
+              setScore(group, lessonId, 'receive', pct);
+            }
+          }
+          return next;
+        });
+        setShowReveal(false);
+        setFeedback('idle');
+      }, 500);
+    },
+    [group, lessonId, setScore],
+  );
+
+  const submitAnswer = React.useCallback(
+    (choice: string) => {
+      if (!started || !currentTarget || summary || feedback !== 'idle') return;
+      const isCorrect = choice.toUpperCase() === currentTarget.toUpperCase();
+      finishQuestion(isCorrect);
+    },
+    [started, currentTarget, summary, finishQuestion],
+  );
+
+  const handleClose = React.useCallback(() => {
+    router.replace(homePath);
+  }, [router]);
+
+  const handleReveal = React.useCallback(() => {
+    if (!started || summary || !currentTarget) return;
+    setShowReveal((prev) => !prev);
+  }, [started, summary, currentTarget]);
+
+  const canInteract = started && !summary && !!currentTarget && feedback === 'idle';
+  const visibleChar = !started
+    ? ''
+    : feedback === 'idle'
+    ? '?'
+    : currentTarget ?? '?';
+  const progressValue = results.length;
+
+  if (!meta.pool.length) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.container}>
-          <Text style={styles.title}>Lesson not found</Text>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>Content unavailable.</Text>
+          <Pressable onPress={handleClose} style={({ pressed }) => [styles.emptyBtn, pressed && { opacity: 0.92 }]}>
+            <Text style={styles.emptyBtnText}>Back to Lessons</Text>
+          </Pressable>
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (summary) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <SessionSummary
+          percent={summary.percent}
+          correct={summary.correct}
+          total={TOTAL_QUESTIONS}
+          onContinue={handleClose}
+        />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safe}>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            backgroundColor: colors.text,
+            opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.2] }),
+          },
+        ]}
+      />
+
       <View style={styles.container}>
-        {/* Flash overlay */}
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: theme.colors.textPrimary,
-              opacity: flash.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 0.18],
-              }),
-            },
-          ]}
+        <SessionHeader
+          labelTop={meta.headerTop}
+          labelBottom="RECEIVE"
+          onClose={handleClose}
         />
 
-        <Text style={styles.title}>{lesson.label} - Receive</Text>
-        <Text style={styles.sub}>Characters: {lesson.chars.join(', ')}</Text>
+        <ProgressBar value={progressValue} total={TOTAL_QUESTIONS} />
 
-        {/* Spacer */}
-        <View style={{ flex: 1 }} />
-
-        {/* Feedback and Play icon */}
-        <View style={styles.feedbackRow}>
-          <Text
-            style={[
-              styles.feedbackText,
-              feedback === 'correct' && { color: theme.colors.success },
-              feedback === 'incorrect' && { color: theme.colors.error },
-            ]}
-          >
-            {feedback === 'correct' && 'Correct'}
-            {feedback === 'incorrect' && 'Incorrect'}
-          </Text>
-          <Pressable
-            onPress={onPlay}
-            style={({ pressed }) => [
-              styles.iconPlay,
-              pressed && styles.btnPressed,
-            ]}
-            accessibilityLabel="Play tone"
-          >
-            <Ionicons name="play" size={20} color={theme.colors.background} />
-          </Pressable>
-        </View>
-
-        {/* 2x2 Multiple-choice grid at bottom */}
-        <View style={styles.choiceGrid}>
-          {choices.map((c) => (
+        <Text style={styles.promptLabel}>Identify the character</Text>
+        <View style={styles.promptArea}>
+          {!started ? (
             <Pressable
-              key={c}
-              onPress={() => onAnswer(c)}
-              style={({ pressed }) => [
-                styles.choiceSquare,
-                pressed && styles.choicePressed,
+              accessibilityRole="button"
+              onPress={startSession}
+              style={({ pressed }) => [styles.startBtn, pressed && { opacity: 0.92 }]}
+            >
+              <Text style={styles.startText}>Start</Text>
+            </Pressable>
+          ) : (
+            <Text
+              style={[
+                styles.promptChar,
+                feedback === 'correct' && { color: colors.gold },
+                feedback === 'wrong' && { color: '#FF6B6B' },
               ]}
             >
-              <Text style={styles.choiceText}>{c}</Text>
-            </Pressable>
-          ))}
+              {visibleChar}
+            </Text>
+          )}
         </View>
+        {showReveal && canInteract && (
+          <Text style={styles.reveal}>{formatMorse(currentMorse)}</Text>
+        )}
+
+        <View style={styles.controls}>
+          <View style={styles.actionRow}>
+            <ActionButton
+              icon={showReveal ? 'eye-off-outline' : 'eye-outline'}
+              accessibilityLabel="Reveal code"
+              onPress={handleReveal}
+              active={showReveal}
+              disabled={!canInteract}
+            />
+            <ActionButton
+              icon="play"
+              accessibilityLabel="Play code"
+              onPress={playTarget}
+              disabled={!canInteract}
+            />
+          </View>
+
+          <View style={styles.toggleRow}>
+            <OutputToggle
+              icon="vibrate"
+              accessibilityLabel="Toggle haptics"
+              active={hapticsEnabled}
+              onPress={() => setHapticsEnabled(!hapticsEnabled)}
+            />
+            <OutputToggle
+              icon="monitor"
+              accessibilityLabel="Toggle screen flash"
+              active={lightEnabled}
+              onPress={() => setLightEnabled(!lightEnabled)}
+            />
+            <OutputToggle
+              icon="volume-high"
+              accessibilityLabel="Toggle audio"
+              active={audioEnabled}
+              onPress={() => setAudioEnabled(!audioEnabled)}
+            />
+            <OutputToggle
+              icon="flashlight"
+              accessibilityLabel="Toggle flashlight"
+              active={torchEnabled}
+              onPress={() => setTorchEnabled(!torchEnabled)}
+            />
+          </View>
+        </View>
+
+        {meta.isChallenge ? (
+          <View style={styles.keyboard}>
+            {KEYBOARD_LAYOUT.map((row) => (
+              <View key={row.join('-')} style={styles.keyboardRow}>
+                {row.map((key) => {
+                  const learned = learnedSet.has(key);
+                  const active = learned && canInteract;
+                  return (
+                    <Pressable
+                      key={key}
+                      disabled={!learned || !canInteract}
+                      onPress={() => submitAnswer(key)}
+                      style={({ pressed }) => [
+                        styles.key,
+                        learned && styles.keyLearned,
+                        active && pressed && styles.keyPressed,
+                        !learned && styles.keyDisabled,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.keyText,
+                          learned ? styles.keyTextActive : styles.keyTextDisabled,
+                        ]}
+                      >
+                        {key}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.lessonChoices}>
+            {meta.pool.map((char) => (
+              <Pressable
+                key={char}
+                onPress={() => submitAnswer(char)}
+                disabled={!canInteract}
+                style={({ pressed }) => [
+                  styles.choice,
+                  pressed && styles.choicePressed,
+                  !canInteract && { opacity: 0.5 },
+                ]}
+              >
+                <Text style={styles.choiceText}>{char}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: theme.colors.background },
+  safe: { flex: 1, backgroundColor: colors.bg },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing(4),
-    gap: theme.spacing(3),
+    paddingHorizontal: spacing(4),
+    paddingTop: spacing(5),
+    paddingBottom: spacing(5),
+    gap: spacing(3),
   },
-  title: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.typography.title,
-    fontWeight: '800',
+  promptLabel: {
+    color: colors.textDim,
+    textAlign: 'center',
+    fontSize: 15,
+    letterSpacing: 0.6,
   },
-  sub: { color: theme.colors.muted },
-
-  feedbackRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing(3),
-  },
-  feedbackText: {
-    color: theme.colors.muted,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  iconPlay: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius.pill,
-    width: 44,
-    height: 44,
+  promptArea: {
+    height: 140,
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  choiceGrid: {
-    marginTop: theme.spacing(3),
+  startBtn: {
+    minWidth: 180,
+    paddingVertical: spacing(2.5),
+    paddingHorizontal: spacing(6),
+    borderRadius: 32,
+    backgroundColor: colors.blueNeon,
+  },
+  startText: {
+    color: colors.bg,
+    fontWeight: '800',
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  promptChar: {
+    fontSize: 104,
+    fontWeight: '900',
+    color: colors.text,
+    letterSpacing: 6,
+    textAlign: 'center',
+  },
+  reveal: {
+    color: colors.blueNeon,
+    fontSize: 24,
+    letterSpacing: 6,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  controls: {
+    gap: spacing(3),
+    alignItems: 'center',
+  },
+  actionRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing(3),
+    justifyContent: 'center',
+    gap: spacing(2.5),
+  },
+  toggleRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    width: '100%',
+    maxWidth: 280,
+    alignSelf: 'center',
   },
-  choiceSquare: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    width: '48%', // 2 per row with gap
-    aspectRatio: 1,
+  lessonChoices: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing(2.5),
+  },
+  choice: {
+    flex: 1,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: '#0F151D',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
+    paddingVertical: spacing(3),
+  },
+  choicePressed: {
+    backgroundColor: '#15202A',
   },
   choiceText: {
-    color: theme.colors.textPrimary,
-    fontSize: 22,
+    color: colors.text,
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: 4,
+  },
+  keyboard: {
+    gap: spacing(1.5),
+    alignItems: 'center',
+  },
+  keyboardRow: {
+    flexDirection: 'row',
+    gap: spacing(1.2),
+  },
+  key: {
+    width: 44,
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#1F2933',
+    backgroundColor: '#0F151D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyLearned: {
+    borderColor: colors.blueNeon,
+  },
+  keyPressed: {
+    backgroundColor: '#15202A',
+  },
+  keyDisabled: {
+    opacity: 0.35,
+  },
+  keyText: {
+    fontSize: 16,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  choicePressed: { backgroundColor: '#081018' },
-  btnPressed: { opacity: 0.92 },
+  keyTextActive: {
+    color: colors.blueNeon,
+  },
+  keyTextDisabled: {
+    color: '#4A5058',
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing(4),
+    padding: spacing(4),
+  },
+  emptyText: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  emptyBtn: {
+    backgroundColor: colors.blueNeon,
+    borderRadius: 30,
+    paddingVertical: spacing(2.5),
+    paddingHorizontal: spacing(6),
+  },
+  emptyBtnText: {
+    color: colors.bg,
+    fontWeight: '800',
+  },
 });

@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ViewStyle, Animated, Easing } from 'react-native';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '@/theme/lessonTheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors } from '@/theme/lessonTheme';
 
 type Props = {
   kind: 'lesson' | 'challenge';
@@ -12,112 +12,214 @@ type Props = {
   locked: boolean;
   receiveDone: boolean;
   sendDone: boolean;
-  isActive: boolean;
-  canSend: boolean;
+  isActive: boolean; // receive available
+  canSend: boolean;  // send available
   onReceive: () => void;
   onSend: () => void;
   style?: ViewStyle;
 };
 
-const goldOutline = '#FFD700';
-const goldFill = '#B8860B';
-const cardBg = '#101214';
-const grayBorder = '#2A2F36';
-const grayFill = '#15171C';
-const mutedIcon = '#3E424B';
-const crownSize = 28;
+/** Palette */
+const GOLD_OUTLINE = colors.gold;
+const GOLD_FILL = '#B8860B'; // keep if you like the warmer fill; or use colors.gold as both
+const CARD_BG = '#101214';
+const GRAY_BORDER = '#2A2F36';
+const GRAY_FILL = '#15171C';
+const MUTED_ICON = '#3E424B';
+
+// Two-tone blues from theme:
+const DEEP_BLUE = colors.blueDeep; // unlocked / available
+const NEON_BLUE = colors.blueNeon; // active / pulsing
+
+const CROWN_SIZE = 28;
+const CIRCLE_SIZE = 52;
 
 type CircleState = { active: boolean; completed: boolean; locked: boolean };
 
-function circleStyles({ active, completed, locked }: CircleState) {
-  if (locked) return { bg: grayFill, border: grayBorder, icon: mutedIcon };
-  if (completed) return { bg: goldFill, border: goldOutline, icon: goldOutline };
-  if (active) return { bg: colors.blue, border: colors.border, icon: colors.border };
-  return { bg: grayFill, border: grayBorder, icon: grayBorder };
+/** Pulse helper for active outline buttons */
+function usePulse(enabled: boolean) {
+  const scale = React.useRef(new Animated.Value(1)).current;
+  React.useEffect(() => {
+    if (!enabled) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.08, duration: 950, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1.0, duration: 950, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [enabled, scale]);
+  return scale;
+}
+
+function CircleButton({
+  state,
+  iconName,
+  onPress,
+  accessibilityLabel,
+}: {
+  state: CircleState;
+  iconName: keyof typeof MaterialCommunityIcons.glyphMap;
+  onPress: () => void;
+  accessibilityLabel: string;
+}) {
+  const isActiveOutline = state.active && !state.completed && !state.locked;
+  const isUnlockedIdle = !state.locked && !state.completed && !state.active;
+
+  const pulse = usePulse(isActiveOutline);
+
+  // Resolve style
+  let backgroundColor = GRAY_FILL;
+  let borderColor = GRAY_BORDER;
+  let iconColor: string = GRAY_BORDER;
+
+  if (state.locked) {
+    backgroundColor = GRAY_FILL;
+    borderColor = GRAY_BORDER;
+    iconColor = MUTED_ICON;
+  } else if (state.completed) {
+    backgroundColor = GOLD_FILL;
+    borderColor = GOLD_OUTLINE;
+    iconColor = GOLD_OUTLINE;
+  } else if (isActiveOutline) {
+    backgroundColor = 'transparent';
+    borderColor = NEON_BLUE;
+    iconColor = NEON_BLUE;
+  } else if (isUnlockedIdle) {
+    backgroundColor = 'transparent';
+    borderColor = DEEP_BLUE;
+    iconColor = DEEP_BLUE;
+  }
+
+  return (
+    <Pressable
+      disabled={state.locked}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.circleBase,
+        { backgroundColor, borderColor },
+        pressed && !state.locked && { opacity: 0.92 },
+      ]}
+      accessibilityLabel={accessibilityLabel}
+    >
+      {isActiveOutline && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.glowRing,
+            { borderColor: NEON_BLUE, transform: [{ scale: pulse }], opacity: 0.55 },
+          ]}
+        />
+      )}
+      <MaterialCommunityIcons name={iconName} size={22} color={iconColor} />
+    </Pressable>
+  );
 }
 
 export default function LessonCard(p: Props) {
   const bothComplete = p.receiveDone && p.sendDone;
-  const outline = bothComplete ? goldOutline : grayBorder;
+
+  // Per-side states
+  const left: CircleState = {
+    active: p.isActive && !p.receiveDone && !p.locked,
+    completed: p.receiveDone,
+    locked: p.locked,
+  };
+  const right: CircleState = {
+    active: p.canSend && !p.sendDone && !p.locked,
+    completed: p.sendDone,
+    locked: p.locked || !p.canSend,
+  };
+
+  // Card border + subtitle logic
+  const anyActive = (left.active || right.active) && !bothComplete;
+  const anyUnlockedIdle =
+    (!left.locked && !left.completed && !left.active) ||
+    (!right.locked && !right.completed && !right.active);
+
+  const cardBorder = bothComplete
+    ? GOLD_OUTLINE
+    : anyActive
+    ? NEON_BLUE
+    : anyUnlockedIdle
+    ? DEEP_BLUE
+    : GRAY_BORDER;
+
+  const subtitleColor = bothComplete
+    ? GOLD_OUTLINE
+    : anyActive
+    ? NEON_BLUE
+    : anyUnlockedIdle
+    ? DEEP_BLUE
+    : MUTED_ICON;
+
+  // Crown state (Challenge)
+  const crownState: 'none' | 'partial' | 'complete' = bothComplete ? 'complete' : anyActive ? 'partial' : 'none';
+
   const label = p.subtitle ? `${p.title} ${p.subtitle}` : p.title;
 
-  const left = circleStyles({ active: p.isActive && !p.receiveDone && !p.locked, completed: p.receiveDone, locked: p.locked });
-  const right = circleStyles({ active: p.canSend && !p.sendDone && !p.locked, completed: p.sendDone, locked: p.locked || !p.canSend });
-
   return (
-    <View
-      style={[styles.card, { borderColor: outline }, p.style]}
-      accessibilityLabel={label}
-    >
-      <Pressable
-        disabled={p.locked}
-        onPress={p.onReceive}
-        style={({ pressed }) => [
-          styles.circle,
-          { backgroundColor: left.bg, borderColor: left.border },
-          pressed && !p.locked && { opacity: 0.92 },
-        ]}
-        accessibilityLabel="Receive"
-      >
-        <MaterialCommunityIcons name="radar" size={22} color={left.icon as string} />
-      </Pressable>
+    <View style={[styles.card, { borderColor: cardBorder }, p.style]} accessibilityLabel={label}>
+      <CircleButton state={left} iconName="radar" onPress={p.onReceive} accessibilityLabel="Receive" />
+
       <View style={styles.center}>
         {p.kind === 'lesson' ? (
           <>
             <Text style={styles.title}>{p.title}</Text>
-            {!!p.subtitle && <Text style={styles.subtitle}>{p.subtitle}</Text>}
+            {!!p.subtitle && <Text style={[styles.subtitle, { color: subtitleColor }]}>{p.subtitle}</Text>}
           </>
         ) : (
           <>
             <Text style={styles.title}>Challenge</Text>
-            <ChallengeCrown filled={bothComplete} />
+            <ChallengeCrown state={crownState} />
           </>
         )}
       </View>
-      <Pressable
-        disabled={p.locked || !p.canSend}
-        onPress={p.onSend}
-        style={({ pressed }) => [
-          styles.circle,
-          { backgroundColor: right.bg, borderColor: right.border },
-          pressed && !(p.locked || !p.canSend) && { opacity: 0.92 },
-        ]}
-        accessibilityLabel="Send"
-      >
-        <MaterialCommunityIcons name="antenna" size={22} color={right.icon as string} />
-      </Pressable>
+
+      <CircleButton state={right} iconName="antenna" onPress={p.onSend} accessibilityLabel="Send" />
     </View>
   );
 }
 
-function ChallengeCrown({ filled }: { filled: boolean }) {
-  if (!filled) {
+// Crown: gray (none) → NEON blue (partial) → gold gradient (complete)
+function ChallengeCrown({ state }: { state: 'none' | 'partial' | 'complete' }) {
+  if (state === 'complete') {
+    return (
+      <MaskedView
+        style={styles.crownMask}
+        maskElement={
+          <View style={styles.crownMask}>
+            <MaterialCommunityIcons name="crown" size={CROWN_SIZE} color="#fff" />
+          </View>
+        }
+      >
+        <LinearGradient
+          colors={['#FFD700', '#FFC837', '#FFB347']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.crownGradient}
+        />
+      </MaskedView>
+    );
+  }
+  if (state === 'partial') {
     return (
       <MaterialCommunityIcons
-        name="crown-outline"
-        size={crownSize}
-        color={grayBorder}
-        accessibilityLabel="Challenge crown"
+        name="crown"
+        size={CROWN_SIZE}
+        color={NEON_BLUE}
+        accessibilityLabel="Challenge crown (in progress)"
       />
     );
   }
-
   return (
-    <MaskedView
-      style={styles.crownMask}
-      maskElement={(
-        <View style={styles.crownMask}>
-          <MaterialCommunityIcons name="crown" size={crownSize} color="#fff" />
-        </View>
-      )}
-    >
-      <LinearGradient
-        colors={['#FFD700', '#FFC837', '#FFB347']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.crownGradient}
-      />
-    </MaskedView>
+    <MaterialCommunityIcons
+      name="crown-outline"
+      size={CROWN_SIZE}
+      color={GRAY_BORDER}
+      accessibilityLabel="Challenge crown"
+    />
   );
 }
 
@@ -126,32 +228,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: cardBg,
+    backgroundColor: CARD_BG,
     borderRadius: 22,
     borderWidth: 2,
-    borderColor: grayBorder,
+    borderColor: GRAY_BORDER,
     paddingVertical: 16,
     paddingHorizontal: 18,
     marginVertical: 10,
   },
-  circle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  circleBase: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    overflow: 'visible',
+  },
+  glowRing: {
+    position: 'absolute',
+    width: CIRCLE_SIZE + 10,
+    height: CIRCLE_SIZE + 10,
+    borderRadius: (CIRCLE_SIZE + 10) / 2,
     borderWidth: 2,
   },
   center: { alignItems: 'center', justifyContent: 'center', flex: 1, gap: 4 },
   title: { color: '#FFFFFF', fontWeight: '800', fontSize: 18 },
-  subtitle: { color: colors.neonTeal, fontWeight: '800' },
+  subtitle: { fontWeight: '800' },
   crownMask: {
-    width: crownSize,
-    height: crownSize,
+    width: CROWN_SIZE,
+    height: CROWN_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  crownGradient: {
-    flex: 1,
-  },
+  crownGradient: { flex: 1 },
 });
+

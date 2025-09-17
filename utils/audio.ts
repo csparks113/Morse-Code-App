@@ -15,7 +15,7 @@ let currentUnit: number | null = null;
 // Exposed as a function so UI changes (settings) are reflected immediately.
 export function getMorseUnitMs(): number {
   const { wpm } = useSettingsStore.getState() as any;
-  const safeWpm = Math.max(5, Math.min(60, Number(wpm) || 20));
+  const safeWpm = Math.max(5, Math.min(60, Number(wpm) || 12));
   return Math.round(1200 / safeWpm);
 }
 
@@ -143,18 +143,17 @@ export async function playMorseCode(
     const symbol = code[i] as '.' | '-';
     const durationMs = unitGapMs * (symbol === '.' ? 1 : 3);
 
-    // Notify screens to do visuals/haptics
     opts?.onSymbolStart?.(symbol, durationMs);
 
-    // Play sound if enabled and loaded (no-op otherwise)
     if (audioEnabled && genDot && genDash) {
       const sound = symbol === '.' ? genDot : genDash;
       await sound?.replayAsync();
     }
 
-    // Symbol length + intra-character gap (1 unit)
     await new Promise((r) => setTimeout(r, durationMs));
-    await new Promise((r) => setTimeout(r, unitGapMs));
+    if (i < code.length - 1) {
+      await new Promise((r) => setTimeout(r, unitGapMs));
+    }
   }
 }
 
@@ -163,11 +162,22 @@ export async function playMorseForText(
   unitGapMs = getMorseUnitMs(),
   opts?: PlayOpts,
 ) {
-  for (const ch of text.split('')) {
+  const chars = text.split('');
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    if (ch === ' ') {
+      await new Promise((r) => setTimeout(r, unitGapMs * 7));
+      continue;
+    }
+
     const code = toMorse(ch);
     if (!code) continue;
+
     await playMorseCode(code, unitGapMs, opts);
-    // Inter-letter gap = ~3 units
-    await new Promise((r) => setTimeout(r, unitGapMs * 3));
+
+    const next = chars[i + 1];
+    if (next && next !== ' ') {
+      await new Promise((r) => setTimeout(r, unitGapMs * 3));
+    }
   }
 }

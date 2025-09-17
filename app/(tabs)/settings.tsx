@@ -40,6 +40,8 @@ export default function SettingsScreen() {
     hapticsEnabled,
     wpm,
     toneHz,
+    signalTolerancePercent,
+    gapTolerancePercent,
     setReceiveOnly,
     setAudioEnabled,
     setLightEnabled,
@@ -47,6 +49,8 @@ export default function SettingsScreen() {
     setHapticsEnabled,
     setWpm,
     setToneHz,
+    setSignalTolerancePercent,
+    setGapTolerancePercent,
   } = useSettingsStore();
 
   return (
@@ -110,6 +114,60 @@ export default function SettingsScreen() {
             <Pressable
               accessibilityLabel="Increase send speed"
               onPress={() => setWpm(Math.min(60, wpm + 1))}
+              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
+            >
+              <Text style={styles.stepText}>+</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Signal tolerance */}
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Signal tolerance</Text>
+            <Text style={styles.rowSub}>
+              Acceptable dot/dash window (±{signalTolerancePercent}%)
+            </Text>
+          </View>
+          <View style={styles.stepper}>
+            <Pressable
+              accessibilityLabel="Decrease signal tolerance"
+              onPress={() => setSignalTolerancePercent(signalTolerancePercent - 5)}
+              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
+            >
+              <Text style={styles.stepText}>-</Text>
+            </Pressable>
+            <Text style={styles.stepValue}>{signalTolerancePercent}%</Text>
+            <Pressable
+              accessibilityLabel="Increase signal tolerance"
+              onPress={() => setSignalTolerancePercent(signalTolerancePercent + 5)}
+              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
+            >
+              <Text style={styles.stepText}>+</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Gap tolerance */}
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Gap tolerance</Text>
+            <Text style={styles.rowSub}>
+              Acceptable pause window (±{gapTolerancePercent}%)
+            </Text>
+          </View>
+          <View style={styles.stepper}>
+            <Pressable
+              accessibilityLabel="Decrease gap tolerance"
+              onPress={() => setGapTolerancePercent(gapTolerancePercent - 5)}
+              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
+            >
+              <Text style={styles.stepText}>-</Text>
+            </Pressable>
+            <Text style={styles.stepValue}>{gapTolerancePercent}%</Text>
+            <Pressable
+              accessibilityLabel="Increase gap tolerance"
+              onPress={() => setGapTolerancePercent(gapTolerancePercent + 5)}
               style={({ pressed }) => [styles.step, pressed && styles.pressed]}
             >
               <Text style={styles.stepText}>+</Text>
@@ -207,7 +265,7 @@ const styles = StyleSheet.create({
   stepValue: {
     color: theme.colors.textPrimary,
     fontWeight: '800',
-    minWidth: 36,
+    minWidth: 48,
     textAlign: 'center',
   },
   pressed: { opacity: 0.92 },

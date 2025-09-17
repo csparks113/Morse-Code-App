@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 type SettingsState = {
   receiveOnly: boolean;
 
-  // Toggles
+  // Output toggles
   audioEnabled: boolean;
   lightEnabled: boolean; // flash overlay
   torchEnabled: boolean; // device flashlight
@@ -14,6 +14,8 @@ type SettingsState = {
   // Morse timing
   wpm: number; // words per minute (dot = 1200 / WPM ms)
   toneHz: number; // tone frequency in Hz
+  signalTolerancePercent: number; // dot/dash tolerance window (±%)
+  gapTolerancePercent: number; // gap tolerance window (±%)
 
   setReceiveOnly: (value: boolean) => void;
   setAudioEnabled: (value: boolean) => void;
@@ -22,6 +24,8 @@ type SettingsState = {
   setHapticsEnabled: (value: boolean) => void;
   setWpm: (value: number) => void;
   setToneHz: (value: number) => void;
+  setSignalTolerancePercent: (value: number) => void;
+  setGapTolerancePercent: (value: number) => void;
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -34,8 +38,10 @@ export const useSettingsStore = create<SettingsState>()(
       torchEnabled: false,
       hapticsEnabled: true,
 
-      wpm: 15,
+      wpm: 12,
       toneHz: 600,
+      signalTolerancePercent: 30,
+      gapTolerancePercent: 50,
 
       setReceiveOnly: (value) => set({ receiveOnly: value }),
       setAudioEnabled: (value) => set({ audioEnabled: value }),
@@ -50,6 +56,14 @@ export const useSettingsStore = create<SettingsState>()(
         const clamped = Math.max(200, Math.min(1200, Math.round(value)));
         set({ toneHz: clamped });
       },
+      setSignalTolerancePercent: (value) => {
+        const clamped = Math.max(20, Math.min(60, Math.round(value)));
+        set({ signalTolerancePercent: clamped });
+      },
+      setGapTolerancePercent: (value) => {
+        const clamped = Math.max(30, Math.min(80, Math.round(value)));
+        set({ gapTolerancePercent: clamped });
+      },
     }),
     {
       name: 'settings',
@@ -62,6 +76,8 @@ export const useSettingsStore = create<SettingsState>()(
         hapticsEnabled: state.hapticsEnabled,
         wpm: state.wpm,
         toneHz: state.toneHz,
+        signalTolerancePercent: state.signalTolerancePercent,
+        gapTolerancePercent: state.gapTolerancePercent,
       }),
     },
   ),
