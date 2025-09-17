@@ -113,6 +113,7 @@ export default function ReceiveSessionScreen() {
 
   const playTarget = React.useCallback(async () => {
     if (!currentMorse) return;
+    // getMorseUnitMs() should reflect current WPM from settings (e.g., 12 WPM => ~100ms unit).
     await playMorseCode(currentMorse, getMorseUnitMs(), {
       onSymbolStart: (symbol, duration) => {
         runFlash(duration);
@@ -127,9 +128,11 @@ export default function ReceiveSessionScreen() {
       playTarget();
     }, 400);
     return () => clearTimeout(timer);
-  }, [started, currentTarget, summary, playTarget]);
+  }, [started, currentTarget, summary, playTarget, feedback]);
 
-  const startSession = React.useCallback(() => {\n    if (!meta.pool.length) return;\n    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+  const startSession = React.useCallback(() => {
+    if (!meta.pool.length) return;
+    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
     const generated: string[] = [];
     for (let i = 0; i < TOTAL_QUESTIONS; i += 1) {
       const pick = meta.pool[Math.floor(Math.random() * meta.pool.length)];
@@ -176,7 +179,7 @@ export default function ReceiveSessionScreen() {
       const isCorrect = choice.toUpperCase() === currentTarget.toUpperCase();
       finishQuestion(isCorrect);
     },
-    [started, currentTarget, summary, finishQuestion],
+    [started, currentTarget, summary, feedback, finishQuestion],
   );
 
   const handleClose = React.useCallback(() => {

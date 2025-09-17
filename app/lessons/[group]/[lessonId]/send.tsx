@@ -35,7 +35,7 @@ function classifySignalDuration(
     { symbol: '.', duration: unitMs },
     { symbol: '-', duration: unitMs * 3 },
   ];
-  let best: { symbol: '.' | '-'; ratio: number } | null = null;
+  let best: { symbol: '.' | '-'; ratio: number } | undefined;
   options.forEach((opt) => {
     const ratio = Math.abs(durationMs - opt.duration) / opt.duration;
     if (!best || ratio < best.ratio) {
@@ -56,7 +56,7 @@ function classifyGapDuration(
     { type: 'inter', duration: unitMs * 3 },
     { type: 'word', duration: unitMs * 7 },
   ];
-  let best: { type: GapType; ratio: number } | null = null;
+  let best: { type: GapType; ratio: number } | undefined;
   options.forEach((opt) => {
     const ratio = Math.abs(durationMs - opt.duration) / opt.duration;
     if (!best || ratio < best.ratio) {
@@ -74,18 +74,23 @@ export default function SendSessionScreen() {
   const meta = React.useMemo(() => buildSessionMeta(group || 'alphabet', lessonId), [group, lessonId]);
   const setScore = useProgressStore((s) => s.setScore);
 
+  const settings = useSettingsStore();
   const {
     audioEnabled,
     lightEnabled,
     torchEnabled,
     hapticsEnabled,
-    signalTolerancePercent,
-    gapTolerancePercent,
     setAudioEnabled,
     setLightEnabled,
     setTorchEnabled,
     setHapticsEnabled,
-  } = useSettingsStore();
+  } = settings;
+
+  // Robust defaults (if Settings UI not wired yet):
+  const signalTolerancePercent =
+    typeof settings.signalTolerancePercent === 'number' ? settings.signalTolerancePercent : 30; // ±30%
+  const gapTolerancePercent =
+    typeof settings.gapTolerancePercent === 'number' ? settings.gapTolerancePercent : 50; // ±50%
 
   const signalTolerance = signalTolerancePercent / 100;
   const gapTolerance = gapTolerancePercent / 100;
@@ -162,6 +167,7 @@ export default function SendSessionScreen() {
 
   const playTarget = React.useCallback(async () => {
     if (!currentMorse) return;
+    // getMorseUnitMs() should reflect current WPM from settings (e.g., 12 WPM => ~100ms unit).
     await playMorseCode(currentMorse, getMorseUnitMs(), {
       onSymbolStart: (symbol, duration) => {
         runFlash(duration);
@@ -250,6 +256,7 @@ export default function SendSessionScreen() {
     const now = Date.now();
     if (inputRef.current.length > 0 && lastReleaseRef.current !== null) {
       const gapDuration = now - lastReleaseRef.current;
+      // For single-letter send lessons, any gap during keying must be an intra-character gap.
       const gapType = classifyGapDuration(gapDuration, getMorseUnitMs(), gapTolerance);
       if (gapType !== 'intra') {
         ignorePressRef.current = true;
