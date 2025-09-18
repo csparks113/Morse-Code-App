@@ -1,3 +1,37 @@
+/**
+ * RECEIVE SESSION SCREEN (Morse Code Master)
+ * ------------------------------------------
+ * OVERVIEW
+ * This screen teaches/practices *receiving* Morse code for a single character.
+ * The app PLAYS a Morse sequence (audio/flash/haptics) and the user must IDENTIFY
+ * the correct character (either via 2-choice buttons for lessons or a keyboard for
+ * challenges).
+ *
+ * GOAL
+ * - Listen/feel the code for the target character.
+ * - Choose the matching character.
+ *
+ * KEY IDEAS
+ * - We derive timing from WPM (getMorseUnitMs). Playback uses playMorseCode().
+ * - Output toggles let users enable/disable haptics, screen flash, and audio.
+ * - Lessons: small set of multiple-choice buttons (the lesson’s pool).
+ * - Challenges: a larger on-screen keyboard (only keys for learned chars are active).
+ *
+ * MAIN FLOW
+ * 1) User taps "Start" → build 20-item questions list from meta.pool.
+ * 2) For each question:
+ *    - We auto-play the target character’s Morse pattern shortly after it appears.
+ *    - The user selects an answer:
+ *        correct → mark correct, advance
+ *        wrong   → mark wrong, advance
+ * 3) After 20 prompts: compute % correct, store in progress, show SessionSummary.
+ *
+ * ACCESSIBILITY & FEEDBACK
+ * - Flash overlay and haptic ticks during playback (if enabled).
+ * - Reveal button to show the dot/dash pattern (for learning).
+ * - Keyboard disables characters that haven’t been learned yet in this lesson path.
+ */
+
 import React from 'react';
 import {
   View,
@@ -9,19 +43,34 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+
+// Reusable UI
 import SessionHeader from '@/components/session/SessionHeader';
 import ProgressBar from '@/components/session/ProgressBar';
 import ActionButton from '@/components/session/ActionButton';
 import OutputToggle from '@/components/session/OutputToggle';
 import SessionSummary from '@/components/session/SessionSummary';
+
+// Theme + utils
 import { colors, spacing } from '@/theme/lessonTheme';
 import { toMorse } from '@/utils/morse';
 import { playMorseCode, getMorseUnitMs } from '@/utils/audio';
+
+// Stores
 import { useProgressStore } from '@/store/useProgressStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+
+// Lesson meta
 import { buildSessionMeta } from './sessionMeta';
 
+// Number of questions per session
 const TOTAL_QUESTIONS = 20;
+
+/**
+ * Keyboard layout for challenge mode.
+ * NOTE: Depending on your design, you can remove numbers or space bar.
+ * Here it's letters + numbers, with *only learned* keys enabled.
+ */
 const KEYBOARD_LAYOUT = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
@@ -29,22 +78,33 @@ const KEYBOARD_LAYOUT = [
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
 ];
 
+// Simple summary type
 type Summary = { correct: number; percent: number };
 
+// For the large prompt character’s color feedback
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 
+/**
+ * Pretty-print a Morse string by spacing symbols: ".-" → ". -"
+ */
 function formatMorse(code?: string | null) {
   if (!code) return '';
   return code.split('').join(' ');
 }
 
 export default function ReceiveSessionScreen() {
+  // Route params like /lessons/[group]/[lessonId]
   const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
   const router = useRouter();
   const homePath = '../../../../(tabs)/index';
+
+  // Build lesson metadata (pool, labels, challenge flag)
   const meta = React.useMemo(() => buildSessionMeta(group || 'alphabet', lessonId), [group, lessonId]);
+
+  // Save score to progress store when done
   const setScore = useProgressStore((s) => s.setScore);
 
+  // Settings toggles (audio/flash/haptics)
   const {
     audioEnabled,
     lightEnabled,
@@ -56,6 +116,7 @@ export default function ReceiveSessionScreen() {
     setHapticsEnabled,
   } = useSettingsStore();
 
+  // Session state
   const [started, setStarted] = React.useState(false);
   const [questions, setQuestions] = React.useState<string[]>([]);
   const [results, setResults] = React.useState<boolean[]>([]);
@@ -63,20 +124,30 @@ export default function ReceiveSessionScreen() {
   const [showReveal, setShowReveal] = React.useState(false);
   const [summary, setSummary] = React.useState<Summary | null>(null);
 
+  // Visual flash overlay
   const flash = React.useRef(new Animated.Value(0)).current;
+
+  // Timer to delay advancing / scheduling playback
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Current target + Morse code
   const currentIndex = results.length;
   const currentTarget = questions[currentIndex] ?? null;
   const currentMorse = currentTarget ? toMorse(currentTarget) ?? '' : '';
+
+  // Which keys should be active in challenge mode? (only learned)
   const learnedSet = React.useMemo(() => new Set(meta.pool.map((c) => c.toUpperCase())), [meta.pool]);
 
+  // Cleanup timer on unmount
   React.useEffect(() => {
     return () => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
     };
   }, []);
 
+  /**
+   * Flash overlay for playback feedback.
+   */
   const runFlash = React.useCallback(
     (durationMs: number) => {
       if (!lightEnabled) return;
@@ -98,6 +169,9 @@ export default function ReceiveSessionScreen() {
     [flash, lightEnabled],
   );
 
+  /**
+   * Haptic tick per symbol during *playback* (optional).
+   */
   const hapticTick = React.useCallback(
     async (symbol: '.' | '-') => {
       if (!hapticsEnabled) return;
@@ -105,15 +179,17 @@ export default function ReceiveSessionScreen() {
         const style = symbol === '.' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium;
         await Haptics.impactAsync(style);
       } catch {
-        // Ignore missing haptics hardware.
+        // Ignore if hardware not present.
       }
     },
     [hapticsEnabled],
   );
 
+  /**
+   * Play the target character’s Morse pattern using audio/haptics/flash.
+   */
   const playTarget = React.useCallback(async () => {
     if (!currentMorse) return;
-    // getMorseUnitMs() should reflect current WPM from settings (e.g., 12 WPM => ~100ms unit).
     await playMorseCode(currentMorse, getMorseUnitMs(), {
       onSymbolStart: (symbol, duration) => {
         runFlash(duration);
@@ -122,6 +198,9 @@ export default function ReceiveSessionScreen() {
     });
   }, [currentMorse, runFlash, hapticTick]);
 
+  /**
+   * Auto-play the target shortly after it appears (only while idle on the prompt).
+   */
   React.useEffect(() => {
     if (!started || !currentTarget || summary || feedback !== 'idle') return;
     const timer = setTimeout(() => {
@@ -130,14 +209,19 @@ export default function ReceiveSessionScreen() {
     return () => clearTimeout(timer);
   }, [started, currentTarget, summary, playTarget, feedback]);
 
+  /**
+   * Start a new receive session (20 random characters from meta.pool).
+   */
   const startSession = React.useCallback(() => {
     if (!meta.pool.length) return;
     if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+
     const generated: string[] = [];
     for (let i = 0; i < TOTAL_QUESTIONS; i += 1) {
       const pick = meta.pool[Math.floor(Math.random() * meta.pool.length)];
       generated.push(pick);
     }
+
     setQuestions(generated);
     setResults([]);
     setFeedback('idle');
@@ -146,6 +230,9 @@ export default function ReceiveSessionScreen() {
     setStarted(true);
   }, [meta.pool]);
 
+  /**
+   * Finish a question and move forward (delay for quick visual feedback).
+   */
   const finishQuestion = React.useCallback(
     (isCorrect: boolean) => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
@@ -155,6 +242,7 @@ export default function ReceiveSessionScreen() {
         setResults((prev) => {
           if (prev.length >= TOTAL_QUESTIONS) return prev;
           const next = [...prev, isCorrect];
+
           if (next.length === TOTAL_QUESTIONS) {
             const correctCount = next.filter(Boolean).length;
             const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
@@ -166,6 +254,7 @@ export default function ReceiveSessionScreen() {
           }
           return next;
         });
+
         setShowReveal(false);
         setFeedback('idle');
       }, 500);
@@ -173,32 +262,46 @@ export default function ReceiveSessionScreen() {
     [group, lessonId, setScore],
   );
 
+  /**
+   * Handle a user choice (from lesson choices or keyboard).
+   */
   const submitAnswer = React.useCallback(
     (choice: string) => {
       if (!started || !currentTarget || summary || feedback !== 'idle') return;
-      const isCorrect = choice.toUpperCase() === currentTarget.toUpperCase();
+      const isCorrect = choice.toUpperCase() === (currentTarget ?? '').toUpperCase();
       finishQuestion(isCorrect);
     },
     [started, currentTarget, summary, feedback, finishQuestion],
   );
 
+  /**
+   * Close out of session back to lessons.
+   */
   const handleClose = React.useCallback(() => {
     router.replace(homePath);
   }, [router]);
 
+  /**
+   * Reveal/unreveal the correct Morse sequence (for learning).
+   */
   const handleReveal = React.useCallback(() => {
     if (!started || summary || !currentTarget) return;
     setShowReveal((prev) => !prev);
   }, [started, summary, currentTarget]);
 
+  // Only interactive when mid-session, idle, and we have a target
   const canInteract = started && !summary && !!currentTarget && feedback === 'idle';
+
+  // Large prompt char: '?' during idle thinking, else show the answer
   const visibleChar = !started
     ? ''
     : feedback === 'idle'
     ? '?'
     : currentTarget ?? '?';
+
   const progressValue = results.length;
 
+  // Graceful empty state if meta has nothing to quiz on
   if (!meta.pool.length) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -212,6 +315,7 @@ export default function ReceiveSessionScreen() {
     );
   }
 
+  // Finished → show summary
   if (summary) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -225,8 +329,10 @@ export default function ReceiveSessionScreen() {
     );
   }
 
+  // Active session UI
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Flash overlay for playback */}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -239,14 +345,17 @@ export default function ReceiveSessionScreen() {
       />
 
       <View style={styles.container}>
+        {/* Header with lesson/challenge labels */}
         <SessionHeader
           labelTop={meta.headerTop}
           labelBottom="RECEIVE"
           onClose={handleClose}
         />
 
+        {/* Progress across 20 questions */}
         <ProgressBar value={progressValue} total={TOTAL_QUESTIONS} />
 
+        {/* Prompt area shows large "?" while waiting, then green/red on correctness */}
         <Text style={styles.promptLabel}>Identify the character</Text>
         <View style={styles.promptArea}>
           {!started ? (
@@ -269,10 +378,13 @@ export default function ReceiveSessionScreen() {
             </Text>
           )}
         </View>
+
+        {/* Optional reveal of Morse string */}
         {showReveal && canInteract && (
           <Text style={styles.reveal}>{formatMorse(currentMorse)}</Text>
         )}
 
+        {/* Action buttons + output toggles */}
         <View style={styles.controls}>
           <View style={styles.actionRow}>
             <ActionButton
@@ -318,6 +430,9 @@ export default function ReceiveSessionScreen() {
           </View>
         </View>
 
+        {/* Choices:
+            - For *lessons*: only the lesson’s two characters as big choices.
+            - For *challenges*: full keyboard but only learned keys are active. */}
         {meta.isChallenge ? (
           <View style={styles.keyboard}>
             {KEYBOARD_LAYOUT.map((row) => (
@@ -374,6 +489,9 @@ export default function ReceiveSessionScreen() {
   );
 }
 
+/**
+ * Styles: keep consistent padding/spacing & clear visual states.
+ */
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   container: {

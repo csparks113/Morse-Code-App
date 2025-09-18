@@ -1,3 +1,22 @@
+/**
+ * SESSION META HELPERS
+ * --------------------
+ * OVERVIEW
+ * This module defines the shape of metadata (`SessionMeta`) that the
+ * Send/Receive screens need, and provides a builder function
+ * `buildSessionMeta(groupId, lessonId)`.
+ *
+ * WHAT IT DOES
+ * - For **lessons**: returns the label ("Lesson 1 - E & T"), the pool of
+ *   characters (['E','T']), and marks isChallenge = false.
+ * - For **challenges**: returns headerTop = "Challenge", builds a pool of
+ *   *all characters learned so far* in that group, and marks isChallenge = true.
+ *
+ * WHY
+ * - This abstraction keeps session screens simple: they just consume a
+ *   normalized object with `headerTop`, `pool`, and `isChallenge`.
+ */
+
 import { getGroupById, getLesson } from '@/data/lessons';
 
 export type SessionMeta = {
@@ -9,24 +28,47 @@ export type SessionMeta = {
 
 export function buildSessionMeta(groupId: string, lessonId?: string): SessionMeta {
   const group = getGroupById(groupId);
+
+  // If invalid group or no lessonId, return an empty state
   if (!group || !lessonId) {
     return { headerTop: 'Lesson', pool: [], isChallenge: false };
   }
 
+  // --- CHALLENGE PATH -------------------------------------------------------
   if (lessonId.startsWith('ch-')) {
-    const idx = Number.parseInt(lessonId.slice(3), 10) || 1;
-    const upto = Math.min(group.lessons.length, idx * 2);
-    const slice = group.lessons.slice(0, upto);
-    const chars = Array.from(new Set(slice.flatMap((l) => l.chars)));
+    /**
+     * Collect all characters from lessons up to this challenge.
+     * Example: if this is Challenge 2, include chars from all lessons
+     * in the group before this challenge.
+     */
+    const challengeIndex = parseInt(lessonId.replace('ch-', ''), 10);
+
+    // Flatten all lesson chars prior to this challenge index
+    const chars: string[] = [];
+    for (const lesson of group.lessons) {
+      // Stop if we hit another challenge marker
+      if (lesson.id.startsWith('ch-')) {
+        const idx = parseInt(lesson.id.replace('ch-', ''), 10);
+        if (idx >= challengeIndex) break;
+        continue;
+      }
+      chars.push(...lesson.chars);
+    }
+
+    // Remove duplicates in case of overlap
+    const uniqueChars = Array.from(new Set(chars));
+
     return {
       headerTop: 'Challenge',
-      pool: chars,
+      pool: uniqueChars,
       isChallenge: true,
     };
   }
 
+  // --- LESSON PATH ----------------------------------------------------------
   const lesson = getLesson(groupId, lessonId);
   const label = lesson ? `${lesson.label} - ${lesson.chars.join(' & ')}` : 'Lesson';
+
   return {
     headerTop: label,
     pool: lesson?.chars ?? [],

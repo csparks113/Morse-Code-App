@@ -1,9 +1,30 @@
+/**
+ * ACTION BUTTON
+ * -------------
+ * OVERVIEW
+ * A compact rounded square button used for small actions like
+ * "Reveal" or "Play" in the session screens. Shows a single icon.
+ *
+ * PROPS
+ * - icon: MaterialCommunityIcons name (string literal)
+ * - onPress: click handler
+ * - accessibilityLabel: label for screen readers
+ * - disabled?: disables interactions + dims the button
+ * - active?: highlights the button (e.g., reveal toggled on)
+ * - style?: allow caller to override/extend layout styles
+ *
+ * ACCESSIBILITY
+ * - accessibilityRole="button"
+ * - accessibilityState reflects { disabled, selected: active }
+ */
+
 import React from 'react';
 import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '@/theme/lessonTheme';
 
 const SIZE = 58;
+
 type Props = {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   onPress: () => void;
@@ -13,7 +34,14 @@ type Props = {
   style?: ViewStyle;
 };
 
-export default function ActionButton({ icon, onPress, accessibilityLabel, disabled, active, style }: Props) {
+export default function ActionButton({
+  icon,
+  onPress,
+  accessibilityLabel,
+  disabled,
+  active,
+  style,
+}: Props) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -21,6 +49,7 @@ export default function ActionButton({ icon, onPress, accessibilityLabel, disabl
       accessibilityState={{ disabled, selected: active }}
       disabled={disabled}
       onPress={onPress}
+      // `pressed` lets us slightly fade the button while pressing
       style={({ pressed }) => [
         styles.base,
         active && styles.active,
@@ -29,6 +58,7 @@ export default function ActionButton({ icon, onPress, accessibilityLabel, disabl
         style,
       ]}
     >
+      {/* The icon color switches when `active` */}
       <MaterialCommunityIcons
         name={icon}
         size={28}
