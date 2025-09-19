@@ -30,7 +30,11 @@ export type SessionHeaderProps = {
   onClose: () => void;
 };
 
-export default function SessionHeader({ labelTop, labelBottom, onClose }: SessionHeaderProps) {
+export default function SessionHeader({
+  labelTop,
+  labelBottom,
+  onClose,
+}: SessionHeaderProps) {
   return (
     <View style={styles.wrap}>
       {/* Left: Close button */}

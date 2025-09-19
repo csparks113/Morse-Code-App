@@ -26,7 +26,10 @@ export type SessionMeta = {
   lessonLabel?: string;
 };
 
-export function buildSessionMeta(groupId: string, lessonId?: string): SessionMeta {
+export function buildSessionMeta(
+  groupId: string,
+  lessonId?: string,
+): SessionMeta {
   const group = getGroupById(groupId);
 
   // If invalid group or no lessonId, return an empty state
@@ -67,7 +70,9 @@ export function buildSessionMeta(groupId: string, lessonId?: string): SessionMet
 
   // --- LESSON PATH ----------------------------------------------------------
   const lesson = getLesson(groupId, lessonId);
-  const label = lesson ? `${lesson.label} - ${lesson.chars.join(' & ')}` : 'Lesson';
+  const label = lesson
+    ? `${lesson.label} - ${lesson.chars.join(' & ')}`
+    : 'Lesson';
 
   return {
     headerTop: label,

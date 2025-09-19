@@ -22,7 +22,14 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, Switch, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Switch,
+  Pressable,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../theme/theme';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -73,7 +80,6 @@ function Row({ title, sub, value, onChange }: RowProps) {
 export default function SettingsScreen() {
   // Read state and setters from the global settings store (Zustand).
   const {
-    receiveOnly,
     audioEnabled,
     lightEnabled,
     torchEnabled,
@@ -82,7 +88,6 @@ export default function SettingsScreen() {
     toneHz,
     signalTolerancePercent,
     gapTolerancePercent,
-    setReceiveOnly,
     setAudioEnabled,
     setLightEnabled,
     setTorchEnabled,
@@ -98,173 +103,194 @@ export default function SettingsScreen() {
       <View style={styles.container}>
         <Text style={styles.title}>Settings</Text>
         <View style={styles.headerDivider} />
+        <ScrollView>
+          {/* Output toggles: control which cues are used during lessons */}
+          <Row
+            title="Audio"
+            sub="Play dot/dash tones in lessons"
+            value={audioEnabled}
+            onChange={setAudioEnabled}
+          />
 
-        {/* Receive-only mode:
-            - For learners who only want to practice listening/recognition.
-            - Hides Send controls in session screens. */}
-        <Row
-          title="Receive-only mode"
-          sub="Hide Send buttons and focus on recognition"
-          value={receiveOnly}
-          onChange={setReceiveOnly}
-        />
+          <Row
+            title="Screen flash"
+            sub="Blink a visual overlay with each dot/dash"
+            value={lightEnabled}
+            onChange={setLightEnabled}
+          />
 
-        {/* Output toggles: control which cues are used during lessons */}
-        <Row
-          title="Audio"
-          sub="Play dot/dash tones in lessons"
-          value={audioEnabled}
-          onChange={setAudioEnabled}
-        />
+          <Row
+            title="Flashlight"
+            sub="Use the device torch for output cues"
+            value={torchEnabled}
+            onChange={setTorchEnabled}
+          />
 
-        <Row
-          title="Screen flash"
-          sub="Blink a visual overlay with each dot/dash"
-          value={lightEnabled}
-          onChange={setLightEnabled}
-        />
+          <Row
+            title="Haptics"
+            sub="Vibrate on key presses and feedback"
+            value={hapticsEnabled}
+            onChange={setHapticsEnabled}
+          />
 
-        <Row
-          title="Flashlight"
-          sub="Use the device torch for output cues"
-          value={torchEnabled}
-          onChange={setTorchEnabled}
-        />
-
-        <Row
-          title="Haptics"
-          sub="Vibrate on key presses and feedback"
-          value={hapticsEnabled}
-          onChange={setHapticsEnabled}
-        />
-
-        {/* WPM control:
+          {/* WPM control:
             - Morse timing is derived from WPM: dot = 1200 / WPM milliseconds.
             - We clamp between 5 and 60 to avoid unusable extremes. */}
-        <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Send Speed (WPM)</Text>
-            <Text style={styles.rowSub}>
-              Controls Morse timing (dot = 1200 / WPM ms)
-            </Text>
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Send Speed (WPM)</Text>
+              <Text style={styles.rowSub}>
+                Controls Morse timing (dot = 1200 / WPM ms)
+              </Text>
+            </View>
+
+            <View style={styles.stepper}>
+              <Pressable
+                accessibilityLabel="Decrease send speed"
+                onPress={() => setWpm(Math.max(5, wpm - 1))}
+                style={({ pressed }) => [
+                  styles.step,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.stepText}>-</Text>
+              </Pressable>
+
+              <Text style={styles.stepValue}>{wpm}</Text>
+
+              <Pressable
+                accessibilityLabel="Increase send speed"
+                onPress={() => setWpm(Math.min(60, wpm + 1))}
+                style={({ pressed }) => [
+                  styles.step,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.stepText}>+</Text>
+              </Pressable>
+            </View>
           </View>
 
-          <View style={styles.stepper}>
-            <Pressable
-              accessibilityLabel="Decrease send speed"
-              onPress={() => setWpm(Math.max(5, wpm - 1))}
-              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
-            >
-              <Text style={styles.stepText}>-</Text>
-            </Pressable>
-
-            <Text style={styles.stepValue}>{wpm}</Text>
-
-            <Pressable
-              accessibilityLabel="Increase send speed"
-              onPress={() => setWpm(Math.min(60, wpm + 1))}
-              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
-            >
-              <Text style={styles.stepText}>+</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Signal tolerance:
+          {/* Signal tolerance:
             - Forgiveness for press lengths when *sending*.
             - Example: ±30% means a "dot" press can be 30% shorter/longer than ideal.
             - Change step: 5%. */}
-        <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Signal tolerance</Text>
-            <Text style={styles.rowSub}>
-              Acceptable dot/dash window (±{signalTolerancePercent}%)
-            </Text>
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Signal tolerance</Text>
+              <Text style={styles.rowSub}>
+                Acceptable dot/dash window (±{signalTolerancePercent}%)
+              </Text>
+            </View>
+
+            <View style={styles.stepper}>
+              <Pressable
+                accessibilityLabel="Decrease signal tolerance"
+                onPress={() =>
+                  setSignalTolerancePercent(signalTolerancePercent - 5)
+                }
+                style={({ pressed }) => [
+                  styles.step,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.stepText}>-</Text>
+              </Pressable>
+
+              <Text style={styles.stepValue}>{signalTolerancePercent}%</Text>
+
+              <Pressable
+                accessibilityLabel="Increase signal tolerance"
+                onPress={() =>
+                  setSignalTolerancePercent(signalTolerancePercent + 5)
+                }
+                style={({ pressed }) => [
+                  styles.step,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.stepText}>+</Text>
+              </Pressable>
+            </View>
           </View>
 
-          <View style={styles.stepper}>
-            <Pressable
-              accessibilityLabel="Decrease signal tolerance"
-              onPress={() => setSignalTolerancePercent(signalTolerancePercent - 5)}
-              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
-            >
-              <Text style={styles.stepText}>-</Text>
-            </Pressable>
-
-            <Text style={styles.stepValue}>{signalTolerancePercent}%</Text>
-
-            <Pressable
-              accessibilityLabel="Increase signal tolerance"
-              onPress={() => setSignalTolerancePercent(signalTolerancePercent + 5)}
-              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
-            >
-              <Text style={styles.stepText}>+</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Gap tolerance:
+          {/* Gap tolerance:
             - Forgiveness for pauses between presses when *sending*.
             - Helps the app decide if a pause was “intra-character” vs “inter-character”, etc.
             - Change step: 5%. */}
-        <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Gap tolerance</Text>
-            <Text style={styles.rowSub}>
-              Acceptable pause window (±{gapTolerancePercent}%)
-            </Text>
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Gap tolerance</Text>
+              <Text style={styles.rowSub}>
+                Acceptable pause window (±{gapTolerancePercent}%)
+              </Text>
+            </View>
+
+            <View style={styles.stepper}>
+              <Pressable
+                accessibilityLabel="Decrease gap tolerance"
+                onPress={() => setGapTolerancePercent(gapTolerancePercent - 5)}
+                style={({ pressed }) => [
+                  styles.step,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.stepText}>-</Text>
+              </Pressable>
+
+              <Text style={styles.stepValue}>{gapTolerancePercent}%</Text>
+
+              <Pressable
+                accessibilityLabel="Increase gap tolerance"
+                onPress={() => setGapTolerancePercent(gapTolerancePercent + 5)}
+                style={({ pressed }) => [
+                  styles.step,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.stepText}>+</Text>
+              </Pressable>
+            </View>
           </View>
 
-          <View style={styles.stepper}>
-            <Pressable
-              accessibilityLabel="Decrease gap tolerance"
-              onPress={() => setGapTolerancePercent(gapTolerancePercent - 5)}
-              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
-            >
-              <Text style={styles.stepText}>-</Text>
-            </Pressable>
-
-            <Text style={styles.stepValue}>{gapTolerancePercent}%</Text>
-
-            <Pressable
-              accessibilityLabel="Increase gap tolerance"
-              onPress={() => setGapTolerancePercent(gapTolerancePercent + 5)}
-              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
-            >
-              <Text style={styles.stepText}>+</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Tone pitch control:
+          {/* Tone pitch control:
             - Adjust the sine tone frequency used for audio playback.
             - Typical comfortable range is ~400–800 Hz; we clamp 200–1200 Hz. */}
-        <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Tone Pitch</Text>
-            <Text style={styles.rowSub}>Adjust audio tone frequency (Hz)</Text>
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Tone Pitch</Text>
+              <Text style={styles.rowSub}>
+                Adjust audio tone frequency (Hz)
+              </Text>
+            </View>
+
+            <View style={styles.stepper}>
+              <Pressable
+                accessibilityLabel="Decrease tone pitch"
+                onPress={() => setToneHz(Math.max(200, toneHz - 10))}
+                style={({ pressed }) => [
+                  styles.step,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.stepText}>-</Text>
+              </Pressable>
+
+              <Text style={styles.stepValue}>{toneHz} Hz</Text>
+
+              <Pressable
+                accessibilityLabel="Increase tone pitch"
+                onPress={() => setToneHz(Math.min(1200, toneHz + 10))}
+                style={({ pressed }) => [
+                  styles.step,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.stepText}>+</Text>
+              </Pressable>
+            </View>
           </View>
-
-          <View style={styles.stepper}>
-            <Pressable
-              accessibilityLabel="Decrease tone pitch"
-              onPress={() => setToneHz(Math.max(200, toneHz - 10))}
-              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
-            >
-              <Text style={styles.stepText}>-</Text>
-            </Pressable>
-
-            <Text style={styles.stepValue}>{toneHz} Hz</Text>
-
-            <Pressable
-              accessibilityLabel="Increase tone pitch"
-              onPress={() => setToneHz(Math.min(1200, toneHz + 10))}
-              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
-            >
-              <Text style={styles.stepText}>+</Text>
-            </Pressable>
-          </View>
-        </View>
+        </ScrollView>
       </View>
     </SafeAreaView>
   );

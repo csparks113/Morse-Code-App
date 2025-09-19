@@ -50,8 +50,8 @@ export default function OutputToggle({
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
-        active && styles.active,      // neon ring + soft glow when active
-        disabled && styles.disabled,  // slightly dim when disabled
+        active && styles.active, // neon ring + soft glow when active
+        disabled && styles.disabled, // slightly dim when disabled
         pressed && !disabled && { opacity: 0.9 },
         style,
       ]}

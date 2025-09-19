@@ -35,13 +35,7 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Animated,
-} from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -82,8 +76,8 @@ function classifySignalDuration(
 ): '.' | '-' | null {
   // Target durations for a single press
   const options: Array<{ symbol: '.' | '-'; duration: number }> = [
-    { symbol: '.', duration: unitMs },       // dot = 1 unit
-    { symbol: '-', duration: unitMs * 3 },   // dash = 3 units
+    { symbol: '.', duration: unitMs }, // dot = 1 unit
+    { symbol: '-', duration: unitMs * 3 }, // dash = 3 units
   ];
 
   // Choose whichever target is *closest* to the actual press time
@@ -110,9 +104,9 @@ function classifyGapDuration(
   tolerance: number,
 ): GapType | null {
   const options: Array<{ type: GapType; duration: number }> = [
-    { type: 'intra', duration: unitMs },        // inside a letter
-    { type: 'inter', duration: unitMs * 3 },    // between letters
-    { type: 'word', duration: unitMs * 7 },     // between words
+    { type: 'intra', duration: unitMs }, // inside a letter
+    { type: 'inter', duration: unitMs * 3 }, // between letters
+    { type: 'word', duration: unitMs * 7 }, // between words
   ];
 
   let best: { type: GapType; ratio: number } | undefined;
@@ -129,12 +123,18 @@ function classifyGapDuration(
 
 export default function SendSessionScreen() {
   // Pull route params like /lessons/[group]/[lessonId]
-  const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
+  const { group, lessonId } = useLocalSearchParams<{
+    group: string;
+    lessonId: string;
+  }>();
   const router = useRouter();
   const homePath = '../../../../(tabs)/index';
 
   // Build lesson metadata (title, pool of characters, header text)
-  const meta = React.useMemo(() => buildSessionMeta(group || 'alphabet', lessonId), [group, lessonId]);
+  const meta = React.useMemo(
+    () => buildSessionMeta(group || 'alphabet', lessonId),
+    [group, lessonId],
+  );
 
   // Save score to global store on completion
   const setScore = useProgressStore((s) => s.setScore);
@@ -154,9 +154,13 @@ export default function SendSessionScreen() {
 
   // Tolerance defaults if Settings UI isn’t wired
   const signalTolerancePercent =
-    typeof settings.signalTolerancePercent === 'number' ? settings.signalTolerancePercent : 30; // ±30%
+    typeof settings.signalTolerancePercent === 'number'
+      ? settings.signalTolerancePercent
+      : 30; // ±30%
   const gapTolerancePercent =
-    typeof settings.gapTolerancePercent === 'number' ? settings.gapTolerancePercent : 50; // ±50%
+    typeof settings.gapTolerancePercent === 'number'
+      ? settings.gapTolerancePercent
+      : 50; // ±50%
 
   const signalTolerance = signalTolerancePercent / 100;
   const gapTolerance = gapTolerancePercent / 100;
@@ -165,7 +169,9 @@ export default function SendSessionScreen() {
   const [started, setStarted] = React.useState(false);
   const [questions, setQuestions] = React.useState<string[]>([]);
   const [results, setResults] = React.useState<boolean[]>([]);
-  const [feedback, setFeedback] = React.useState<'idle' | 'correct' | 'wrong'>('idle');
+  const [feedback, setFeedback] = React.useState<'idle' | 'correct' | 'wrong'>(
+    'idle',
+  );
   const [showReveal, setShowReveal] = React.useState(false);
   const [summary, setSummary] = React.useState<Summary | null>(null);
   const [input, setInput] = React.useState(''); // typed Morse for current target
@@ -179,15 +185,17 @@ export default function SendSessionScreen() {
 
   // Animation & timing refs
   const flash = React.useRef(new Animated.Value(0)).current; // overlay flash
-  const pressStartRef = React.useRef<number | null>(null);   // when the current press started
-  const lastReleaseRef = React.useRef<number | null>(null);  // when the last press ended
-  const ignorePressRef = React.useRef(false);                // used when a wrong gap happens
-  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null); // debounce next question
+  const pressStartRef = React.useRef<number | null>(null); // when the current press started
+  const lastReleaseRef = React.useRef<number | null>(null); // when the last press ended
+  const ignorePressRef = React.useRef(false); // used when a wrong gap happens
+  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  ); // debounce next question
 
   // Current question: target char + its Morse pattern
   const currentIndex = results.length;
   const currentTarget = questions[currentIndex] ?? null;
-  const currentMorse = currentTarget ? toMorse(currentTarget) ?? '' : '';
+  const currentMorse = currentTarget ? (toMorse(currentTarget) ?? '') : '';
 
   // Clear timer on unmount to avoid setState after unmount
   React.useEffect(() => {
@@ -228,7 +236,10 @@ export default function SendSessionScreen() {
     async (symbol: '.' | '-') => {
       if (!hapticsEnabled) return;
       try {
-        const style = symbol === '.' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium;
+        const style =
+          symbol === '.'
+            ? Haptics.ImpactFeedbackStyle.Light
+            : Haptics.ImpactFeedbackStyle.Medium;
         await Haptics.impactAsync(style);
       } catch {
         // Devices without haptics: ignore.
@@ -350,7 +361,8 @@ export default function SendSessionScreen() {
   /**
    * True when the user is mid-session and ready to interact.
    */
-  const canInteract = started && !summary && !!currentTarget && feedback === 'idle';
+  const canInteract =
+    started && !summary && !!currentTarget && feedback === 'idle';
 
   /**
    * Handle press DOWN (start timing + validate previous gap).
@@ -365,7 +377,11 @@ export default function SendSessionScreen() {
       const gapDuration = now - lastReleaseRef.current;
 
       // For single-letter keying, only *intra-character* (1 unit) is allowed here
-      const gapType = classifyGapDuration(gapDuration, getMorseUnitMs(), gapTolerance);
+      const gapType = classifyGapDuration(
+        gapDuration,
+        getMorseUnitMs(),
+        gapTolerance,
+      );
       if (gapType !== 'intra') {
         // Wrong type of gap → mark as wrong and ignore this press
         ignorePressRef.current = true;
@@ -400,7 +416,11 @@ export default function SendSessionScreen() {
     const duration = releaseAt - startAt;
 
     // Classify press length as '.' or '-'
-    const symbol = classifySignalDuration(duration, getMorseUnitMs(), signalTolerance);
+    const symbol = classifySignalDuration(
+      duration,
+      getMorseUnitMs(),
+      signalTolerance,
+    );
     if (!symbol) {
       lastReleaseRef.current = null;
       finishQuestion(false);
@@ -412,10 +432,20 @@ export default function SendSessionScreen() {
 
     // Add to input & evaluate
     appendSymbol(symbol);
-  }, [started, currentTarget, summary, feedback, signalTolerance, appendSymbol, finishQuestion]);
+  }, [
+    started,
+    currentTarget,
+    summary,
+    feedback,
+    signalTolerance,
+    appendSymbol,
+    finishQuestion,
+  ]);
 
   // Text helper under the prompt
-  const promptText = started ? 'Tap to key the Morse code' : 'Press start to begin';
+  const promptText = started
+    ? 'Tap to key the Morse code'
+    : 'Press start to begin';
 
   // Close out of the session (back to lessons)
   const handleClose = React.useCallback(() => {
@@ -434,7 +464,13 @@ export default function SendSessionScreen() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>Content unavailable.</Text>
-          <Pressable onPress={handleClose} style={({ pressed }) => [styles.emptyBtn, pressed && { opacity: 0.92 }]}>
+          <Pressable
+            onPress={handleClose}
+            style={({ pressed }) => [
+              styles.emptyBtn,
+              pressed && { opacity: 0.92 },
+            ]}
+          >
             <Text style={styles.emptyBtnText}>Back to Lessons</Text>
           </Pressable>
         </View>
@@ -466,14 +502,21 @@ export default function SendSessionScreen() {
           StyleSheet.absoluteFill,
           {
             backgroundColor: colors.text,
-            opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.2] }),
+            opacity: flash.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.2],
+            }),
           },
         ]}
       />
 
       <View style={styles.container}>
         {/* Header with top/bottom labels and close (X) */}
-        <SessionHeader labelTop={meta.headerTop} labelBottom="SEND" onClose={handleClose} />
+        <SessionHeader
+          labelTop={meta.headerTop}
+          labelBottom="SEND"
+          onClose={handleClose}
+        />
 
         {/* Progress across the 20 questions */}
         <ProgressBar value={results.length} total={TOTAL_QUESTIONS} />
@@ -484,7 +527,10 @@ export default function SendSessionScreen() {
             <Pressable
               accessibilityRole="button"
               onPress={startSession}
-              style={({ pressed }) => [styles.startBtn, pressed && { opacity: 0.92 }]}
+              style={({ pressed }) => [
+                styles.startBtn,
+                pressed && { opacity: 0.92 },
+              ]}
             >
               <Text style={styles.startText}>Start</Text>
             </Pressable>
@@ -566,7 +612,9 @@ export default function SendSessionScreen() {
             ]}
           >
             <Text style={styles.keyerText}>Tap & Hold to Key</Text>
-            {started && <Text style={styles.input}>{input.split('').join(' ')}</Text>}
+            {started && (
+              <Text style={styles.input}>{input.split('').join(' ')}</Text>
+            )}
           </Pressable>
         </View>
       </View>

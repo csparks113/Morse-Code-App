@@ -30,18 +30,46 @@ export default function LessonPath({ groupId, lessons }: Props) {
   );
 
   type Node =
-    | { kind: 'lesson'; key: string; index: number; label: string; chars: string[]; id: string }
-    | { kind: 'challenge'; key: string; index: number; label: string; chars: string[]; id: string };
+    | {
+        kind: 'lesson';
+        key: string;
+        index: number;
+        label: string;
+        chars: string[];
+        id: string;
+      }
+    | {
+        kind: 'challenge';
+        key: string;
+        index: number;
+        label: string;
+        chars: string[];
+        id: string;
+      };
 
   const derivedNodes: Node[] = React.useMemo(() => {
     const out: Node[] = [];
     let cumulativeChars: string[] = [];
     lessons.forEach((l, i) => {
-      out.push({ kind: 'lesson', key: `l-${l.id}`, index: out.length, label: l.label, chars: l.chars, id: l.id });
+      out.push({
+        kind: 'lesson',
+        key: `l-${l.id}`,
+        index: out.length,
+        label: l.label,
+        chars: l.chars,
+        id: l.id,
+      });
       cumulativeChars = Array.from(new Set([...cumulativeChars, ...l.chars]));
       if (i % 2 === 1) {
         const chId = `ch-${Math.ceil((i + 1) / 2)}`;
-        out.push({ kind: 'challenge', key: chId, index: out.length, label: 'Challenge', chars: cumulativeChars, id: chId });
+        out.push({
+          kind: 'challenge',
+          key: chId,
+          index: out.length,
+          label: 'Challenge',
+          chars: cumulativeChars,
+          id: chId,
+        });
       }
     });
     return out;
@@ -93,13 +121,17 @@ export default function LessonPath({ groupId, lessons }: Props) {
   }, [derivedNodes, lessons, getLessonProgress]);
 
   return (
-    <ScrollView contentContainerStyle={contentStyle} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={contentStyle}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.list}>
         {derivedNodes.map((n, i) => {
           const status = statuses[i];
           const isLesson = n.kind === 'lesson';
           const progressState = getLessonProgress(n.id);
-          const receiveDone = status === 'receiveComplete' || status === 'bothComplete';
+          const receiveDone =
+            status === 'receiveComplete' || status === 'bothComplete';
           const sendDone = status === 'bothComplete';
           const canSend = progressState.receiveScore >= thresholds.receive;
           const locked = status === 'locked';
@@ -116,10 +148,16 @@ export default function LessonPath({ groupId, lessons }: Props) {
               isActive={status === 'active'}
               canSend={canSend}
               onReceive={() =>
-                router.push({ pathname: '/lessons/[group]/[lessonId]/receive', params: { group: groupId, lessonId: String(n.id) } })
+                router.push({
+                  pathname: '/lessons/[group]/[lessonId]/receive',
+                  params: { group: groupId, lessonId: String(n.id) },
+                })
               }
               onSend={() =>
-                router.push({ pathname: '/lessons/[group]/[lessonId]/send', params: { group: groupId, lessonId: String(n.id) } })
+                router.push({
+                  pathname: '/lessons/[group]/[lessonId]/send',
+                  params: { group: groupId, lessonId: String(n.id) },
+                })
               }
             />
           );

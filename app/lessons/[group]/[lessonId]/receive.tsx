@@ -68,25 +68,18 @@ const TOTAL_QUESTIONS = 20;
 
 /**
  * Keyboard layout for challenge mode.
- * NOTE: Depending on your design, you can remove numbers or space bar.
  * Here it's letters + numbers, with *only learned* keys enabled.
  */
 const KEYBOARD_LAYOUT = [
-  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
-  ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-  ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-  ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
+  ['1','2','3','4','5','6','7','8','9','0'],
+  ['Q','W','E','R','T','Y','U','I','O','P'],
+  ['A','S','D','F','G','H','J','K','L'],
+  ['Z','X','C','V','B','N','M'],
 ];
 
-// Simple summary type
 type Summary = { correct: number; percent: number };
-
-// For the large prompt character’s color feedback
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 
-/**
- * Pretty-print a Morse string by spacing symbols: ".-" → ". -"
- */
 function formatMorse(code?: string | null) {
   if (!code) return '';
   return code.split('').join(' ');
@@ -133,7 +126,7 @@ export default function ReceiveSessionScreen() {
   // Current target + Morse code
   const currentIndex = results.length;
   const currentTarget = questions[currentIndex] ?? null;
-  const currentMorse = currentTarget ? toMorse(currentTarget) ?? '' : '';
+  const currentMorse = currentTarget ? (toMorse(currentTarget) ?? '') : '';
 
   // Which keys should be active in challenge mode? (only learned)
   const learnedSet = React.useMemo(() => new Set(meta.pool.map((c) => c.toUpperCase())), [meta.pool]);
@@ -148,42 +141,34 @@ export default function ReceiveSessionScreen() {
   /**
    * Flash overlay for playback feedback.
    */
-  const runFlash = React.useCallback(
-    (durationMs: number) => {
-      if (!lightEnabled) return;
-      flash.stopAnimation();
-      flash.setValue(0);
-      Animated.sequence([
-        Animated.timing(flash, {
-          toValue: 0.9,
-          duration: Math.min(120, durationMs * 0.6),
-          useNativeDriver: true,
-        }),
-        Animated.timing(flash, {
-          toValue: 0,
-          duration: Math.max(120, durationMs * 0.6),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    },
-    [flash, lightEnabled],
-  );
+  const runFlash = React.useCallback((durationMs: number) => {
+    if (!lightEnabled) return;
+    flash.stopAnimation();
+    flash.setValue(0);
+    Animated.sequence([
+      Animated.timing(flash, {
+        toValue: 1,
+        duration: Math.min(50, durationMs * 0.4),
+        useNativeDriver: true,
+      }),
+      Animated.timing(flash, {
+        toValue: 0,
+        duration: Math.max(50, durationMs * 0.4),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [flash, lightEnabled]);
 
   /**
    * Haptic tick per symbol during *playback* (optional).
    */
-  const hapticTick = React.useCallback(
-    async (symbol: '.' | '-') => {
-      if (!hapticsEnabled) return;
-      try {
-        const style = symbol === '.' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium;
-        await Haptics.impactAsync(style);
-      } catch {
-        // Ignore if hardware not present.
-      }
-    },
-    [hapticsEnabled],
-  );
+  const hapticTick = React.useCallback(async (symbol: '.' | '-') => {
+    if (!hapticsEnabled) return;
+    try {
+      const style = symbol === '.' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium;
+      await Haptics.impactAsync(style);
+    } catch { /* ignore */ }
+  }, [hapticsEnabled]);
 
   /**
    * Play the target character’s Morse pattern using audio/haptics/flash.
@@ -203,9 +188,7 @@ export default function ReceiveSessionScreen() {
    */
   React.useEffect(() => {
     if (!started || !currentTarget || summary || feedback !== 'idle') return;
-    const timer = setTimeout(() => {
-      playTarget();
-    }, 400);
+    const timer = setTimeout(() => playTarget(), 400);
     return () => clearTimeout(timer);
   }, [started, currentTarget, summary, playTarget, feedback]);
 
@@ -233,46 +216,38 @@ export default function ReceiveSessionScreen() {
   /**
    * Finish a question and move forward (delay for quick visual feedback).
    */
-  const finishQuestion = React.useCallback(
-    (isCorrect: boolean) => {
-      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-      setFeedback(isCorrect ? 'correct' : 'wrong');
+  const finishQuestion = React.useCallback((isCorrect: boolean) => {
+    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    setFeedback(isCorrect ? 'correct' : 'wrong');
 
-      advanceTimerRef.current = setTimeout(() => {
-        setResults((prev) => {
-          if (prev.length >= TOTAL_QUESTIONS) return prev;
-          const next = [...prev, isCorrect];
+    advanceTimerRef.current = setTimeout(() => {
+      setResults((prev) => {
+        if (prev.length >= TOTAL_QUESTIONS) return prev;
+        const next = [...prev, isCorrect];
 
-          if (next.length === TOTAL_QUESTIONS) {
-            const correctCount = next.filter(Boolean).length;
-            const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
-            setSummary({ correct: correctCount, percent: pct });
-            setStarted(false);
-            if (group && lessonId) {
-              setScore(group, lessonId, 'receive', pct);
-            }
-          }
-          return next;
-        });
+        if (next.length === TOTAL_QUESTIONS) {
+          const correctCount = next.filter(Boolean).length;
+          const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
+          setSummary({ correct: correctCount, percent: pct });
+          setStarted(false);
+          if (group && lessonId) setScore(group, lessonId, 'receive', pct);
+        }
+        return next;
+      });
 
-        setShowReveal(false);
-        setFeedback('idle');
-      }, 500);
-    },
-    [group, lessonId, setScore],
-  );
+      setShowReveal(false);
+      setFeedback('idle');
+    }, 450);
+  }, [group, lessonId, setScore]);
 
   /**
    * Handle a user choice (from lesson choices or keyboard).
    */
-  const submitAnswer = React.useCallback(
-    (choice: string) => {
-      if (!started || !currentTarget || summary || feedback !== 'idle') return;
-      const isCorrect = choice.toUpperCase() === (currentTarget ?? '').toUpperCase();
-      finishQuestion(isCorrect);
-    },
-    [started, currentTarget, summary, feedback, finishQuestion],
-  );
+  const submitAnswer = React.useCallback((choice: string) => {
+    if (!started || !currentTarget || summary || feedback !== 'idle') return;
+    const isCorrect = choice.toUpperCase() === (currentTarget ?? '').toUpperCase();
+    finishQuestion(isCorrect);
+  }, [started, currentTarget, summary, feedback, finishQuestion]);
 
   /**
    * Close out of session back to lessons.
@@ -293,11 +268,7 @@ export default function ReceiveSessionScreen() {
   const canInteract = started && !summary && !!currentTarget && feedback === 'idle';
 
   // Large prompt char: '?' during idle thinking, else show the answer
-  const visibleChar = !started
-    ? ''
-    : feedback === 'idle'
-    ? '?'
-    : currentTarget ?? '?';
+  const visibleChar = !started ? '' : feedback === 'idle' ? '?' : (currentTarget ?? '?');
 
   const progressValue = results.length;
 
@@ -345,193 +316,228 @@ export default function ReceiveSessionScreen() {
       />
 
       <View style={styles.container}>
-        {/* Header with lesson/challenge labels */}
-        <SessionHeader
-          labelTop={meta.headerTop}
-          labelBottom="RECEIVE"
-          onClose={handleClose}
-        />
-
-        {/* Progress across 20 questions */}
-        <ProgressBar value={progressValue} total={TOTAL_QUESTIONS} />
-
-        {/* Prompt area shows large "?" while waiting, then green/red on correctness */}
-        <Text style={styles.promptLabel}>Identify the character</Text>
-        <View style={styles.promptArea}>
-          {!started ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={startSession}
-              style={({ pressed }) => [styles.startBtn, pressed && { opacity: 0.92 }]}
-            >
-              <Text style={styles.startText}>Start</Text>
-            </Pressable>
-          ) : (
-            <Text
-              style={[
-                styles.promptChar,
-                feedback === 'correct' && { color: colors.gold },
-                feedback === 'wrong' && { color: '#FF6B6B' },
-              ]}
-            >
-              {visibleChar}
-            </Text>
-          )}
+        {/* TOP: header + progress (tighter spacing) */}
+        <View style={styles.topGroup}>
+          <SessionHeader labelTop={meta.headerTop} labelBottom="RECEIVE" onClose={handleClose} />
+          <ProgressBar value={progressValue} total={TOTAL_QUESTIONS} />
         </View>
 
-        {/* Optional reveal of Morse string */}
-        {showReveal && canInteract && (
-          <Text style={styles.reveal}>{formatMorse(currentMorse)}</Text>
-        )}
+        {/* MIDDLE: centered prompt card + output toggles */}
+        <View style={styles.middleGroup}>
+          {/* Prompt + Start/?/Char + Reveal + Actions — inside a centered card */}
+          <View style={styles.promptCard}>
+            <Text style={styles.promptLabel}>Identify the character</Text>
 
-        {/* Action buttons + output toggles */}
-        <View style={styles.controls}>
-          <View style={styles.actionRow}>
-            <ActionButton
-              icon={showReveal ? 'eye-off-outline' : 'eye-outline'}
-              accessibilityLabel="Reveal code"
-              onPress={handleReveal}
-              active={showReveal}
-              disabled={!canInteract}
-            />
-            <ActionButton
-              icon="play"
-              accessibilityLabel="Play code"
-              onPress={playTarget}
-              disabled={!canInteract}
-            />
-          </View>
-
-          <View style={styles.toggleRow}>
-            <OutputToggle
-              icon="vibrate"
-              accessibilityLabel="Toggle haptics"
-              active={hapticsEnabled}
-              onPress={() => setHapticsEnabled(!hapticsEnabled)}
-            />
-            <OutputToggle
-              icon="monitor"
-              accessibilityLabel="Toggle screen flash"
-              active={lightEnabled}
-              onPress={() => setLightEnabled(!lightEnabled)}
-            />
-            <OutputToggle
-              icon="volume-high"
-              accessibilityLabel="Toggle audio"
-              active={audioEnabled}
-              onPress={() => setAudioEnabled(!audioEnabled)}
-            />
-            <OutputToggle
-              icon="flashlight"
-              accessibilityLabel="Toggle flashlight"
-              active={torchEnabled}
-              onPress={() => setTorchEnabled(!torchEnabled)}
-            />
-          </View>
-        </View>
-
-        {/* Choices:
-            - For *lessons*: only the lesson’s two characters as big choices.
-            - For *challenges*: full keyboard but only learned keys are active. */}
-        {meta.isChallenge ? (
-          <View style={styles.keyboard}>
-            {KEYBOARD_LAYOUT.map((row) => (
-              <View key={row.join('-')} style={styles.keyboardRow}>
-                {row.map((key) => {
-                  const learned = learnedSet.has(key);
-                  const active = learned && canInteract;
-                  return (
-                    <Pressable
-                      key={key}
-                      disabled={!learned || !canInteract}
-                      onPress={() => submitAnswer(key)}
-                      style={({ pressed }) => [
-                        styles.key,
-                        learned && styles.keyLearned,
-                        active && pressed && styles.keyPressed,
-                        !learned && styles.keyDisabled,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.keyText,
-                          learned ? styles.keyTextActive : styles.keyTextDisabled,
-                        ]}
-                      >
-                        {key}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.lessonChoices}>
-            {meta.pool.map((char) => (
+            {!started ? (
               <Pressable
-                key={char}
-                onPress={() => submitAnswer(char)}
-                disabled={!canInteract}
-                style={({ pressed }) => [
-                  styles.choice,
-                  pressed && styles.choicePressed,
-                  !canInteract && { opacity: 0.5 },
+                accessibilityRole="button"
+                onPress={startSession}
+                style={({ pressed }) => [styles.startBtn, pressed && { opacity: 0.92 }]}
+              >
+                <Text style={styles.startText}>Start</Text>
+              </Pressable>
+            ) : (
+              <Text
+                style={[
+                  styles.promptChar,
+                  feedback === 'correct' && { color: colors.gold },
+                  feedback === 'wrong' && { color: '#FF6B6B' },
                 ]}
               >
-                <Text style={styles.choiceText}>{char}</Text>
-              </Pressable>
-            ))}
+                {visibleChar}
+              </Text>
+            )}
+
+            {/* Reserved slot so the reveal doesn’t move layout */}
+            <View style={styles.revealSlot}>
+              <Text
+                style={[styles.reveal, !(showReveal && canInteract) && { opacity: 0 }]}
+                numberOfLines={1}
+                ellipsizeMode="clip"
+              >
+                {formatMorse(currentMorse)}
+              </Text>
+            </View>
+
+            {/* Action buttons row (compact gap) */}
+            <View style={styles.actionRow}>
+              <ActionButton
+                icon={showReveal ? 'eye-off-outline' : 'eye-outline'}
+                accessibilityLabel="Reveal code"
+                onPress={handleReveal}
+                active={showReveal}
+                disabled={!canInteract}
+              />
+              <ActionButton
+                icon="play"
+                accessibilityLabel="Play code"
+                onPress={playTarget}
+                disabled={!canInteract}
+              />
+            </View>
           </View>
-        )}
+
+          {/* OUTPUT container: toggles */}
+          <View style={styles.outputContainer}>
+            <View style={styles.toggleRow}>
+              <OutputToggle
+                icon="vibrate"
+                accessibilityLabel="Toggle haptics"
+                active={hapticsEnabled}
+                onPress={() => setHapticsEnabled(!hapticsEnabled)}
+              />
+              <OutputToggle
+                icon="monitor"
+                accessibilityLabel="Toggle screen flash"
+                active={lightEnabled}
+                onPress={() => setLightEnabled(!lightEnabled)}
+              />
+              <OutputToggle
+                icon="volume-high"
+                accessibilityLabel="Toggle audio"
+                active={audioEnabled}
+                onPress={() => setAudioEnabled(!audioEnabled)}
+              />
+              <OutputToggle
+                icon="flashlight"
+                accessibilityLabel="Toggle flashlight"
+                active={torchEnabled}
+                onPress={() => setTorchEnabled(!torchEnabled)}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* BOTTOM: INPUT container (lesson choices or challenge keyboard) */}
+        <View style={styles.inputContainer}>
+          {meta.isChallenge ? (
+            <View style={styles.keyboard}>
+              {KEYBOARD_LAYOUT.map((row) => (
+                <View key={row.join('-')} style={styles.keyboardRow}>
+                  {row.map((key) => {
+                    const learned = learnedSet.has(key);
+                    const active = learned && canInteract;
+                    return (
+                      <Pressable
+                        key={key}
+                        disabled={!learned || !canInteract}
+                        onPress={() => submitAnswer(key)}
+                        style={({ pressed }) => [
+                          styles.key,
+                          learned && styles.keyLearned,
+                          active && pressed && styles.keyPressed,
+                          !learned && styles.keyDisabled,
+                        ]}
+                      >
+                        <Text style={[styles.keyText, learned ? styles.keyTextActive : styles.keyTextDisabled]}>
+                          {key}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.lessonChoices}>
+              {meta.pool.map((char) => (
+                <Pressable
+                  key={char}
+                  onPress={() => submitAnswer(char)}
+                  disabled={!canInteract}
+                  style={({ pressed }) => [
+                    styles.choice,
+                    pressed && styles.choicePressed,
+                    !canInteract && { opacity: 0.5 },
+                  ]}
+                >
+                  <Text style={styles.choiceText}>{char}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
       </View>
     </SafeAreaView>
   );
 }
 
 /**
- * Styles: keep consistent padding/spacing & clear visual states.
+ * Styles: compact vertical rhythm + centered card.
  */
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
+
   container: {
     flex: 1,
     paddingHorizontal: spacing(4),
-    paddingTop: spacing(5),
-    paddingBottom: spacing(5),
-    gap: spacing(3),
+    paddingTop: spacing(3),       // tighter than before
+    paddingBottom: spacing(3),
   },
+
+  // --- groups ---------------------------------------------------------------
+  topGroup: {
+    marginBottom: spacing(0),     // tight gap between progress and card
+  },
+
+  middleGroup: {
+    flex: 1,                      // takes remaining space
+    alignItems: 'center',
+    //justifyContent: 'center',     // vertically center the card area
+    gap: spacing(1),              // small gap between card and outputs
+  },
+
+  inputContainer: {
+    marginTop: spacing(2),
+  },
+
+  // --- prompt card ----------------------------------------------------------
+  promptCard: {
+  alignSelf: 'center',
+  backgroundColor: colors.card,
+  //borderColor: colors.border,
+  borderWidth: 2,
+  borderRadius: 18,
+  paddingVertical: spacing(3),
+  paddingHorizontal: spacing(3),
+  alignItems: 'center',
+  minWidth: '70%',
+  maxWidth: 560,
+  gap: spacing(2),            // compact spacing inside the card
+},
+
+// NEW: fixed-height slot for Start vs ?/Char
+promptMainSlot: {
+  minHeight: 100,             // ~big glyph height; tweak if your font changes
+  alignSelf: 'stretch',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
   promptLabel: {
     color: colors.textDim,
     textAlign: 'center',
     fontSize: 15,
     letterSpacing: 0.6,
   },
-  promptArea: {
-    height: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  startBtn: {
-    minWidth: 180,
-    paddingVertical: spacing(2.5),
-    paddingHorizontal: spacing(6),
-    borderRadius: 32,
-    backgroundColor: colors.blueNeon,
-  },
-  startText: {
-    color: colors.bg,
-    fontWeight: '800',
-    fontSize: 18,
-    textAlign: 'center',
-  },
+
   promptChar: {
-    fontSize: 104,
-    fontWeight: '900',
-    color: colors.text,
-    letterSpacing: 6,
-    textAlign: 'center',
-  },
+  fontSize: 104,
+  lineHeight: 104,            // keep glyph from adding extra line height
+  fontWeight: '900',
+  color: colors.text,
+  letterSpacing: 6,
+  textAlign: 'center',
+},
+
+  // Fixed-height reservation so reveal toggling doesn’t move layout
+ revealSlot: {
+  minHeight: 24,              // already preventing reveal shifts
+  alignSelf: 'stretch',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
   reveal: {
     color: colors.blueNeon,
     fontSize: 24,
@@ -539,27 +545,37 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-  controls: {
-    gap: spacing(3),
-    alignItems: 'center',
-  },
+
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: spacing(2.5),
+    alignItems: 'center',
+    gap: spacing(5),              // slightly reduced from earlier
   },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    maxWidth: 280,
-    alignSelf: 'center',
-  },
+
+  // --- outputs --------------------------------------------------------------
+outputContainer: {
+  alignSelf: 'stretch',          // take full width of the screen
+  paddingHorizontal: spacing(2),
+  marginTop: spacing(1),
+},
+
+toggleRow: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',              // allows 2x2 on small screens instead of squishing
+  alignItems: 'center',
+  justifyContent: 'space-between', // even spread when they fit on one row
+  columnGap: spacing(2),
+  rowGap: spacing(2),
+  width: '100%',                 // ensure it actually stretches
+},
+  // --- inputs ---------------------------------------------------------------
   lessonChoices: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: spacing(2.5),
+    gap: spacing(2),
   },
+
   choice: {
     flex: 1,
     borderRadius: 18,
@@ -570,26 +586,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: spacing(3),
   },
-  choicePressed: {
-    backgroundColor: '#15202A',
-  },
+
+  choicePressed: { backgroundColor: '#15202A' },
+
   choiceText: {
     color: colors.text,
     fontSize: 32,
     fontWeight: '800',
     letterSpacing: 4,
   },
+
   keyboard: {
-    gap: spacing(1.5),
+    gap: spacing(.6),
     alignItems: 'center',
   },
+
   keyboardRow: {
     flexDirection: 'row',
-    gap: spacing(1.2),
+    gap: spacing(.6),
   },
+
   key: {
-    width: 44,
-    height: 50,
+    width: 32,
+    height: 40,
     borderRadius: 14,
     borderWidth: 2,
     borderColor: '#1F2933',
@@ -597,26 +616,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  keyLearned: {
-    borderColor: colors.blueNeon,
-  },
-  keyPressed: {
-    backgroundColor: '#15202A',
-  },
-  keyDisabled: {
-    opacity: 0.35,
-  },
+
+  keyLearned: { borderColor: colors.blueNeon },
+  keyPressed: { backgroundColor: '#15202A' },
+  keyDisabled: { opacity: 0.35 },
   keyText: {
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  keyTextActive: {
-    color: colors.blueNeon,
+
+  keyTextActive: { color: colors.blueNeon },
+  keyTextDisabled: { color: '#4A5058' },
+
+  // --- misc -----------------------------------------------------------------
+  startBtn: {
+    minWidth: 180,
+    paddingVertical: spacing(2.25), // slightly tighter
+    paddingHorizontal: spacing(5.5),
+    borderRadius: 32,
+    backgroundColor: colors.blueNeon,
   },
-  keyTextDisabled: {
-    color: '#4A5058',
+  startText: {
+    color: colors.bg,
+    fontWeight: '800',
+    fontSize: 18,
+    textAlign: 'center',
   },
+
   emptyState: {
     flex: 1,
     alignItems: 'center',

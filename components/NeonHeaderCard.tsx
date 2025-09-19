@@ -33,7 +33,10 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
     [groupId],
   );
   const sectionIndex =
-    Math.max(0, LESSON_GROUPS.findIndex((g) => g.id === groupId)) + 1;
+    Math.max(
+      0,
+      LESSON_GROUPS.findIndex((g) => g.id === groupId),
+    ) + 1;
 
   const getCompletionRatio = useProgressStore((s) => s.getCompletionRatio);
   const progress = useProgressStore((s) => s.progress);
@@ -52,7 +55,8 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
     const groupProg = progress[g.id] ?? {};
     ids.forEach((id) => {
       const p = groupProg[id];
-      const receive = (p?.receiveScore ?? (p?.receive ? 100 : 0)) >= thresholds.receive;
+      const receive =
+        (p?.receiveScore ?? (p?.receive ? 100 : 0)) >= thresholds.receive;
       const send = (p?.sendScore ?? (p?.send ? 100 : 0)) >= thresholds.send;
       if (receive) done += 1;
       if (send) done += 1;
@@ -72,7 +76,10 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
           <View style={styles.side}>
             <Pressable
               onPress={() => setOpen(true)}
-              style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                pressed && styles.pressed,
+              ]}
               accessibilityLabel="Open groups"
             >
               <Ionicons name="menu" size={24} color={colors.bg} />
@@ -101,7 +108,10 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
           <View style={styles.side}>
             <Pressable
               onPress={() => router.push(overviewHref)}
-              style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                pressed && styles.pressed,
+              ]}
               accessibilityLabel="Help"
             >
               <Ionicons name="help" size={24} color={colors.bg} />
@@ -111,14 +121,21 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
       </View>
 
       {/* Groups modal unchanged (progress colors tuned to blueNeon) */}
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOpen(false)}
+      >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Lesson Groups</Text>
             <FlatList
               data={LESSON_GROUPS}
               keyExtractor={(item) => item.id}
-              ItemSeparatorComponent={() => <View style={{ height: spacing(2) }} />}
+              ItemSeparatorComponent={() => (
+                <View style={{ height: spacing(2) }} />
+              )}
               renderItem={({ item }) => {
                 const ratio = getCompletionRatio(item.id, item.lessons.length);
                 return (
@@ -127,20 +144,36 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
                       onChangeGroup(item.id);
                       setOpen(false);
                     }}
-                    style={({ pressed }) => [styles.groupRow, pressed && { opacity: 0.92 }]}
+                    style={({ pressed }) => [
+                      styles.groupRow,
+                      pressed && { opacity: 0.92 },
+                    ]}
                   >
                     <View style={{ flex: 1 }}>
                       <Text style={styles.groupTitle}>{item.title}</Text>
                       <View style={styles.progressTrack}>
-                        <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
+                        <View
+                          style={[
+                            styles.progressFill,
+                            { width: `${ratio * 100}%` },
+                          ]}
+                        />
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color={colors.blueNeon} />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={18}
+                      color={colors.blueNeon}
+                    />
                   </Pressable>
                 );
               }}
             />
-            <Pressable onPress={() => setOpen(false)} style={styles.closeBtn} accessibilityLabel="Close">
+            <Pressable
+              onPress={() => setOpen(false)}
+              style={styles.closeBtn}
+              accessibilityLabel="Close"
+            >
               <Text style={styles.closeBtnText}>Close</Text>
             </Pressable>
           </View>
@@ -183,10 +216,10 @@ const styles = StyleSheet.create({
 
   centerTextWrap: { alignItems: 'center', justifyContent: 'center', flex: 1 },
   section: { color: colors.textDim, fontSize: 13, marginBottom: 2 }, // smaller section label
-  title: { color: colors.text, fontWeight: '800', fontSize: 30 },    // larger title
+  title: { color: colors.text, fontWeight: '800', fontSize: 30 }, // larger title
 
   headerBarTrack: {
-    height: 10,                    // thicker bar
+    height: 10, // thicker bar
     backgroundColor: '#2A2F36',
     borderRadius: 999,
     marginTop: spacing(1.25),
@@ -219,7 +252,11 @@ const styles = StyleSheet.create({
     gap: spacing(2),
     paddingVertical: spacing(1.5),
   },
-  groupTitle: { color: colors.text, fontWeight: '700', marginBottom: spacing(1) },
+  groupTitle: {
+    color: colors.text,
+    fontWeight: '700',
+    marginBottom: spacing(1),
+  },
   progressTrack: {
     height: 10,
     backgroundColor: 'rgba(10,132,255,0.25)',

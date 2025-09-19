@@ -9,17 +9,17 @@ export const colors = {
 
   // Path + neon accents
   // Use blueNeon for "active" and blueDeep for "available"
-  blueDeep: '#0A84FF',  // AVAILABLE / unlocked but idle
-  blueNeon: '#00E6FF',  // ACTIVE / pulsing
+  blueDeep: '#0A84FF', // AVAILABLE / unlocked but idle
+  blueNeon: '#00E6FF', // ACTIVE / pulsing
   // Back-compat alias (previously "AVAILABLE"):
   blue: '#0A84FF',
 
-  neonTeal: '#00FFE0',  // keep for teal accents elsewhere if needed
-  green: '#50C878',     // RECEIVE_DONE
-  gold: '#FFD700',      // MASTERED / crown / star
+  neonTeal: '#00FFE0', // keep for teal accents elsewhere if needed
+  green: '#50C878', // RECEIVE_DONE
+  gold: '#FFD700', // MASTERED / crown / star
 
   // These use the new neon blue as the base
-  line: 'rgba(0,230,255,0.35)',   // dotted path
+  line: 'rgba(0,230,255,0.35)', // dotted path
   border: 'rgba(0,230,255,0.55)', // neon outline for cards/nodes
 } as const;
 

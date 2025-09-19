@@ -22,7 +22,12 @@
 
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import Svg, {
+  Circle,
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  Stop,
+} from 'react-native-svg';
 import { colors, spacing } from '@/theme/lessonTheme';
 
 type Props = {
@@ -38,7 +43,12 @@ const STROKE = 18;
 const RADIUS = (SIZE - STROKE) / 2;
 const CIRC = 2 * Math.PI * RADIUS;
 
-export default function SessionSummary({ percent, correct, total, onContinue }: Props) {
+export default function SessionSummary({
+  percent,
+  correct,
+  total,
+  onContinue,
+}: Props) {
   // Keep percent safe (integer 0..100)
   const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
 
@@ -92,7 +102,9 @@ export default function SessionSummary({ percent, correct, total, onContinue }: 
 
         {/* Center label overlay */}
         <View style={styles.center}>
-          <Text style={[styles.percent, { color: accent }]}>{safePercent}%</Text>
+          <Text style={[styles.percent, { color: accent }]}>
+            {safePercent}%
+          </Text>
           <Text style={styles.sub}>
             {correct} / {total} correct
           </Text>

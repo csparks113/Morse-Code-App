@@ -1,5 +1,13 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, ViewStyle, Animated, Easing } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ViewStyle,
+  Animated,
+  Easing,
+} from 'react-native';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -13,7 +21,7 @@ type Props = {
   receiveDone: boolean;
   sendDone: boolean;
   isActive: boolean; // receive available
-  canSend: boolean;  // send available
+  canSend: boolean; // send available
   onReceive: () => void;
   onSend: () => void;
   style?: ViewStyle;
@@ -43,9 +51,19 @@ function usePulse(enabled: boolean) {
     if (!enabled) return;
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(scale, { toValue: 1.08, duration: 950, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1.0, duration: 950, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      ])
+        Animated.timing(scale, {
+          toValue: 1.08,
+          duration: 950,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1.0,
+          duration: 950,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
     );
     loop.start();
     return () => loop.stop();
@@ -108,7 +126,11 @@ function CircleButton({
           pointerEvents="none"
           style={[
             styles.glowRing,
-            { borderColor: NEON_BLUE, transform: [{ scale: pulse }], opacity: 0.55 },
+            {
+              borderColor: NEON_BLUE,
+              transform: [{ scale: pulse }],
+              opacity: 0.55,
+            },
           ]}
         />
       )}
@@ -141,33 +163,49 @@ export default function LessonCard(p: Props) {
   const cardBorder = bothComplete
     ? GOLD_OUTLINE
     : anyActive
-    ? NEON_BLUE
-    : anyUnlockedIdle
-    ? DEEP_BLUE
-    : GRAY_BORDER;
+      ? NEON_BLUE
+      : anyUnlockedIdle
+        ? DEEP_BLUE
+        : GRAY_BORDER;
 
   const subtitleColor = bothComplete
     ? GOLD_OUTLINE
     : anyActive
-    ? NEON_BLUE
-    : anyUnlockedIdle
-    ? DEEP_BLUE
-    : MUTED_ICON;
+      ? NEON_BLUE
+      : anyUnlockedIdle
+        ? DEEP_BLUE
+        : MUTED_ICON;
 
   // Crown state (Challenge)
-  const crownState: 'none' | 'partial' | 'complete' = bothComplete ? 'complete' : anyActive ? 'partial' : 'none';
+  const crownState: 'none' | 'partial' | 'complete' = bothComplete
+    ? 'complete'
+    : anyActive
+      ? 'partial'
+      : 'none';
 
   const label = p.subtitle ? `${p.title} ${p.subtitle}` : p.title;
 
   return (
-    <View style={[styles.card, { borderColor: cardBorder }, p.style]} accessibilityLabel={label}>
-      <CircleButton state={left} iconName="radar" onPress={p.onReceive} accessibilityLabel="Receive" />
+    <View
+      style={[styles.card, { borderColor: cardBorder }, p.style]}
+      accessibilityLabel={label}
+    >
+      <CircleButton
+        state={left}
+        iconName="radar"
+        onPress={p.onReceive}
+        accessibilityLabel="Receive"
+      />
 
       <View style={styles.center}>
         {p.kind === 'lesson' ? (
           <>
             <Text style={styles.title}>{p.title}</Text>
-            {!!p.subtitle && <Text style={[styles.subtitle, { color: subtitleColor }]}>{p.subtitle}</Text>}
+            {!!p.subtitle && (
+              <Text style={[styles.subtitle, { color: subtitleColor }]}>
+                {p.subtitle}
+              </Text>
+            )}
           </>
         ) : (
           <>
@@ -177,7 +215,12 @@ export default function LessonCard(p: Props) {
         )}
       </View>
 
-      <CircleButton state={right} iconName="antenna" onPress={p.onSend} accessibilityLabel="Send" />
+      <CircleButton
+        state={right}
+        iconName="antenna"
+        onPress={p.onSend}
+        accessibilityLabel="Send"
+      />
     </View>
   );
 }
@@ -190,7 +233,11 @@ function ChallengeCrown({ state }: { state: 'none' | 'partial' | 'complete' }) {
         style={styles.crownMask}
         maskElement={
           <View style={styles.crownMask}>
-            <MaterialCommunityIcons name="crown" size={CROWN_SIZE} color="#fff" />
+            <MaterialCommunityIcons
+              name="crown"
+              size={CROWN_SIZE}
+              color="#fff"
+            />
           </View>
         }
       >
@@ -263,4 +310,3 @@ const styles = StyleSheet.create({
   },
   crownGradient: { flex: 1 },
 });
-
