@@ -21,8 +21,8 @@ export default function TabLayout() {
         sceneStyle: { backgroundColor: theme.colors.background },
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
-          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: '#2A2F36',
+          borderTopWidth: 1,
           height: barHeight,
           paddingBottom: padBottom,
         },
@@ -57,4 +57,5 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
 

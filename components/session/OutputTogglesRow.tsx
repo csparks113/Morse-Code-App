@@ -60,16 +60,17 @@ export default function OutputTogglesRow({
 const styles = StyleSheet.create({
   outputContainer: {
     alignSelf: 'stretch',
-    paddingHorizontal: spacing(2),
-    marginTop: spacing(1),
+    paddingHorizontal: spacing(2.5),
+    paddingTop: spacing(1),
   },
   toggleRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
-    columnGap: spacing(2),
-    rowGap: spacing(2),
+    columnGap: spacing(1.5),
+    rowGap: spacing(1.5),
     width: '100%',
   },
 });
+

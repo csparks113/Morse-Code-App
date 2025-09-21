@@ -80,6 +80,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  keyTextActive: { color: colors.blueNeon },
-  keyTextDisabled: { color: '#4A5058' },
+  keyTextActive: { color: colors.text },
+  keyTextDisabled: { color: 'rgba(154, 160, 166, 0.65)' },
 });
+

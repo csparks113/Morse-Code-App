@@ -44,21 +44,24 @@ export function buildSessionMeta(
      * Example: if this is Challenge 2, include chars from all lessons
      * in the group before this challenge.
      */
-    const challengeIndex = parseInt(lessonId.replace('ch-', ''), 10);
+    const challengeIndex = Number.parseInt(lessonId.replace('ch-', ''), 10) || 1;
 
-    // Flatten all lesson chars prior to this challenge index
+    // Collect characters from lessons unlocked prior to this challenge.
     const chars: string[] = [];
+    let lessonsCounted = 0;
     for (const lesson of group.lessons) {
-      // Stop if we hit another challenge marker
       if (lesson.id.startsWith('ch-')) {
-        const idx = parseInt(lesson.id.replace('ch-', ''), 10);
+        const idx = Number.parseInt(lesson.id.replace('ch-', ''), 10) || 0;
         if (idx >= challengeIndex) break;
         continue;
       }
+
       chars.push(...lesson.chars);
+      lessonsCounted += 1;
+
+      if (lessonsCounted >= challengeIndex * 2) break; // challenges arrive every 2 lessons
     }
 
-    // Remove duplicates in case of overlap
     const uniqueChars = Array.from(new Set(chars));
 
     return {

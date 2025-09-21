@@ -28,6 +28,8 @@ import {
   Pressable,
   Animated,
   Dimensions,
+  Platform,
+  Vibration,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -63,16 +65,18 @@ function classifySignalDuration(
   unitMs: number,
   tolerance: number,
 ): '.' | '-' | null {
-  const targets: Array<{ symbol: '.' | '-'; duration: number }> = [
-    { symbol: '.', duration: unitMs }, // dot = 1 unit
-    { symbol: '-', duration: unitMs * 3 }, // dash = 3 units
-  ];
-  let best: { symbol: '.' | '-'; ratio: number } | undefined;
-  for (const t of targets) {
-    const ratio = Math.abs(durationMs - t.duration) / t.duration;
-    if (!best || ratio < best.ratio) best = { symbol: t.symbol, ratio };
-  }
-  return best && best.ratio <= tolerance ? best.symbol : null;
+  if (durationMs <= 0) return null;
+
+  const clampedTol = Math.max(0.05, Math.min(tolerance, 0.9));
+  const dotUpper = unitMs * (1 + clampedTol);
+  if (durationMs <= dotUpper) return '.';
+
+  const dashTarget = unitMs * 3;
+  const dashLower = dashTarget * (1 - clampedTol);
+  const dashUpper = dashTarget * (1 + clampedTol);
+  if (durationMs >= dashLower && durationMs <= dashUpper) return '-';
+
+  return null;
 }
 
 function classifyGapDuration(
@@ -125,11 +129,11 @@ export default function SendSessionScreen() {
   const signalTolerancePercent =
     typeof settings.signalTolerancePercent === 'number'
       ? settings.signalTolerancePercent
-      : 30; // ±30%
+      : 30; // +/-30%
   const gapTolerancePercent =
     typeof settings.gapTolerancePercent === 'number'
       ? settings.gapTolerancePercent
-      : 50; // ±50%
+      : 50; // +/-50%
 
   const signalTolerance = signalTolerancePercent / 100;
   const gapTolerance = gapTolerancePercent / 100;
@@ -143,6 +147,7 @@ export default function SendSessionScreen() {
   );
   const [showReveal, setShowReveal] = React.useState(false);
   const [summary, setSummary] = React.useState<Summary | null>(null);
+  const [streak, setStreak] = React.useState(0);
   const [input, setInput] = React.useState(''); // typed Morse for current target
 
   // Refs
@@ -160,11 +165,14 @@ export default function SendSessionScreen() {
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+ 
+  const currentMorseRef = React.useRef('');
 
   // Current question: target char + its Morse pattern
   const currentIndex = results.length;
   const currentTarget = questions[currentIndex] ?? null;
   const currentMorse = currentTarget ? (toMorse(currentTarget) ?? '') : '';
+  currentMorseRef.current = currentMorse;
 
   // Responsive tuning for compact UI
   const screenH = Dimensions.get('window').height;
@@ -188,20 +196,17 @@ export default function SendSessionScreen() {
   const runFlash = React.useCallback(
     (durationMs: number) => {
       if (!lightEnabled) return;
-      flash.stopAnimation();
-      flash.setValue(0);
-      Animated.sequence([
-        Animated.timing(flash, {
-          toValue: 1,
-          duration: Math.min(120, durationMs * 0.6),
-          useNativeDriver: true,
-        }),
+      const fadeDuration = Math.max(90, durationMs * 0.4);
+
+      flash.stopAnimation(() => {
+        flash.setValue(1);
         Animated.timing(flash, {
           toValue: 0,
-          duration: Math.max(120, durationMs * 0.6),
+          delay: Math.max(0, durationMs - fadeDuration),
+          duration: fadeDuration,
           useNativeDriver: true,
-        }),
-      ]).start();
+        }).start();
+      });
     },
     [flash, lightEnabled],
   );
@@ -210,14 +215,23 @@ export default function SendSessionScreen() {
    * Haptic tick per symbol when *playing* (not when the user keys).
    */
   const hapticTick = React.useCallback(
-    async (symbol: '.' | '-') => {
+    (symbol: '.' | '-', durationMs: number) => {
       if (!hapticsEnabled) return;
+
+      if (Platform.OS === 'android') {
+        try {
+          Vibration.cancel();
+        } catch {}
+        Vibration.vibrate(Math.max(15, Math.round(durationMs)));
+        return;
+      }
+
       try {
         const style =
           symbol === '.'
             ? Haptics.ImpactFeedbackStyle.Light
             : Haptics.ImpactFeedbackStyle.Medium;
-        await Haptics.impactAsync(style);
+        Haptics.impactAsync(style);
       } catch {}
     },
     [hapticsEnabled],
@@ -227,14 +241,16 @@ export default function SendSessionScreen() {
    * Play the correct pattern (audio/flash/haptics) so the user can hear/feel it.
    */
   const playTarget = React.useCallback(async () => {
-    if (!currentMorse) return;
-    await playMorseCode(currentMorse, getMorseUnitMs(), {
+    const morse = currentMorseRef.current;
+    if (!morse) return;
+
+    await playMorseCode(morse, getMorseUnitMs(), {
       onSymbolStart: (symbol, duration) => {
         runFlash(duration);
-        hapticTick(symbol);
+        hapticTick(symbol, duration);
       },
     });
-  }, [currentMorse, runFlash, hapticTick]);
+  }, [runFlash, hapticTick]);
 
   /**
    * Finish current question and advance.
@@ -243,6 +259,7 @@ export default function SendSessionScreen() {
     (isCorrect: boolean) => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
       setFeedback(isCorrect ? 'correct' : 'wrong');
+      setStreak((prev) => (isCorrect ? prev + 1 : 0));
       setShowReveal(true); // always reveal the correct code for comparison
 
       ignorePressRef.current = false;
@@ -285,7 +302,7 @@ export default function SendSessionScreen() {
       updateInput(next);
 
       if (!expected.startsWith(next)) {
-        // diverged → wrong
+        // diverged -> wrong
         finishQuestion(false);
         return;
       }
@@ -316,6 +333,7 @@ export default function SendSessionScreen() {
     setShowReveal(false);
     setFeedback('idle');
     setSummary(null);
+    setStreak(0);
     setStarted(true);
 
     // Reset press/gap tracking
@@ -349,7 +367,7 @@ export default function SendSessionScreen() {
         gapTolerance,
       );
       if (gapType !== 'intra') {
-        // Wrong gap → mark wrong and ignore this press
+        // Wrong gap -> mark wrong and ignore this press
         ignorePressRef.current = true;
         lastReleaseRef.current = null;
         finishQuestion(false);
@@ -362,7 +380,7 @@ export default function SendSessionScreen() {
   }, [canInteract, gapTolerance, finishQuestion]);
 
   /**
-   * Handle press UP (measure duration → classify as dot/dash).
+   * Handle press UP (measure duration -> classify as dot/dash).
    */
   const onPressOut = React.useCallback(() => {
     if (!canInteract) return;
@@ -463,7 +481,7 @@ export default function SendSessionScreen() {
             labelBottom="SEND"
             onClose={handleCloseCleanup}
           />
-          <ProgressBar value={results.length} total={TOTAL_QUESTIONS} />
+          <ProgressBar value={results.length} total={TOTAL_QUESTIONS} streak={streak} />
         </View>
 
         {/* CENTER: Prompt card only (moves based on screen height) */}
@@ -558,8 +576,8 @@ const styles = StyleSheet.create({
   // margin between toggles and keyer
   togglesWrap: {
     alignSelf: 'stretch',
-    paddingHorizontal: spacing(2),
-    marginBottom: spacing(3),
+    paddingHorizontal: spacing(2.5),
+    marginBottom: spacing(2.75),
   },
 
   // Classic keyer button (reverted)
@@ -596,3 +614,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+

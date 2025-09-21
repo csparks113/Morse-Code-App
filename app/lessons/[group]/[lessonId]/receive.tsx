@@ -19,6 +19,8 @@ import {
   Pressable,
   Animated,
   Dimensions,
+  Platform,
+  Vibration,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -85,17 +87,20 @@ export default function ReceiveSessionScreen() {
   const [feedback, setFeedback] = React.useState<FeedbackState>('idle');
   const [showReveal, setShowReveal] = React.useState(false);
   const [summary, setSummary] = React.useState<Summary | null>(null);
+  const [streak, setStreak] = React.useState(0);
 
   // Visual flash overlay
   const flash = React.useRef(new Animated.Value(0)).current;
 
   // Timer to delay advancing / scheduling playback
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentMorseRef = React.useRef('');
 
   // Current target + Morse code
   const currentIndex = results.length;
   const currentTarget = questions[currentIndex] ?? null;
   const currentMorse = currentTarget ? (toMorse(currentTarget) ?? '') : '';
+  currentMorseRef.current = currentMorse;
 
   // Learned set (for challenge keyboard enablement)
   const learnedSet = React.useMemo(
@@ -122,46 +127,53 @@ export default function ReceiveSessionScreen() {
    */
   const runFlash = React.useCallback((durationMs: number) => {
     if (!lightEnabled) return;
-    flash.stopAnimation();
-    flash.setValue(0);
-    Animated.sequence([
-      Animated.timing(flash, {
-        toValue: 1,
-        duration: Math.min(50, durationMs * 0.4),
-        useNativeDriver: true,
-      }),
+    const fadeDuration = Math.max(80, durationMs * 0.4);
+
+    flash.stopAnimation(() => {
+      flash.setValue(1);
       Animated.timing(flash, {
         toValue: 0,
-        duration: Math.max(50, durationMs * 0.4),
+        delay: Math.max(0, durationMs - fadeDuration),
+        duration: fadeDuration,
         useNativeDriver: true,
-      }),
-    ]).start();
+      }).start();
+    });
   }, [flash, lightEnabled]);
 
   /**
    * Haptic tick per symbol during *playback* (optional).
    */
-  const hapticTick = React.useCallback(async (symbol: '.' | '-') => {
+  const hapticTick = React.useCallback((symbol: '.' | '-', durationMs: number) => {
     if (!hapticsEnabled) return;
+
+    if (Platform.OS === 'android') {
+      try {
+        Vibration.cancel();
+      } catch {}
+      Vibration.vibrate(Math.max(15, Math.round(durationMs)));
+      return;
+    }
+
     try {
       const style = symbol === '.' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium;
-      await Haptics.impactAsync(style);
+      Haptics.impactAsync(style);
     } catch { /* ignore */ }
   }, [hapticsEnabled]);
 
   /**
-   * Play the target character’s Morse pattern using audio/haptics/flash.
+   * Play the target character's Morse pattern using audio/haptics/flash.
    */
   const playTarget = React.useCallback(async () => {
-    if (!currentMorse) return;
-    await playMorseCode(currentMorse, getMorseUnitMs(), {
+    const morse = currentMorseRef.current;
+    if (!morse) return;
+
+    await playMorseCode(morse, getMorseUnitMs(), {
       onSymbolStart: (symbol, duration) => {
         runFlash(duration);
-        hapticTick(symbol);
+        hapticTick(symbol, duration);
       },
     });
-  }, [currentMorse, runFlash, hapticTick]);
-
+  }, [runFlash, hapticTick]);
   /**
    * Auto-play the target shortly after it appears (only while idle on the prompt).
    */
@@ -189,6 +201,7 @@ export default function ReceiveSessionScreen() {
     setFeedback('idle');
     setShowReveal(false);
     setSummary(null);
+    setStreak(0);
     setStarted(true);
   }, [meta.pool]);
 
@@ -198,6 +211,7 @@ export default function ReceiveSessionScreen() {
   const finishQuestion = React.useCallback((isCorrect: boolean) => {
     if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
     setFeedback(isCorrect ? 'correct' : 'wrong');
+    setStreak((prev) => (isCorrect ? prev + 1 : 0));
 
     advanceTimerRef.current = setTimeout(() => {
       setResults((prev) => {
@@ -247,7 +261,7 @@ export default function ReceiveSessionScreen() {
     );
   }
 
-  // Finished → show summary
+  // Finished -> show summary
   if (summary) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -281,7 +295,7 @@ export default function ReceiveSessionScreen() {
         {/* --- TOP (fixed): header + progress --- */}
         <View style={styles.topGroup}>
           <SessionHeader labelTop={meta.headerTop} labelBottom="RECEIVE" />
-          <ProgressBar value={progressValue} total={TOTAL_QUESTIONS} />
+          <ProgressBar value={progressValue} total={TOTAL_QUESTIONS} streak={streak} />
         </View>
 
         {/* --- CENTER (flex, centered): PromptCard only --- */}
@@ -378,8 +392,8 @@ const styles = StyleSheet.create({
   // --- toggles right above input -------------------------------------------
   togglesWrap: {
     alignSelf: 'stretch',
-    paddingHorizontal: spacing(2),
-    marginBottom: spacing(2.5), // space between toggles and input
+    paddingHorizontal: spacing(2.5),
+    marginBottom: spacing(2.75), // space between toggles and input
   },
 
   // --- lesson choices row ---------------------------------------------------

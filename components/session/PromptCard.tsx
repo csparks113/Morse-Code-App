@@ -44,12 +44,12 @@ export default function PromptCard({
   const revealVisible = (showReveal && started) || feedback !== 'idle';
 
   // compact spacing
-  const padV = compact ? spacing(2.25) : spacing(3);
-  const gap = compact ? spacing(1.25) : spacing(2);
-  const slotMinH = compact ? Math.min(100, mainSlotMinHeight) : mainSlotMinHeight;
-  const actionsGap = compact ? spacing(4) : spacing(5);
+  const padV = compact ? spacing(1.75) : spacing(2.5);
+  const gap = compact ? spacing(1) : spacing(1.75);
+  const slotMinH = compact ? Math.min(92, mainSlotMinHeight) : mainSlotMinHeight;
+  const actionsGap = compact ? spacing(3) : spacing(4);
   const labelSize = compact ? 14 : 15;
-  const belowMinH = compact ? 18 : 24;
+  const belowMinH = compact ? 12 : 18;
   const revealSz = revealSize ?? (compact ? 'sm' : 'md');
 
   return (
@@ -107,7 +107,8 @@ const styles = StyleSheet.create({
   card: {
     alignSelf: 'center',
     backgroundColor: colors.card,
-    borderWidth: 2,
+    borderWidth: 1.5,
+    borderColor: '#2A2F36',
     borderRadius: 18,
     paddingHorizontal: spacing(3),
     alignItems: 'center',
@@ -146,4 +147,3 @@ const styles = StyleSheet.create({
 
   actions: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
 });
-

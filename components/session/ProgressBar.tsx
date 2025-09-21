@@ -1,58 +1,95 @@
 /**
- * PROGRESS BAR
- * ------------
- * OVERVIEW
- * Simple horizontal progress bar with a gold gradient fill.
- * Used on the session screens to show progress out of 20 prompts.
- *
- * PROPS
- * - value: current progress count (e.g., number of answered questions)
- * - total: total count (e.g., 20)
- *
- * IMPLEMENTATION
- * - We clamp value/total to a 0..1 fraction and set the fill width to that %.
- * - Uses `expo-linear-gradient` for a nice gold gradient.
+ * PROGRESS BAR WITH STATS
+ * -----------------------
+ * Displays current question progress and streak info alongside the neon track.
  */
 
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from '@/theme/lessonTheme';
 
 type Props = {
   value: number;
   total: number;
+  streak?: number;
 };
 
-export default function ProgressBar({ value, total }: Props) {
-  // Convert to a [0, 1] fraction; guard against bad totals
-  const clamped = total <= 0 ? 0 : Math.max(0, Math.min(1, value / total));
+export default function ProgressBar({ value, total, streak = 0 }: Props) {
+  const clampedTotal = total > 0 ? total : 0;
+  const answered = Math.max(0, Math.min(value, clampedTotal));
+  const fraction = clampedTotal === 0 ? 0 : answered / clampedTotal;
+  const percentWidth = `${fraction * 100}%`;
+  const safeStreak = Math.max(0, streak);
+  const hasStreak = safeStreak > 0;
+  const streakColor = hasStreak ? '#FF9F1C' : 'rgba(154, 160, 166, 0.7)';
 
   return (
-    <View style={styles.track}>
-      {/* Only render the fill when > 0 to avoid drawing a tiny sliver */}
-      {clamped > 0 && (
-        <LinearGradient
-          colors={['#FFEE94', colors.gold]} // pale gold → rich gold
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={[styles.fill, { width: `${clamped * 100}%` }]}
+    <View style={styles.container}>
+      <Text style={styles.countLabel} accessibilityRole="text">
+        {answered}/{clampedTotal}
+      </Text>
+
+      <View style={styles.track}>
+        {fraction > 0 && (
+          <LinearGradient
+            colors={['#FFEE94', colors.gold]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={[styles.fill, { width: percentWidth }]}
+          />
+        )}
+      </View>
+
+      <View style={styles.streakWrap}>
+        <Ionicons
+          name="flame"
+          size={18}
+          color={streakColor}
+          accessibilityElementsHidden
         />
-      )}
+        <Text style={[styles.streakText, { color: streakColor }]} accessibilityRole="text">
+          {safeStreak}
+        </Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(1.5),
+    marginBottom: spacing(3),
+  },
+  countLabel: {
+    width: 60,
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'left',
+  },
   track: {
+    flex: 1,
     height: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)', // faint gold track
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
     overflow: 'hidden',
-    width: '100%',
-    marginBottom: spacing(3),
   },
   fill: {
     height: '100%',
+  },
+  streakWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(0.5),
+    minWidth: 46,
+    justifyContent: 'flex-end',
+  },
+  streakText: {
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
