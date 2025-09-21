@@ -1,134 +1,104 @@
+// app/lessons/[group]/[lessonId]/send.tsx
 /**
- * SEND SESSION SCREEN (Morse Code Master)
- * ---------------------------------------
- * OVERVIEW
- * This screen teaches/practices *sending* Morse code for a single character at a time.
- * The app shows a target character (e.g., "E"). The user "keys" the character by
- * pressing the big keyer button: short press = dot (·), long press = dash (–).
+ * SEND SESSION SCREEN (Pinned layout)
+ * -----------------------------------
+ * Top:    SessionHeader + ProgressBar (fixed)
+ * Middle: PromptCard (centered in remaining space)
+ * Bottom: OutputTogglesRow (directly above) + Keyer button (fixed to bottom)
  *
- * GOAL
- * - The user must reproduce the target character's Morse sequence (e.g., "E" = ".").
- * - Timing matters: we classify each press as dot/dash using the user's WPM settings.
- * - Gaps between presses should be *intra-character* (1 unit). If not, it's wrong.
- *
- * KEY IDEAS
- * - Timing units come from WPM (getMorseUnitMs). Dot = 1 unit, dash = 3 units.
- * - Gaps: intra = 1 unit, inter = 3 units, word = 7 units (we only accept intra here).
- * - Tolerances (percent) for dot/dash and gaps are configurable in settings.
- * - We generate 20 random prompts from the lesson pool; store correctness; show summary.
- *
- * MAIN FLOW
- * 1) User taps "Start" → we build a 20-item "questions" list from lesson meta.pool.
- * 2) For each question:
- *    - Show the target character (big letter).
- *    - The user presses/releases the big keyer:
- *        onPressIn  → start the timer and check the previous gap.
- *        onPressOut → measure press duration, classify dot/dash, append to input.
- *    - If the input ever deviates from the correct Morse sequence → wrong & advance.
- *    - If it matches exactly → correct & advance.
- * 3) After 20 prompts: compute % correct, save to progress store, show SessionSummary.
- *
- * ACCESSIBILITY & FEEDBACK
- * - Screen flash + haptics on playback (optional via OutputToggle).
- * - Reveal button shows the target's Morse sequence (for learning).
- * - Play button plays audio/haptics/flash pattern of the correct code.
+ * Other features:
+ * - Typed input shows inside PromptCard under reveal; auto-reveal on result
+ * - Keyer has pulsing fill + shimmer while interactive
+ * - Uses the accepted two-line SessionHeader (subtitle removed) and navigation handled there
+ */
+
+// app/lessons/[group]/[lessonId]/send.tsx
+/**
+ * SEND SESSION SCREEN (Pinned layout + outline shimmer)
+ * - Keyer: shimmering OUTLINE + solid fill (pulses on press)
+ * - Start button gets the same outline shimmer
+ * - Extra margin between toggles and keyer
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Animated,
+  Dimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
-// Reusable UI components
+// Shared UI components
 import SessionHeader from '@/components/session/SessionHeader';
 import ProgressBar from '@/components/session/ProgressBar';
-import ActionButton from '@/components/session/ActionButton';
-import OutputToggle from '@/components/session/OutputToggle';
 import SessionSummary from '@/components/session/SessionSummary';
+import PromptCard from '@/components/session/PromptCard';
+import OutputTogglesRow from '@/components/session/OutputTogglesRow';
 
 // Theme + utilities
 import { colors, spacing } from '@/theme/lessonTheme';
+import { theme } from '@/theme/theme';
 import { toMorse } from '@/utils/morse';
 import { playMorseCode, getMorseUnitMs } from '@/utils/audio';
 
-// State stores (Zustand)
+// Stores
 import { useProgressStore } from '@/store/useProgressStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
 // Lesson/session metadata helper
 import { buildSessionMeta } from './sessionMeta';
 
-// Number of questions per session
 const TOTAL_QUESTIONS = 20;
 
-// Types for local state
 type Summary = { correct: number; percent: number };
 type GapType = 'intra' | 'inter' | 'word';
 
-/**
- * Turn a press duration into '.' or '-' if it’s within tolerance.
- */
 function classifySignalDuration(
   durationMs: number,
   unitMs: number,
   tolerance: number,
 ): '.' | '-' | null {
-  // Target durations for a single press
-  const options: Array<{ symbol: '.' | '-'; duration: number }> = [
+  const targets: Array<{ symbol: '.' | '-'; duration: number }> = [
     { symbol: '.', duration: unitMs }, // dot = 1 unit
     { symbol: '-', duration: unitMs * 3 }, // dash = 3 units
   ];
-
-  // Choose whichever target is *closest* to the actual press time
   let best: { symbol: '.' | '-'; ratio: number } | undefined;
-  options.forEach((opt) => {
-    const ratio = Math.abs(durationMs - opt.duration) / opt.duration; // % error
-    if (!best || ratio < best.ratio) {
-      best = { symbol: opt.symbol, ratio };
-    }
-  });
-
-  // Only accept if within tolerance (% error <= tolerance)
-  if (best && best.ratio <= tolerance) return best.symbol;
-  return null;
+  for (const t of targets) {
+    const ratio = Math.abs(durationMs - t.duration) / t.duration;
+    if (!best || ratio < best.ratio) best = { symbol: t.symbol, ratio };
+  }
+  return best && best.ratio <= tolerance ? best.symbol : null;
 }
 
-/**
- * Turn a *gap* duration into gap type (intra/inter/word) if it’s within tolerance.
- * For send lessons here, we *only accept* intra (1 unit) between symbols of the SAME letter.
- */
 function classifyGapDuration(
   durationMs: number,
   unitMs: number,
   tolerance: number,
 ): GapType | null {
-  const options: Array<{ type: GapType; duration: number }> = [
+  const targets: Array<{ type: GapType; duration: number }> = [
     { type: 'intra', duration: unitMs }, // inside a letter
     { type: 'inter', duration: unitMs * 3 }, // between letters
     { type: 'word', duration: unitMs * 7 }, // between words
   ];
-
   let best: { type: GapType; ratio: number } | undefined;
-  options.forEach((opt) => {
-    const ratio = Math.abs(durationMs - opt.duration) / opt.duration;
-    if (!best || ratio < best.ratio) {
-      best = { type: opt.type, ratio };
-    }
-  });
-
-  if (best && best.ratio <= tolerance) return best.type;
-  return null;
+  for (const t of targets) {
+    const ratio = Math.abs(durationMs - t.duration) / t.duration;
+    if (!best || ratio < best.ratio) best = { type: t.type, ratio };
+  }
+  return best && best.ratio <= tolerance ? best.type : null;
 }
 
 export default function SendSessionScreen() {
-  // Pull route params like /lessons/[group]/[lessonId]
+  // Route params like /lessons/[group]/[lessonId]
   const { group, lessonId } = useLocalSearchParams<{
     group: string;
     lessonId: string;
   }>();
-  const router = useRouter();
-  const homePath = '../../../../(tabs)/index';
 
   // Build lesson metadata (title, pool of characters, header text)
   const meta = React.useMemo(
@@ -152,7 +122,6 @@ export default function SendSessionScreen() {
     setHapticsEnabled,
   } = settings;
 
-  // Tolerance defaults if Settings UI isn’t wired
   const signalTolerancePercent =
     typeof settings.signalTolerancePercent === 'number'
       ? settings.signalTolerancePercent
@@ -165,7 +134,7 @@ export default function SendSessionScreen() {
   const signalTolerance = signalTolerancePercent / 100;
   const gapTolerance = gapTolerancePercent / 100;
 
-  // Local state for session control
+  // Local state
   const [started, setStarted] = React.useState(false);
   const [questions, setQuestions] = React.useState<string[]>([]);
   const [results, setResults] = React.useState<boolean[]>([]);
@@ -176,28 +145,37 @@ export default function SendSessionScreen() {
   const [summary, setSummary] = React.useState<Summary | null>(null);
   const [input, setInput] = React.useState(''); // typed Morse for current target
 
-  // Keep input in a ref so we can read it in event handlers without re-rendering
+  // Refs
   const inputRef = React.useRef('');
   const updateInput = React.useCallback((next: string) => {
     inputRef.current = next;
     setInput(next);
   }, []);
 
-  // Animation & timing refs
   const flash = React.useRef(new Animated.Value(0)).current; // overlay flash
-  const pressStartRef = React.useRef<number | null>(null); // when the current press started
-  const lastReleaseRef = React.useRef<number | null>(null); // when the last press ended
-  const ignorePressRef = React.useRef(false); // used when a wrong gap happens
+
+  const pressStartRef = React.useRef<number | null>(null);
+  const lastReleaseRef = React.useRef<number | null>(null);
+  const ignorePressRef = React.useRef(false);
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
-  ); // debounce next question
+  );
 
   // Current question: target char + its Morse pattern
   const currentIndex = results.length;
   const currentTarget = questions[currentIndex] ?? null;
   const currentMorse = currentTarget ? (toMorse(currentTarget) ?? '') : '';
 
-  // Clear timer on unmount to avoid setState after unmount
+  // Responsive tuning for compact UI
+  const screenH = Dimensions.get('window').height;
+  const layout =
+    screenH < 635 ? 'xsmall' :
+    screenH < 700 ? 'small' : 'regular';
+  const promptSlotHeight = layout === 'regular' ? 116 : layout === 'small' ? 96 : 84;
+  const keyerMinHeight   = layout === 'regular' ? 128 : layout === 'small' ? 104 : 92;
+  const inputFontSize    = layout === 'regular' ? 20 : layout === 'small' ? 18 : 16;
+
+  // Cleanup timer on unmount
   React.useEffect(() => {
     return () => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
@@ -206,7 +184,6 @@ export default function SendSessionScreen() {
 
   /**
    * Visual flash feedback (if screen flash is enabled).
-   * We briefly fade a semi-opaque overlay in/out.
    */
   const runFlash = React.useCallback(
     (durationMs: number) => {
@@ -215,7 +192,7 @@ export default function SendSessionScreen() {
       flash.setValue(0);
       Animated.sequence([
         Animated.timing(flash, {
-          toValue: 0.9,
+          toValue: 1,
           duration: Math.min(120, durationMs * 0.6),
           useNativeDriver: true,
         }),
@@ -241,9 +218,7 @@ export default function SendSessionScreen() {
             ? Haptics.ImpactFeedbackStyle.Light
             : Haptics.ImpactFeedbackStyle.Medium;
         await Haptics.impactAsync(style);
-      } catch {
-        // Devices without haptics: ignore.
-      }
+      } catch {}
     },
     [hapticsEnabled],
   );
@@ -253,7 +228,6 @@ export default function SendSessionScreen() {
    */
   const playTarget = React.useCallback(async () => {
     if (!currentMorse) return;
-    // getMorseUnitMs should reflect WPM from settings
     await playMorseCode(currentMorse, getMorseUnitMs(), {
       onSymbolStart: (symbol, duration) => {
         runFlash(duration);
@@ -263,50 +237,44 @@ export default function SendSessionScreen() {
   }, [currentMorse, runFlash, hapticTick]);
 
   /**
-   * Wrap up a question and advance (with a tiny delay for visual feedback).
+   * Finish current question and advance.
    */
   const finishQuestion = React.useCallback(
     (isCorrect: boolean) => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
       setFeedback(isCorrect ? 'correct' : 'wrong');
+      setShowReveal(true); // always reveal the correct code for comparison
 
-      // Reset press tracking state
       ignorePressRef.current = false;
       pressStartRef.current = null;
       lastReleaseRef.current = null;
 
-      // Advance after a short delay
       advanceTimerRef.current = setTimeout(() => {
         setResults((prev) => {
           if (prev.length >= TOTAL_QUESTIONS) return prev;
           const next = [...prev, isCorrect];
 
-          // If completed all questions, build summary & store in progress
           if (next.length === TOTAL_QUESTIONS) {
             const correctCount = next.filter(Boolean).length;
             const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
             setSummary({ correct: correctCount, percent: pct });
             setStarted(false);
-            if (group && lessonId) {
-              setScore(group, lessonId, 'send', pct);
-            }
+            if (group && lessonId) setScore(group, lessonId, 'send', pct);
           }
           return next;
         });
 
-        // Reset per-question UI
+        // reset per-question UI
         updateInput('');
         setShowReveal(false);
         setFeedback('idle');
-      }, 450);
+      }, 650);
     },
     [group, lessonId, setScore, updateInput],
   );
 
   /**
    * Append a '.' or '-' to the current input and evaluate.
-   * - If it *stops matching* the target pattern, it's wrong.
-   * - If it *exactly equals* the target pattern, it's correct.
    */
   const appendSymbol = React.useCallback(
     (symbol: '.' | '-') => {
@@ -317,12 +285,12 @@ export default function SendSessionScreen() {
       updateInput(next);
 
       if (!expected.startsWith(next)) {
-        // e.g. expected '..-' but user typed '.-'
+        // diverged → wrong
         finishQuestion(false);
         return;
       }
       if (expected === next) {
-        // Completed the letter!
+        // completed correctly
         finishQuestion(true);
       }
     },
@@ -331,8 +299,6 @@ export default function SendSessionScreen() {
 
   /**
    * Build a brand new session:
-   * - Make a 20-item question list (random choices from meta.pool).
-   * - Reset progress, feedback, and per-question state.
    */
   const startSession = React.useCallback(() => {
     if (!meta.pool.length) return;
@@ -368,7 +334,7 @@ export default function SendSessionScreen() {
    * Handle press DOWN (start timing + validate previous gap).
    */
   const onPressIn = React.useCallback(() => {
-    if (!started || summary || !currentTarget || feedback !== 'idle') return;
+    if (!canInteract) return;
 
     const now = Date.now();
 
@@ -383,7 +349,7 @@ export default function SendSessionScreen() {
         gapTolerance,
       );
       if (gapType !== 'intra') {
-        // Wrong type of gap → mark as wrong and ignore this press
+        // Wrong gap → mark wrong and ignore this press
         ignorePressRef.current = true;
         lastReleaseRef.current = null;
         finishQuestion(false);
@@ -393,15 +359,14 @@ export default function SendSessionScreen() {
 
     ignorePressRef.current = false;
     pressStartRef.current = now;
-  }, [started, summary, currentTarget, feedback, gapTolerance, finishQuestion]);
+  }, [canInteract, gapTolerance, finishQuestion]);
 
   /**
    * Handle press UP (measure duration → classify as dot/dash).
    */
   const onPressOut = React.useCallback(() => {
-    if (!started || !currentTarget || summary || feedback !== 'idle') return;
+    if (!canInteract) return;
 
-    // If a wrong gap already happened in this cycle, ignore this release
     if (ignorePressRef.current) {
       ignorePressRef.current = false;
       pressStartRef.current = null;
@@ -432,31 +397,12 @@ export default function SendSessionScreen() {
 
     // Add to input & evaluate
     appendSymbol(symbol);
-  }, [
-    started,
-    currentTarget,
-    summary,
-    feedback,
-    signalTolerance,
-    appendSymbol,
-    finishQuestion,
-  ]);
+  }, [canInteract, signalTolerance, appendSymbol, finishQuestion]);
 
-  // Text helper under the prompt
-  const promptText = started
-    ? 'Tap to key the Morse code'
-    : 'Press start to begin';
-
-  // Close out of the session (back to lessons)
-  const handleClose = React.useCallback(() => {
-    router.replace(homePath);
-  }, [router]);
-
-  // Toggle reveal of the correct Morse code (only while idle on a question)
-  const handleReveal = React.useCallback(() => {
-    if (!canInteract) return;
-    setShowReveal((prev) => !prev);
-  }, [canInteract]);
+  // Close (cleanup only; navigation handled inside SessionHeader)
+  const handleCloseCleanup = React.useCallback(() => {
+    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+  }, []);
 
   // If lesson has no content, show graceful empty state
   if (!meta.pool.length) {
@@ -464,21 +410,12 @@ export default function SendSessionScreen() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>Content unavailable.</Text>
-          <Pressable
-            onPress={handleClose}
-            style={({ pressed }) => [
-              styles.emptyBtn,
-              pressed && { opacity: 0.92 },
-            ]}
-          >
-            <Text style={styles.emptyBtnText}>Back to Lessons</Text>
-          </Pressable>
         </View>
       </SafeAreaView>
     );
   }
 
-  // If we’ve finished, show the summary screen
+  // If finished, show the summary screen
   if (summary) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -486,13 +423,21 @@ export default function SendSessionScreen() {
           percent={summary.percent}
           correct={summary.correct}
           total={TOTAL_QUESTIONS}
-          onContinue={handleClose}
+          onContinue={handleCloseCleanup}
         />
       </SafeAreaView>
     );
   }
 
-  // Otherwise, render the active session UI
+  // User input show (spaced) + color by feedback
+  const inputSpaced = input.split('').join(' ');
+  const inputColor =
+    feedback === 'correct'
+      ? colors.gold
+      : feedback === 'wrong'
+      ? '#FF6B6B'
+      : colors.blueNeon;
+
   return (
     <SafeAreaView style={styles.safe}>
       {/* Full-screen overlay we animate to produce a quick flash */}
@@ -511,110 +456,75 @@ export default function SendSessionScreen() {
       />
 
       <View style={styles.container}>
-        {/* Header with top/bottom labels and close (X) */}
-        <SessionHeader
-          labelTop={meta.headerTop}
-          labelBottom="SEND"
-          onClose={handleClose}
-        />
-
-        {/* Progress across the 20 questions */}
-        <ProgressBar value={results.length} total={TOTAL_QUESTIONS} />
-
-        {/* Prompt area: either Start button or the big target letter */}
-        <View style={styles.promptArea}>
-          {!started ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={startSession}
-              style={({ pressed }) => [
-                styles.startBtn,
-                pressed && { opacity: 0.92 },
-              ]}
-            >
-              <Text style={styles.startText}>Start</Text>
-            </Pressable>
-          ) : (
-            <Text
-              style={[
-                styles.letter,
-                feedback === 'correct' && { color: colors.gold },
-                feedback === 'wrong' && { color: '#FF6B6B' },
-              ]}
-            >
-              {currentTarget}
-            </Text>
-          )}
+        {/* TOP: header + progress */}
+        <View style={styles.topGroup}>
+          <SessionHeader
+            labelTop={meta.headerTop}
+            labelBottom="SEND"
+            onClose={handleCloseCleanup}
+          />
+          <ProgressBar value={results.length} total={TOTAL_QUESTIONS} />
         </View>
 
-        {/* Helper text and reveal of Morse pattern (optional) */}
-        <Text style={styles.promptHint}>{promptText}</Text>
-        {showReveal && canInteract && (
-          <Text style={styles.reveal}>{currentMorse.split('').join(' ')}</Text>
-        )}
+        {/* CENTER: Prompt card only (moves based on screen height) */}
+        <View style={styles.centerGroup}>
+          <PromptCard
+            compact
+            revealSize="sm"
+            title="Tap to key the Morse code"
+            started={started}
+            visibleChar={started ? (currentTarget ?? '') : ''}
+            feedback={feedback}
+            morse={currentMorse}
+            showReveal={showReveal}
+            canInteract={canInteract}
+            onStart={startSession}
+            onRevealToggle={() => setShowReveal((v) => !v)}
+            onReplay={playTarget}
+            mainSlotMinHeight={promptSlotHeight}
+            belowReveal={
+              <Text
+                style={[
+                  styles.inputInCard,
+                  { color: inputColor, fontSize: inputFontSize },
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="clip"
+              >
+                {inputSpaced || ' '}
+              </Text>
+            }
+          />
+        </View>
 
-        {/* Action buttons + output toggles */}
-        <View style={styles.controls}>
-          <View style={styles.actionRow}>
-            <ActionButton
-              icon={showReveal ? 'eye-off-outline' : 'eye-outline'}
-              accessibilityLabel="Reveal code"
-              onPress={handleReveal}
-              active={showReveal}
-              disabled={!canInteract}
-            />
-            <ActionButton
-              icon="play"
-              accessibilityLabel="Play code"
-              onPress={playTarget}
-              disabled={!canInteract}
+        {/* BOTTOM: toggles above keyer; keyer pinned at very bottom */}
+        <View style={styles.bottomGroup}>
+          <View style={styles.togglesWrap}>
+            <OutputTogglesRow
+              hapticsEnabled={hapticsEnabled}
+              lightEnabled={lightEnabled}
+              audioEnabled={audioEnabled}
+              torchEnabled={torchEnabled}
+              setHapticsEnabled={setHapticsEnabled}
+              setLightEnabled={setLightEnabled}
+              setAudioEnabled={setAudioEnabled}
+              setTorchEnabled={setTorchEnabled}
             />
           </View>
 
-          <View style={styles.toggleRow}>
-            <OutputToggle
-              icon="vibrate"
-              accessibilityLabel="Toggle haptics"
-              active={hapticsEnabled}
-              onPress={() => setHapticsEnabled(!hapticsEnabled)}
-            />
-            <OutputToggle
-              icon="monitor"
-              accessibilityLabel="Toggle screen flash"
-              active={lightEnabled}
-              onPress={() => setLightEnabled(!lightEnabled)}
-            />
-            <OutputToggle
-              icon="volume-high"
-              accessibilityLabel="Toggle audio"
-              active={audioEnabled}
-              onPress={() => setAudioEnabled(!audioEnabled)}
-            />
-            <OutputToggle
-              icon="flashlight"
-              accessibilityLabel="Toggle flashlight"
-              active={torchEnabled}
-              onPress={() => setTorchEnabled(!torchEnabled)}
-            />
-          </View>
-        </View>
-
-        {/* Big keyer surface (where press/hold occurs) */}
-        <View style={styles.keyerWrap}>
+          {/* Classic keyer button (solid, bordered) */}
           <Pressable
             onPressIn={onPressIn}
             onPressOut={onPressOut}
             disabled={!canInteract}
             style={({ pressed }) => [
               styles.keyer,
+              { minHeight: keyerMinHeight },
               pressed && styles.keyerPressed,
               !canInteract && { opacity: 0.5 },
             ]}
           >
             <Text style={styles.keyerText}>Tap & Hold to Key</Text>
-            {started && (
-              <Text style={styles.input}>{input.split('').join(' ')}</Text>
-            )}
           </Pressable>
         </View>
       </View>
@@ -623,77 +533,38 @@ export default function SendSessionScreen() {
 }
 
 /**
- * Styles: mostly visual polish + consistent spacing.
+ * Styles: pinned layout + classic solid buttons
  */
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+  safe: { flex: 1, backgroundColor: theme.colors.background },
+
   container: {
     flex: 1,
     paddingHorizontal: spacing(4),
-    paddingTop: spacing(5),
-    paddingBottom: spacing(5),
-    gap: spacing(3),
+    paddingTop: spacing(3),
+    paddingBottom: spacing(3),
   },
-  promptArea: {
-    height: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  promptHint: {
-    color: colors.textDim,
-    textAlign: 'center',
-    fontSize: 15,
-    letterSpacing: 0.6,
-  },
-  startBtn: {
-    minWidth: 180,
-    paddingVertical: spacing(2.5),
-    paddingHorizontal: spacing(6),
-    borderRadius: 32,
-    backgroundColor: colors.blueNeon,
-  },
-  startText: {
-    color: colors.bg,
-    fontWeight: '800',
-    fontSize: 18,
-    textAlign: 'center',
-  },
-  letter: {
-    fontSize: 110,
-    fontWeight: '900',
-    color: colors.text,
-    letterSpacing: 6,
-  },
-  reveal: {
-    color: colors.blueNeon,
-    fontSize: 24,
+
+  // layout bands
+  topGroup: { marginBottom: spacing(0) },
+  centerGroup: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  bottomGroup: {},
+
+  inputInCard: {
     letterSpacing: 6,
     fontWeight: '700',
-    textAlign: 'center',
   },
-  controls: {
-    gap: spacing(3),
-    alignItems: 'center',
+
+  // margin between toggles and keyer
+  togglesWrap: {
+    alignSelf: 'stretch',
+    paddingHorizontal: spacing(2),
+    marginBottom: spacing(3),
   },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing(2.5),
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    maxWidth: 280,
-    alignSelf: 'center',
-  },
-  keyerWrap: {
-    marginTop: spacing(1),
-    alignItems: 'center',
-  },
+
+  // Classic keyer button (reverted)
   keyer: {
     width: '100%',
-    minHeight: 128,
     borderRadius: 26,
     borderWidth: 2,
     borderColor: colors.border,
@@ -703,21 +574,15 @@ const styles = StyleSheet.create({
     gap: spacing(1.5),
     paddingHorizontal: spacing(2),
   },
-  keyerPressed: {
-    backgroundColor: '#15202A',
-  },
+  keyerPressed: { backgroundColor: '#15202A' },
   keyerText: {
     color: colors.text,
     fontWeight: '800',
     fontSize: 18,
     letterSpacing: 0.5,
   },
-  input: {
-    color: colors.blueNeon,
-    fontSize: 20,
-    letterSpacing: 6,
-    fontWeight: '700',
-  },
+
+  // empty state
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -729,15 +594,5 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 18,
     fontWeight: '700',
-  },
-  emptyBtn: {
-    backgroundColor: colors.blueNeon,
-    borderRadius: 30,
-    paddingVertical: spacing(2.5),
-    paddingHorizontal: spacing(6),
-  },
-  emptyBtnText: {
-    color: colors.bg,
-    fontWeight: '800',
   },
 });

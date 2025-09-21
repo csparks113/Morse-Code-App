@@ -7,9 +7,9 @@ import { theme } from '../../theme/theme';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const baseHeight = 46; // your desired bar height without insets
+  const baseHeight = 46; // desired bar height without insets
   const barHeight = baseHeight + insets.bottom;
-  const padBottom = Math.max(0, insets.bottom); // keeps icons off the edge
+  const padBottom = Math.max(0, insets.bottom);
 
   return (
     <Tabs
@@ -17,8 +17,10 @@ export default function TabLayout() {
         headerShown: false,
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
+        // Ensure the whole scene matches the app background (prevents white flash)
+        sceneStyle: { backgroundColor: theme.colors.background },
         tabBarStyle: {
-          backgroundColor: theme.colors.background,
+          backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
           borderTopWidth: StyleSheet.hairlineWidth,
           height: barHeight,
@@ -55,3 +57,4 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+

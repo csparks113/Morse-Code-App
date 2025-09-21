@@ -28,13 +28,14 @@ import Svg, {
   LinearGradient as SvgLinearGradient,
   Stop,
 } from 'react-native-svg';
+import { router } from 'expo-router';              // ⬅️ use static router for dismissAll()
 import { colors, spacing } from '@/theme/lessonTheme';
 
 type Props = {
   percent: number;
   correct: number;
   total: number;
-  onContinue: () => void;
+  onContinue?: () => void;                         // ⬅️ optional: cleanup only
 };
 
 // Drawing constants for the ring
@@ -49,20 +50,24 @@ export default function SessionSummary({
   total,
   onContinue,
 }: Props) {
-  // Keep percent safe (integer 0..100)
   const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
-
-  // Choose ring style: gold if >= 80%, blue otherwise
   const strokeId = safePercent >= 80 ? 'ringGold' : 'ringBlue';
   const dash = CIRC * (1 - safePercent / 100);
   const accent = safePercent >= 80 ? colors.gold : colors.blueNeon;
+
+  const handleContinue = React.useCallback(() => {
+    // 1) Run optional cleanup (stop timers, etc.)
+    onContinue?.();
+    // 2) Clear history and land on Home
+    router.dismissAll();
+    router.replace('/');
+  }, [onContinue]);
 
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>Session Complete</Text>
 
       <View style={styles.ringWrap}>
-        {/* SVG ring with gradient stroke */}
         <Svg width={SIZE} height={SIZE}>
           <Defs>
             <SvgLinearGradient id="ringGold" x1="0" y1="0" x2="1" y2="1">
@@ -75,7 +80,7 @@ export default function SessionSummary({
             </SvgLinearGradient>
           </Defs>
 
-          {/* Background track */}
+          {/* Track */}
           <Circle
             cx={SIZE / 2}
             cy={SIZE / 2}
@@ -85,7 +90,7 @@ export default function SessionSummary({
             fill="transparent"
           />
 
-          {/* Foreground arc showing the score */}
+          {/* Progress arc */}
           <Circle
             cx={SIZE / 2}
             cy={SIZE / 2}
@@ -96,26 +101,24 @@ export default function SessionSummary({
             strokeLinecap="round"
             strokeDasharray={`${CIRC} ${CIRC}`}
             strokeDashoffset={dash}
-            transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`} // start at 12 o’clock
+            transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
           />
         </Svg>
 
-        {/* Center label overlay */}
+        {/* Center label */}
         <View style={styles.center}>
-          <Text style={[styles.percent, { color: accent }]}>
-            {safePercent}%
-          </Text>
+          <Text style={[styles.percent, { color: accent }]}>{safePercent}%</Text>
           <Text style={styles.sub}>
             {correct} / {total} correct
           </Text>
         </View>
       </View>
 
-      {/* Continue button */}
+      {/* Continue button -> cleanup (optional) + dismissAll + replace('/') */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Continue"
-        onPress={onContinue}
+        onPress={handleContinue}
         style={({ pressed }) => [styles.continue, pressed && { opacity: 0.92 }]}
       >
         <Text style={styles.continueText}>Continue</Text>

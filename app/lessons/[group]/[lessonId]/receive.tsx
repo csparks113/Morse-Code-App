@@ -1,35 +1,14 @@
 /**
- * RECEIVE SESSION SCREEN (Morse Code Master)
- * ------------------------------------------
- * OVERVIEW
- * This screen teaches/practices *receiving* Morse code for a single character.
- * The app PLAYS a Morse sequence (audio/flash/haptics) and the user must IDENTIFY
- * the correct character (either via 2-choice buttons for lessons or a keyboard for
- * challenges).
+ * RECEIVE SESSION SCREEN (Pinned layout)
+ * --------------------------------------
+ * Top:    SessionHeader + ProgressBar (fixed)
+ * Center: PromptCard (centers in remaining space; only moving part)
+ * Bottom: OutputTogglesRow (directly above) + Input (lesson choices OR challenge keyboard)
  *
- * GOAL
- * - Listen/feel the code for the target character.
- * - Choose the matching character.
- *
- * KEY IDEAS
- * - We derive timing from WPM (getMorseUnitMs). Playback uses playMorseCode().
- * - Output toggles let users enable/disable haptics, screen flash, and audio.
- * - Lessons: small set of multiple-choice buttons (the lesson’s pool).
- * - Challenges: a larger on-screen keyboard (only keys for learned chars are active).
- *
- * MAIN FLOW
- * 1) User taps "Start" → build 20-item questions list from meta.pool.
- * 2) For each question:
- *    - We auto-play the target character’s Morse pattern shortly after it appears.
- *    - The user selects an answer:
- *        correct → mark correct, advance
- *        wrong   → mark wrong, advance
- * 3) After 20 prompts: compute % correct, store in progress, show SessionSummary.
- *
- * ACCESSIBILITY & FEEDBACK
- * - Flash overlay and haptic ticks during playback (if enabled).
- * - Reveal button to show the dot/dash pattern (for learning).
- * - Keyboard disables characters that haven’t been learned yet in this lesson path.
+ * Behavior preserved:
+ * - Auto-play on each prompt
+ * - Reveal inside PromptCard (above action buttons)
+ * - Toggle audio/flash/haptics/torch with OutputTogglesRow
  */
 
 import React from 'react';
@@ -39,20 +18,23 @@ import {
   StyleSheet,
   Pressable,
   Animated,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
-// Reusable UI
+// Shared UI
 import SessionHeader from '@/components/session/SessionHeader';
 import ProgressBar from '@/components/session/ProgressBar';
-import ActionButton from '@/components/session/ActionButton';
-import OutputToggle from '@/components/session/OutputToggle';
 import SessionSummary from '@/components/session/SessionSummary';
+import PromptCard from '@/components/session/PromptCard';
+import OutputTogglesRow from '@/components/session/OutputTogglesRow';
+import ChallengeKeyboard from '@/components/session/ChallengeKeyboard';
 
 // Theme + utils
 import { colors, spacing } from '@/theme/lessonTheme';
+import { theme } from '@/theme/theme';
 import { toMorse } from '@/utils/morse';
 import { playMorseCode, getMorseUnitMs } from '@/utils/audio';
 
@@ -66,17 +48,6 @@ import { buildSessionMeta } from './sessionMeta';
 // Number of questions per session
 const TOTAL_QUESTIONS = 20;
 
-/**
- * Keyboard layout for challenge mode.
- * Here it's letters + numbers, with *only learned* keys enabled.
- */
-const KEYBOARD_LAYOUT = [
-  ['1','2','3','4','5','6','7','8','9','0'],
-  ['Q','W','E','R','T','Y','U','I','O','P'],
-  ['A','S','D','F','G','H','J','K','L'],
-  ['Z','X','C','V','B','N','M'],
-];
-
 type Summary = { correct: number; percent: number };
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 
@@ -88,8 +59,6 @@ function formatMorse(code?: string | null) {
 export default function ReceiveSessionScreen() {
   // Route params like /lessons/[group]/[lessonId]
   const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
-  const router = useRouter();
-  const homePath = '../../../../(tabs)/index';
 
   // Build lesson metadata (pool, labels, challenge flag)
   const meta = React.useMemo(() => buildSessionMeta(group || 'alphabet', lessonId), [group, lessonId]);
@@ -128,8 +97,18 @@ export default function ReceiveSessionScreen() {
   const currentTarget = questions[currentIndex] ?? null;
   const currentMorse = currentTarget ? (toMorse(currentTarget) ?? '') : '';
 
-  // Which keys should be active in challenge mode? (only learned)
-  const learnedSet = React.useMemo(() => new Set(meta.pool.map((c) => c.toUpperCase())), [meta.pool]);
+  // Learned set (for challenge keyboard enablement)
+  const learnedSet = React.useMemo(
+    () => new Set(meta.pool.map((c) => c.toUpperCase())),
+    [meta.pool],
+  );
+
+  // Responsive card main slot height (keeps PromptCard compact on small screens)
+  const screenH = Dimensions.get('window').height;
+  const layout =
+    screenH < 635 ? 'xsmall' :
+    screenH < 700 ? 'small' : 'regular';
+  const promptSlotHeight = layout === 'regular' ? 116 : layout === 'small' ? 96 : 84;
 
   // Cleanup timer on unmount
   React.useEffect(() => {
@@ -249,21 +228,6 @@ export default function ReceiveSessionScreen() {
     finishQuestion(isCorrect);
   }, [started, currentTarget, summary, feedback, finishQuestion]);
 
-  /**
-   * Close out of session back to lessons.
-   */
-  const handleClose = React.useCallback(() => {
-    router.replace(homePath);
-  }, [router]);
-
-  /**
-   * Reveal/unreveal the correct Morse sequence (for learning).
-   */
-  const handleReveal = React.useCallback(() => {
-    if (!started || summary || !currentTarget) return;
-    setShowReveal((prev) => !prev);
-  }, [started, summary, currentTarget]);
-
   // Only interactive when mid-session, idle, and we have a target
   const canInteract = started && !summary && !!currentTarget && feedback === 'idle';
 
@@ -278,9 +242,6 @@ export default function ReceiveSessionScreen() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>Content unavailable.</Text>
-          <Pressable onPress={handleClose} style={({ pressed }) => [styles.emptyBtn, pressed && { opacity: 0.92 }]}>
-            <Text style={styles.emptyBtnText}>Back to Lessons</Text>
-          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -294,13 +255,14 @@ export default function ReceiveSessionScreen() {
           percent={summary.percent}
           correct={summary.correct}
           total={TOTAL_QUESTIONS}
-          onContinue={handleClose}
+          onContinue={() => {
+            if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+          }}
         />
       </SafeAreaView>
     );
   }
 
-  // Active session UI
   return (
     <SafeAreaView style={styles.safe}>
       {/* Flash overlay for playback */}
@@ -316,128 +278,53 @@ export default function ReceiveSessionScreen() {
       />
 
       <View style={styles.container}>
-        {/* TOP: header + progress (tighter spacing) */}
+        {/* --- TOP (fixed): header + progress --- */}
         <View style={styles.topGroup}>
-          <SessionHeader labelTop={meta.headerTop} labelBottom="RECEIVE" onClose={handleClose} />
+          <SessionHeader labelTop={meta.headerTop} labelBottom="RECEIVE" />
           <ProgressBar value={progressValue} total={TOTAL_QUESTIONS} />
         </View>
 
-        {/* MIDDLE: centered prompt card + output toggles */}
-        <View style={styles.middleGroup}>
-          {/* Prompt + Start/?/Char + Reveal + Actions — inside a centered card */}
-          <View style={styles.promptCard}>
-            <Text style={styles.promptLabel}>Identify the character</Text>
-
-            {!started ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={startSession}
-                style={({ pressed }) => [styles.startBtn, pressed && { opacity: 0.92 }]}
-              >
-                <Text style={styles.startText}>Start</Text>
-              </Pressable>
-            ) : (
-              <Text
-                style={[
-                  styles.promptChar,
-                  feedback === 'correct' && { color: colors.gold },
-                  feedback === 'wrong' && { color: '#FF6B6B' },
-                ]}
-              >
-                {visibleChar}
-              </Text>
-            )}
-
-            {/* Reserved slot so the reveal doesn’t move layout */}
-            <View style={styles.revealSlot}>
-              <Text
-                style={[styles.reveal, !(showReveal && canInteract) && { opacity: 0 }]}
-                numberOfLines={1}
-                ellipsizeMode="clip"
-              >
-                {formatMorse(currentMorse)}
-              </Text>
-            </View>
-
-            {/* Action buttons row (compact gap) */}
-            <View style={styles.actionRow}>
-              <ActionButton
-                icon={showReveal ? 'eye-off-outline' : 'eye-outline'}
-                accessibilityLabel="Reveal code"
-                onPress={handleReveal}
-                active={showReveal}
-                disabled={!canInteract}
-              />
-              <ActionButton
-                icon="play"
-                accessibilityLabel="Play code"
-                onPress={playTarget}
-                disabled={!canInteract}
-              />
-            </View>
-          </View>
-
-          {/* OUTPUT container: toggles */}
-          <View style={styles.outputContainer}>
-            <View style={styles.toggleRow}>
-              <OutputToggle
-                icon="vibrate"
-                accessibilityLabel="Toggle haptics"
-                active={hapticsEnabled}
-                onPress={() => setHapticsEnabled(!hapticsEnabled)}
-              />
-              <OutputToggle
-                icon="monitor"
-                accessibilityLabel="Toggle screen flash"
-                active={lightEnabled}
-                onPress={() => setLightEnabled(!lightEnabled)}
-              />
-              <OutputToggle
-                icon="volume-high"
-                accessibilityLabel="Toggle audio"
-                active={audioEnabled}
-                onPress={() => setAudioEnabled(!audioEnabled)}
-              />
-              <OutputToggle
-                icon="flashlight"
-                accessibilityLabel="Toggle flashlight"
-                active={torchEnabled}
-                onPress={() => setTorchEnabled(!torchEnabled)}
-              />
-            </View>
-          </View>
+        {/* --- CENTER (flex, centered): PromptCard only --- */}
+        <View style={styles.centerGroup}>
+          <PromptCard
+            compact
+            revealSize="sm"
+            title="Identify the character"
+            started={started}
+            visibleChar={visibleChar}
+            feedback={feedback}
+            morse={currentMorse}
+            showReveal={showReveal}
+            canInteract={canInteract}
+            onStart={startSession}
+            onRevealToggle={() => setShowReveal((v) => !v)}
+            onReplay={playTarget}
+            mainSlotMinHeight={promptSlotHeight}
+          />
         </View>
 
-        {/* BOTTOM: INPUT container (lesson choices or challenge keyboard) */}
-        <View style={styles.inputContainer}>
+        {/* --- BOTTOM (fixed): toggles above input --- */}
+        <View style={styles.bottomGroup}>
+          <View style={styles.togglesWrap}>
+            <OutputTogglesRow
+              hapticsEnabled={hapticsEnabled}
+              lightEnabled={lightEnabled}
+              audioEnabled={audioEnabled}
+              torchEnabled={torchEnabled}
+              setHapticsEnabled={setHapticsEnabled}
+              setLightEnabled={setLightEnabled}
+              setAudioEnabled={setAudioEnabled}
+              setTorchEnabled={setTorchEnabled}
+            />
+          </View>
+
+          {/* Input: lesson choices OR challenge keyboard */}
           {meta.isChallenge ? (
-            <View style={styles.keyboard}>
-              {KEYBOARD_LAYOUT.map((row) => (
-                <View key={row.join('-')} style={styles.keyboardRow}>
-                  {row.map((key) => {
-                    const learned = learnedSet.has(key);
-                    const active = learned && canInteract;
-                    return (
-                      <Pressable
-                        key={key}
-                        disabled={!learned || !canInteract}
-                        onPress={() => submitAnswer(key)}
-                        style={({ pressed }) => [
-                          styles.key,
-                          learned && styles.keyLearned,
-                          active && pressed && styles.keyPressed,
-                          !learned && styles.keyDisabled,
-                        ]}
-                      >
-                        <Text style={[styles.keyText, learned ? styles.keyTextActive : styles.keyTextDisabled]}>
-                          {key}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ))}
-            </View>
+            <ChallengeKeyboard
+              learnedSet={learnedSet}
+              canInteract={canInteract}
+              onKeyPress={submitAnswer}
+            />
           ) : (
             <View style={styles.lessonChoices}>
               {meta.pool.map((char) => (
@@ -463,119 +350,44 @@ export default function ReceiveSessionScreen() {
 }
 
 /**
- * Styles: compact vertical rhythm + centered card.
+ * Styles
  */
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+  safe: { flex: 1, backgroundColor: theme.colors.background },
 
   container: {
     flex: 1,
     paddingHorizontal: spacing(4),
-    paddingTop: spacing(3),       // tighter than before
+    paddingTop: spacing(3),
     paddingBottom: spacing(3),
   },
 
-  // --- groups ---------------------------------------------------------------
+  // --- layout bands ---------------------------------------------------------
   topGroup: {
-    marginBottom: spacing(0),     // tight gap between progress and card
+    marginBottom: spacing(0),
   },
-
-  middleGroup: {
-    flex: 1,                      // takes remaining space
+  centerGroup: {
+    flex: 1,
     alignItems: 'center',
-    //justifyContent: 'center',     // vertically center the card area
-    gap: spacing(1),              // small gap between card and outputs
+    justifyContent: 'center', // centers PromptCard in the available space
+  },
+  bottomGroup: {
+    // stays pinned to bottom
   },
 
-  inputContainer: {
-    marginTop: spacing(2),
+  // --- toggles right above input -------------------------------------------
+  togglesWrap: {
+    alignSelf: 'stretch',
+    paddingHorizontal: spacing(2),
+    marginBottom: spacing(2.5), // space between toggles and input
   },
 
-  // --- prompt card ----------------------------------------------------------
-  promptCard: {
-  alignSelf: 'center',
-  backgroundColor: colors.card,
-  //borderColor: colors.border,
-  borderWidth: 2,
-  borderRadius: 18,
-  paddingVertical: spacing(3),
-  paddingHorizontal: spacing(3),
-  alignItems: 'center',
-  minWidth: '70%',
-  maxWidth: 560,
-  gap: spacing(2),            // compact spacing inside the card
-},
-
-// NEW: fixed-height slot for Start vs ?/Char
-promptMainSlot: {
-  minHeight: 100,             // ~big glyph height; tweak if your font changes
-  alignSelf: 'stretch',
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-
-  promptLabel: {
-    color: colors.textDim,
-    textAlign: 'center',
-    fontSize: 15,
-    letterSpacing: 0.6,
-  },
-
-  promptChar: {
-  fontSize: 104,
-  lineHeight: 104,            // keep glyph from adding extra line height
-  fontWeight: '900',
-  color: colors.text,
-  letterSpacing: 6,
-  textAlign: 'center',
-},
-
-  // Fixed-height reservation so reveal toggling doesn’t move layout
- revealSlot: {
-  minHeight: 24,              // already preventing reveal shifts
-  alignSelf: 'stretch',
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-
-  reveal: {
-    color: colors.blueNeon,
-    fontSize: 24,
-    letterSpacing: 6,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing(5),              // slightly reduced from earlier
-  },
-
-  // --- outputs --------------------------------------------------------------
-outputContainer: {
-  alignSelf: 'stretch',          // take full width of the screen
-  paddingHorizontal: spacing(2),
-  marginTop: spacing(1),
-},
-
-toggleRow: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',              // allows 2x2 on small screens instead of squishing
-  alignItems: 'center',
-  justifyContent: 'space-between', // even spread when they fit on one row
-  columnGap: spacing(2),
-  rowGap: spacing(2),
-  width: '100%',                 // ensure it actually stretches
-},
-  // --- inputs ---------------------------------------------------------------
+  // --- lesson choices row ---------------------------------------------------
   lessonChoices: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: spacing(2),
   },
-
   choice: {
     flex: 1,
     borderRadius: 18,
@@ -586,9 +398,7 @@ toggleRow: {
     justifyContent: 'center',
     paddingVertical: spacing(3),
   },
-
   choicePressed: { backgroundColor: '#15202A' },
-
   choiceText: {
     color: colors.text,
     fontSize: 32,
@@ -596,54 +406,7 @@ toggleRow: {
     letterSpacing: 4,
   },
 
-  keyboard: {
-    gap: spacing(.6),
-    alignItems: 'center',
-  },
-
-  keyboardRow: {
-    flexDirection: 'row',
-    gap: spacing(.6),
-  },
-
-  key: {
-    width: 32,
-    height: 40,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#1F2933',
-    backgroundColor: '#0F151D',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  keyLearned: { borderColor: colors.blueNeon },
-  keyPressed: { backgroundColor: '#15202A' },
-  keyDisabled: { opacity: 0.35 },
-  keyText: {
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-
-  keyTextActive: { color: colors.blueNeon },
-  keyTextDisabled: { color: '#4A5058' },
-
-  // --- misc -----------------------------------------------------------------
-  startBtn: {
-    minWidth: 180,
-    paddingVertical: spacing(2.25), // slightly tighter
-    paddingHorizontal: spacing(5.5),
-    borderRadius: 32,
-    backgroundColor: colors.blueNeon,
-  },
-  startText: {
-    color: colors.bg,
-    fontWeight: '800',
-    fontSize: 18,
-    textAlign: 'center',
-  },
-
+  // --- empty state ----------------------------------------------------------
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -655,15 +418,5 @@ toggleRow: {
     color: colors.text,
     fontSize: 18,
     fontWeight: '700',
-  },
-  emptyBtn: {
-    backgroundColor: colors.blueNeon,
-    borderRadius: 30,
-    paddingVertical: spacing(2.5),
-    paddingHorizontal: spacing(6),
-  },
-  emptyBtnText: {
-    color: colors.bg,
-    fontWeight: '800',
   },
 });

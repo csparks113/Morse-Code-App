@@ -160,7 +160,7 @@ export default function SettingsScreen() {
 
               <Pressable
                 accessibilityLabel="Increase send speed"
-                onPress={() => setWpm(Math.min(60, wpm + 1))}
+                onPress={() => setWpm(Math.min(20, wpm + 1))}
                 style={({ pressed }) => [
                   styles.step,
                   pressed && styles.pressed,
