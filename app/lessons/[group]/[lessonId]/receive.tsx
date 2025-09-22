@@ -86,6 +86,9 @@ export default function ReceiveSessionScreen() {
     setHapticsEnabled,
   } = useSettingsStore();
 
+  // Optional per-channel offsets (if present in store; otherwise 0)
+  const { flashOffsetMs = 0, hapticOffsetMs = 0 } = useSettingsStore() as any;
+
   // Session state
   const [started, setStarted] = React.useState(false);
   const [questions, setQuestions] = React.useState<string[]>([]);
@@ -131,24 +134,48 @@ export default function ReceiveSessionScreen() {
 
   /**
    * Flash overlay for playback feedback.
+   * CHANGE: Start on the next frame and fade immediately (no JS delay)
+   * to minimize animation jitter.
    */
-  const runFlash = React.useCallback(
-    (durationMs: number) => {
-      if (!lightEnabled) return;
-      const fadeDuration = Math.max(80, durationMs * 0.4);
+// Hold for (duration - fade) fully on the native driver, then fade out.
+const runFlash = React.useCallback((durationMs: number) => {
+  if (!lightEnabled) return;
 
-      flash.stopAnimation(() => {
-        flash.setValue(1);
+  // Short, consistent fade; tweak if you want sharper/smoother tails
+  const fadeMs = Math.min(240, Math.max(120, Math.floor(durationMs * 0.35)));
+  const holdMs = Math.max(0, Math.floor(durationMs - fadeMs));
+
+  try {
+    flash.stopAnimation();
+  } catch {}
+  flash.setValue(1);
+
+  // Start on the next frame to avoid batching jitter
+  requestAnimationFrame(() => {
+    if (holdMs > 0) {
+      // Phase 1: HOLD at 1.0 (1 -> 1) for the symbol's hold duration.
+      Animated.timing(flash, {
+        toValue: 1,          // no-op change; acts as a native delay
+        duration: holdMs,    // full hold duration
+        useNativeDriver: true,
+      }).start(() => {
+        // Phase 2: FADE to 0
         Animated.timing(flash, {
           toValue: 0,
-          delay: Math.max(0, durationMs - fadeDuration),
-          duration: fadeDuration,
+          duration: fadeMs,
           useNativeDriver: true,
         }).start();
       });
-    },
-    [flash, lightEnabled],
-  );
+    } else {
+      // Very short symbols: just fade immediately
+      Animated.timing(flash, {
+        toValue: 0,
+        duration: fadeMs,
+        useNativeDriver: true,
+      }).start();
+    }
+  });
+}, [lightEnabled, flash]);
 
   /**
    * Haptic tick per symbol during *playback* (optional).
@@ -180,6 +207,8 @@ export default function ReceiveSessionScreen() {
 
   /**
    * Play the target character's Morse pattern using audio/haptics/flash.
+   * CHANGE: Keep UI the same; rely on playMorseCode's onSymbolStart (audio-anchored)
+   * and add small optional offsets for device calibration.
    */
   const playTarget = React.useCallback(async () => {
     const morse = currentMorseRef.current;
@@ -187,16 +216,21 @@ export default function ReceiveSessionScreen() {
 
     await playMorseCode(morse, getMorseUnitMs(), {
       onSymbolStart: (symbol, duration) => {
-        runFlash(duration);
-        hapticTick(symbol, duration);
+        // Optional tiny calibration per device; defaults are 0ms
+        if (flashOffsetMs > 0) setTimeout(() => runFlash(duration), flashOffsetMs);
+        else runFlash(duration);
+
+        if (hapticOffsetMs > 0) setTimeout(() => hapticTick(symbol, duration), hapticOffsetMs);
+        else hapticTick(symbol, duration);
       },
     });
-  }, [runFlash, hapticTick]);
+  }, [runFlash, hapticTick, flashOffsetMs, hapticOffsetMs]);
 
   const playTargetRef = React.useRef<() => Promise<void> | void>(() => {});
   React.useEffect(() => {
     playTargetRef.current = playTarget;
   }, [playTarget]);
+
   /**
    * Auto-play the target shortly after it appears (only while idle on the prompt).
    */

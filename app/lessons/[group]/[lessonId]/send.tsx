@@ -18,6 +18,11 @@
  * - Keyer: shimmering OUTLINE + solid fill (pulses on press)
  * - Start button gets the same outline shimmer
  * - Extra margin between toggles and keyer
+ *
+ * UPDATE: Outputs tied to keyer
+ * - On press-in: audio tone + continuous haptic (Android) / repeated taps (iOS) + held screen flash
+ * - On release: stop audio + cancel haptic + fade flash off
+ * - Auto-play per question removed
  */
 
 import React from 'react';
@@ -34,6 +39,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system/legacy';
 
 // Shared UI components
 import SessionHeader from '@/components/session/SessionHeader';
@@ -46,7 +53,7 @@ import OutputTogglesRow from '@/components/session/OutputTogglesRow';
 import { colors, spacing } from '@/theme/lessonTheme';
 import { theme } from '@/theme/theme';
 import { toMorse } from '@/utils/morse';
-import { playMorseCode, getMorseUnitMs } from '@/utils/audio';
+import { getMorseUnitMs } from '@/utils/audio';
 
 // Stores
 import { useProgressStore } from '@/store/useProgressStore';
@@ -97,6 +104,82 @@ function classifyGapDuration(
   return best && best.ratio <= tolerance ? best.type : null;
 }
 
+/** --- Tone generation helpers for keyer (local & looping) --- */
+function bytesToBase64(bytes: Uint8Array): string {
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+  let output = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const b1 = bytes[i] ?? 0;
+    const b2 = bytes[i + 1];
+    const b3 = bytes[i + 2];
+    const enc1 = b1 >> 2;
+    const enc2 = ((b1 & 3) << 4) | ((b2 ?? 0) >> 4);
+    const enc3 = b2 !== undefined ? (((b2 & 15) << 2) | ((b3 ?? 0) >> 6)) : 64;
+    const enc4 = b3 !== undefined ? (b3 & 63) : 64;
+    output +=
+      chars.charAt(enc1) +
+      chars.charAt(enc2) +
+      chars.charAt(enc3) +
+      chars.charAt(enc4);
+  }
+  return output;
+}
+
+/** Generate a loop-safe sine WAV: we quantize to an integer number of cycles to minimize click at loop boundary. */
+function generateLoopingSineWav(
+  frequency: number,
+  opts?: { sampleRate?: number; cycles?: number; amplitude?: number },
+): Uint8Array {
+  const sampleRate = opts?.sampleRate ?? 44100;
+  const cycles = opts?.cycles ?? 200; // more cycles = longer buffer, smoother loop
+  const amplitude = Math.max(0, Math.min(1, opts?.amplitude ?? 0.28));
+
+  // Quantize period to integer samples so end phase == start phase
+  const periodSamples = Math.max(1, Math.round(sampleRate / frequency));
+  const totalSamples = periodSamples * cycles;
+
+  const bytesPerSample = 2;
+  const dataSize = totalSamples * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+
+  // WAV header
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * bytesPerSample, true);
+  view.setUint16(32, bytesPerSample, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  // PCM samples (with tiny fade-in/out to avoid transient click)
+  let offset = 44;
+  const ramp = Math.min(64, Math.floor(totalSamples * 0.01));
+  for (let i = 0; i < totalSamples; i++) {
+    const t = i / sampleRate;
+    const s = Math.sin(2 * Math.PI * frequency * t);
+    const env =
+      i < ramp ? i / ramp :
+      i > totalSamples - ramp ? (totalSamples - i) / ramp : 1;
+    const val = (Math.max(-1, Math.min(1, s)) * amplitude * env * 32767) | 0;
+    view.setInt16(offset, val, true);
+    offset += 2;
+  }
+
+  return new Uint8Array(buffer);
+}
+
 export default function SendSessionScreen() {
   // Route params like /lessons/[group]/[lessonId]
   const { group, lessonId } = useLocalSearchParams<{
@@ -124,6 +207,7 @@ export default function SendSessionScreen() {
     setLightEnabled,
     setTorchEnabled,
     setHapticsEnabled,
+    toneHz,
   } = settings;
 
   const signalTolerancePercent =
@@ -168,6 +252,11 @@ export default function SendSessionScreen() {
 
   const currentMorseRef = React.useRef('');
 
+  // Audio tone for keyer
+  const keyerSoundRef = React.useRef<Audio.Sound | null>(null);
+  const currentToneHzRef = React.useRef<number | null>(null);
+  const hapticIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Current question: target char + its Morse pattern
   const currentIndex = results.length;
   const currentTarget = questions[currentIndex] ?? null;
@@ -184,89 +273,147 @@ export default function SendSessionScreen() {
   const inputFontSize =
     layout === 'regular' ? 20 : layout === 'small' ? 18 : 16;
 
-  // Cleanup timer on unmount
+  // Cleanup timer & audio on unmount
   React.useEffect(() => {
     return () => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+      // Cleanup audio
+      (async () => {
+        try {
+          await keyerSoundRef.current?.unloadAsync();
+        } catch {}
+      })();
+      // Cleanup haptic timer
+      if (hapticIntervalRef.current) {
+        clearInterval(hapticIntervalRef.current);
+        hapticIntervalRef.current = null;
+      }
+      // Ensure vibration off
+      try { Vibration.cancel(); } catch {}
     };
   }, []);
 
-  /**
-   * Visual flash feedback (if screen flash is enabled).
-   */
-  const runFlash = React.useCallback(
-    (durationMs: number) => {
-      if (!lightEnabled) return;
-      const fadeDuration = Math.max(90, durationMs * 0.4);
-
-      flash.stopAnimation(() => {
-        flash.setValue(1);
-        Animated.timing(flash, {
-          toValue: 0,
-          delay: Math.max(0, durationMs - fadeDuration),
-          duration: fadeDuration,
-          useNativeDriver: true,
-        }).start();
+  /** Configure audio mode for silent-mode playback (best-effort). */
+  const ensureAudioMode = React.useCallback(async () => {
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        staysActiveInBackground: false,
+        playThroughEarpieceAndroid: false,
       });
-    },
-    [flash, lightEnabled],
-  );
+    } catch {}
+  }, []);
 
-  /**
-   * Haptic tick per symbol when *playing* (not when the user keys).
-   */
-  const hapticTick = React.useCallback(
-    (symbol: '.' | '-', durationMs: number) => {
-      if (!hapticsEnabled) return;
+  /** Prepare (or re-prepare) a loop-safe tone sound for the keyer. */
+  const prepareKeyerTone = React.useCallback(async (hz: number) => {
+    if (currentToneHzRef.current === hz && keyerSoundRef.current) return;
 
-      if (Platform.OS === 'android') {
-        try {
-          Vibration.cancel();
-        } catch {}
-        Vibration.vibrate(Math.max(15, Math.round(durationMs)));
-        return;
-      }
+    // unload old
+    try { await keyerSoundRef.current?.unloadAsync(); } catch {}
+    keyerSoundRef.current = null;
 
+    await ensureAudioMode();
+
+    const wavBytes = generateLoopingSineWav(hz, { cycles: 300 }); // ~longer buffer -> smoother loop
+    const b64 = bytesToBase64(wavBytes);
+    const dir = FileSystem.cacheDirectory + 'morse-keyer/';
+    try { await FileSystem.makeDirectoryAsync(dir, { intermediates: true } as any); } catch {}
+    const uri = `${dir}keyer_${hz}.wav`;
+    await FileSystem.writeAsStringAsync(uri, b64, { encoding: 'base64' as any });
+
+    const created = await Audio.Sound.createAsync({ uri });
+    keyerSoundRef.current = created.sound;
+    currentToneHzRef.current = hz;
+    try { await keyerSoundRef.current.setIsLoopingAsync(true); } catch {}
+  }, [ensureAudioMode]);
+
+  /** Flash controls: ON immediately, OFF with quick fade. */
+  const flashOn = React.useCallback(() => {
+    if (!lightEnabled) return;
+    try { flash.stopAnimation(); } catch {}
+    flash.setValue(1);
+  }, [lightEnabled, flash]);
+
+  const flashOff = React.useCallback(() => {
+    // short fade to avoid abrupt cut
+    Animated.timing(flash, {
+      toValue: 0,
+      duration: 140,
+      useNativeDriver: true,
+    }).start();
+  }, [flash]);
+
+  /** Haptics controls */
+  const startHaptics = React.useCallback(() => {
+    if (!hapticsEnabled) return;
+
+    if (Platform.OS === 'android') {
+      // Continuous vibration via repeating pattern; will be canceled on release
       try {
-        const style =
-          symbol === '.'
-            ? Haptics.ImpactFeedbackStyle.Light
-            : Haptics.ImpactFeedbackStyle.Medium;
-        Haptics.impactAsync(style);
+        Vibration.vibrate([0, 40, 60], true);
       } catch {}
-    },
-    [hapticsEnabled],
-  );
+    } else {
+      // iOS: no continuous vibration; simulate periodic taps while held
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch {}
+      if (hapticIntervalRef.current) clearInterval(hapticIntervalRef.current);
+      hapticIntervalRef.current = setInterval(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }, 120);
+    }
+  }, [hapticsEnabled]);
+
+  const stopHaptics = React.useCallback(() => {
+    if (Platform.OS === 'android') {
+      try { Vibration.cancel(); } catch {}
+    } else {
+      if (hapticIntervalRef.current) {
+        clearInterval(hapticIntervalRef.current);
+        hapticIntervalRef.current = null;
+      }
+    }
+  }, []);
+
+  /** Audio tone controls */
+  const startTone = React.useCallback(async () => {
+    if (!audioEnabled) return;
+    const hz = Number(toneHz) || 600;
+    await prepareKeyerTone(hz);
+    try {
+      await keyerSoundRef.current?.setPositionAsync(0);
+      keyerSoundRef.current?.playAsync().catch(() => {});
+    } catch {}
+  }, [audioEnabled, toneHz, prepareKeyerTone]);
+
+  const stopTone = React.useCallback(async () => {
+    try {
+      await keyerSoundRef.current?.stopAsync();
+      await keyerSoundRef.current?.setPositionAsync(0);
+    } catch {}
+  }, []);
 
   /**
-   * Play the correct pattern (audio/flash/haptics) so the user can hear/feel it.
+   * Visual flash feedback was previously symbol-length-based; for keyer hold we keep it fully on
+   * during press and fade it off on release.
+   */
+
+  /**
+   * PlayTarget: keep API for PromptCard replay, but now NO-OP so we don't play for each question.
+   * (If you want the replay button to still play the target pattern, you can reintroduce
+   * playMorseCode here using your synced version.)
    */
   const playTarget = React.useCallback(async () => {
-    const morse = currentMorseRef.current;
-    if (!morse) return;
-
-    await playMorseCode(morse, getMorseUnitMs(), {
-      onSymbolStart: (symbol, duration) => {
-        runFlash(duration);
-        hapticTick(symbol, duration);
-      },
-    });
-  }, [runFlash, hapticTick]);
-  const playTargetRef = React.useRef<() => Promise<void> | void>(() => {});
-  React.useEffect(() => {
-    playTargetRef.current = playTarget;
-  }, [playTarget]);
-  React.useEffect(() => {
-    if (!started || !currentTarget || summary || feedback !== 'idle') return;
-    const timer = setTimeout(() => {
-      playTargetRef.current?.();
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [started, currentTarget, summary, feedback]);
+    // no-op per request (outputs tied to keyer only)
+    return;
+  }, []);
 
   /**
    * Finish current question and advance.
    */
+  const setScoreStore = setScore;
   const finishQuestion = React.useCallback(
     (isCorrect: boolean) => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
@@ -288,7 +435,7 @@ export default function SendSessionScreen() {
             const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
             setSummary({ correct: correctCount, percent: pct });
             setStarted(false);
-            if (group && lessonId) setScore(group, lessonId, 'send', pct);
+            if (group && lessonId) setScoreStore(group, lessonId, 'send', pct);
           }
           return next;
         });
@@ -299,7 +446,7 @@ export default function SendSessionScreen() {
         setFeedback('idle');
       }, 650);
     },
-    [group, lessonId, setScore, updateInput],
+    [group, lessonId, setScoreStore, updateInput],
   );
 
   /**
@@ -361,7 +508,9 @@ export default function SendSessionScreen() {
     started && !summary && !!currentTarget && feedback === 'idle';
 
   /**
-   * Handle press DOWN (start timing + validate previous gap).
+   * Handle press DOWN:
+   * - validate previous gap
+   * - start outputs (audio / haptic / flash)
    */
   const onPressIn = React.useCallback(() => {
     if (!canInteract) return;
@@ -389,13 +538,25 @@ export default function SendSessionScreen() {
 
     ignorePressRef.current = false;
     pressStartRef.current = now;
-  }, [canInteract, gapTolerance, finishQuestion]);
+
+    // --- START OUTPUTS ---
+    flashOn();
+    startHaptics();
+    startTone().catch(() => {});
+  }, [canInteract, gapTolerance, finishQuestion, flashOn, startHaptics, startTone]);
 
   /**
-   * Handle press UP (measure duration -> classify as dot/dash).
+   * Handle press UP:
+   * - stop outputs
+   * - measure duration -> classify '.' or '-' -> evaluate
    */
   const onPressOut = React.useCallback(() => {
     if (!canInteract) return;
+
+    // --- STOP OUTPUTS ---
+    flashOff();
+    stopHaptics();
+    stopTone().catch(() => {});
 
     if (ignorePressRef.current) {
       ignorePressRef.current = false;
@@ -427,7 +588,7 @@ export default function SendSessionScreen() {
 
     // Add to input & evaluate
     appendSymbol(symbol);
-  }, [canInteract, signalTolerance, appendSymbol, finishQuestion]);
+  }, [canInteract, signalTolerance, appendSymbol, finishQuestion, flashOff, stopHaptics, stopTone]);
 
   // Close (cleanup only; navigation handled inside SessionHeader)
   const handleCloseCleanup = React.useCallback(() => {
@@ -470,7 +631,7 @@ export default function SendSessionScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Full-screen overlay we animate to produce a quick flash */}
+      {/* Full-screen overlay we animate to produce a held flash */}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -514,7 +675,7 @@ export default function SendSessionScreen() {
             canInteract={canInteract}
             onStart={startSession}
             onRevealToggle={() => setShowReveal((v) => !v)}
-            onReplay={playTarget}
+            onReplay={playTarget} // kept for UI; currently a no-op
             mainSlotMinHeight={promptSlotHeight}
             belowReveal={
               <Text
