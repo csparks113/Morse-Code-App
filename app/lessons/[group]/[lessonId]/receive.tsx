@@ -60,10 +60,16 @@ function formatMorse(code?: string | null) {
 
 export default function ReceiveSessionScreen() {
   // Route params like /lessons/[group]/[lessonId]
-  const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
+  const { group, lessonId } = useLocalSearchParams<{
+    group: string;
+    lessonId: string;
+  }>();
 
   // Build lesson metadata (pool, labels, challenge flag)
-  const meta = React.useMemo(() => buildSessionMeta(group || 'alphabet', lessonId), [group, lessonId]);
+  const meta = React.useMemo(
+    () => buildSessionMeta(group || 'alphabet', lessonId),
+    [group, lessonId],
+  );
 
   // Save score to progress store when done
   const setScore = useProgressStore((s) => s.setScore);
@@ -93,7 +99,9 @@ export default function ReceiveSessionScreen() {
   const flash = React.useRef(new Animated.Value(0)).current;
 
   // Timer to delay advancing / scheduling playback
-  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const currentMorseRef = React.useRef('');
 
   // Current target + Morse code
@@ -110,10 +118,9 @@ export default function ReceiveSessionScreen() {
 
   // Responsive card main slot height (keeps PromptCard compact on small screens)
   const screenH = Dimensions.get('window').height;
-  const layout =
-    screenH < 635 ? 'xsmall' :
-    screenH < 700 ? 'small' : 'regular';
-  const promptSlotHeight = layout === 'regular' ? 116 : layout === 'small' ? 96 : 84;
+  const layout = screenH < 635 ? 'xsmall' : screenH < 700 ? 'small' : 'regular';
+  const promptSlotHeight =
+    layout === 'regular' ? 116 : layout === 'small' ? 96 : 84;
 
   // Cleanup timer on unmount
   React.useEffect(() => {
@@ -125,40 +132,51 @@ export default function ReceiveSessionScreen() {
   /**
    * Flash overlay for playback feedback.
    */
-  const runFlash = React.useCallback((durationMs: number) => {
-    if (!lightEnabled) return;
-    const fadeDuration = Math.max(80, durationMs * 0.4);
+  const runFlash = React.useCallback(
+    (durationMs: number) => {
+      if (!lightEnabled) return;
+      const fadeDuration = Math.max(80, durationMs * 0.4);
 
-    flash.stopAnimation(() => {
-      flash.setValue(1);
-      Animated.timing(flash, {
-        toValue: 0,
-        delay: Math.max(0, durationMs - fadeDuration),
-        duration: fadeDuration,
-        useNativeDriver: true,
-      }).start();
-    });
-  }, [flash, lightEnabled]);
+      flash.stopAnimation(() => {
+        flash.setValue(1);
+        Animated.timing(flash, {
+          toValue: 0,
+          delay: Math.max(0, durationMs - fadeDuration),
+          duration: fadeDuration,
+          useNativeDriver: true,
+        }).start();
+      });
+    },
+    [flash, lightEnabled],
+  );
 
   /**
    * Haptic tick per symbol during *playback* (optional).
    */
-  const hapticTick = React.useCallback((symbol: '.' | '-', durationMs: number) => {
-    if (!hapticsEnabled) return;
+  const hapticTick = React.useCallback(
+    (symbol: '.' | '-', durationMs: number) => {
+      if (!hapticsEnabled) return;
 
-    if (Platform.OS === 'android') {
+      if (Platform.OS === 'android') {
+        try {
+          Vibration.cancel();
+        } catch {}
+        Vibration.vibrate(Math.max(15, Math.round(durationMs)));
+        return;
+      }
+
       try {
-        Vibration.cancel();
-      } catch {}
-      Vibration.vibrate(Math.max(15, Math.round(durationMs)));
-      return;
-    }
-
-    try {
-      const style = symbol === '.' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium;
-      Haptics.impactAsync(style);
-    } catch { /* ignore */ }
-  }, [hapticsEnabled]);
+        const style =
+          symbol === '.'
+            ? Haptics.ImpactFeedbackStyle.Light
+            : Haptics.ImpactFeedbackStyle.Medium;
+        Haptics.impactAsync(style);
+      } catch {
+        /* ignore */
+      }
+    },
+    [hapticsEnabled],
+  );
 
   /**
    * Play the target character's Morse pattern using audio/haptics/flash.
@@ -174,14 +192,21 @@ export default function ReceiveSessionScreen() {
       },
     });
   }, [runFlash, hapticTick]);
+
+  const playTargetRef = React.useRef<() => Promise<void> | void>(() => {});
+  React.useEffect(() => {
+    playTargetRef.current = playTarget;
+  }, [playTarget]);
   /**
    * Auto-play the target shortly after it appears (only while idle on the prompt).
    */
   React.useEffect(() => {
     if (!started || !currentTarget || summary || feedback !== 'idle') return;
-    const timer = setTimeout(() => playTarget(), 400);
+    const timer = setTimeout(() => {
+      playTargetRef.current?.();
+    }, 400);
     return () => clearTimeout(timer);
-  }, [started, currentTarget, summary, playTarget, feedback]);
+  }, [started, currentTarget, summary, feedback]);
 
   /**
    * Start a new receive session (20 random characters from meta.pool).
@@ -208,45 +233,57 @@ export default function ReceiveSessionScreen() {
   /**
    * Finish a question and move forward (delay for quick visual feedback).
    */
-  const finishQuestion = React.useCallback((isCorrect: boolean) => {
-    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-    setFeedback(isCorrect ? 'correct' : 'wrong');
-    setStreak((prev) => (isCorrect ? prev + 1 : 0));
+  const finishQuestion = React.useCallback(
+    (isCorrect: boolean) => {
+      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+      setFeedback(isCorrect ? 'correct' : 'wrong');
+      setStreak((prev) => (isCorrect ? prev + 1 : 0));
 
-    advanceTimerRef.current = setTimeout(() => {
-      setResults((prev) => {
-        if (prev.length >= TOTAL_QUESTIONS) return prev;
-        const next = [...prev, isCorrect];
+      advanceTimerRef.current = setTimeout(() => {
+        setResults((prev) => {
+          if (prev.length >= TOTAL_QUESTIONS) return prev;
+          const next = [...prev, isCorrect];
 
-        if (next.length === TOTAL_QUESTIONS) {
-          const correctCount = next.filter(Boolean).length;
-          const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
-          setSummary({ correct: correctCount, percent: pct });
-          setStarted(false);
-          if (group && lessonId) setScore(group, lessonId, 'receive', pct);
-        }
-        return next;
-      });
+          if (next.length === TOTAL_QUESTIONS) {
+            const correctCount = next.filter(Boolean).length;
+            const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
+            setSummary({ correct: correctCount, percent: pct });
+            setStarted(false);
+            if (group && lessonId) setScore(group, lessonId, 'receive', pct);
+          }
+          return next;
+        });
 
-      setShowReveal(false);
-      setFeedback('idle');
-    }, 450);
-  }, [group, lessonId, setScore]);
+        setShowReveal(false);
+        setFeedback('idle');
+      }, 450);
+    },
+    [group, lessonId, setScore],
+  );
 
   /**
    * Handle a user choice (from lesson choices or keyboard).
    */
-  const submitAnswer = React.useCallback((choice: string) => {
-    if (!started || !currentTarget || summary || feedback !== 'idle') return;
-    const isCorrect = choice.toUpperCase() === (currentTarget ?? '').toUpperCase();
-    finishQuestion(isCorrect);
-  }, [started, currentTarget, summary, feedback, finishQuestion]);
+  const submitAnswer = React.useCallback(
+    (choice: string) => {
+      if (!started || !currentTarget || summary || feedback !== 'idle') return;
+      const isCorrect =
+        choice.toUpperCase() === (currentTarget ?? '').toUpperCase();
+      finishQuestion(isCorrect);
+    },
+    [started, currentTarget, summary, feedback, finishQuestion],
+  );
 
   // Only interactive when mid-session, idle, and we have a target
-  const canInteract = started && !summary && !!currentTarget && feedback === 'idle';
+  const canInteract =
+    started && !summary && !!currentTarget && feedback === 'idle';
 
   // Large prompt char: '?' during idle thinking, else show the answer
-  const visibleChar = !started ? '' : feedback === 'idle' ? '?' : (currentTarget ?? '?');
+  const visibleChar = !started
+    ? ''
+    : feedback === 'idle'
+      ? '?'
+      : (currentTarget ?? '?');
 
   const progressValue = results.length;
 
@@ -286,7 +323,10 @@ export default function ReceiveSessionScreen() {
           StyleSheet.absoluteFill,
           {
             backgroundColor: colors.text,
-            opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.2] }),
+            opacity: flash.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.2],
+            }),
           },
         ]}
       />
@@ -295,7 +335,11 @@ export default function ReceiveSessionScreen() {
         {/* --- TOP (fixed): header + progress --- */}
         <View style={styles.topGroup}>
           <SessionHeader labelTop={meta.headerTop} labelBottom="RECEIVE" />
-          <ProgressBar value={progressValue} total={TOTAL_QUESTIONS} streak={streak} />
+          <ProgressBar
+            value={progressValue}
+            total={TOTAL_QUESTIONS}
+            streak={streak}
+          />
         </View>
 
         {/* --- CENTER (flex, centered): PromptCard only --- */}

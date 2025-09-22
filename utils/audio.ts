@@ -143,20 +143,60 @@ export async function playMorseCode(
     const symbol = code[i] as '.' | '-';
     const durationMs = unitGapMs * (symbol === '.' ? 1 : 3);
 
-    opts?.onSymbolStart?.(symbol, durationMs);
-
+    let playback: Promise<any> | null = null;
     if (audioEnabled && genDot && genDash) {
       const sound = symbol === '.' ? genDot : genDash;
-      await sound?.replayAsync();
+      if (sound) {
+        const started = new Promise<void>((resolveStart) => {
+          let settled = false;
+          const resolveOnce = () => {
+            if (!settled) {
+              settled = true;
+              resolveStart();
+            }
+          };
+
+          sound.setOnPlaybackStatusUpdate((status) => {
+            if (!('isLoaded' in status)) {
+              return;
+            }
+
+            if (status.isPlaying) {
+              sound.setOnPlaybackStatusUpdate(null);
+              resolveOnce();
+            }
+          });
+
+          playback = sound
+            .replayAsync({ positionMillis: 0 })
+            .catch(() => null)
+            .finally(() => sound.setOnPlaybackStatusUpdate(null));
+
+          setTimeout(() => {
+            sound.setOnPlaybackStatusUpdate(null);
+            resolveOnce();
+          }, 90);
+        });
+
+        await started;
+      }
     }
 
+    opts?.onSymbolStart?.(symbol, durationMs);
+
     await new Promise((r) => setTimeout(r, durationMs));
+    if (playback) {
+      try {
+        await playback;
+      } catch {
+        // audio errors shouldn't block the other feedback channels
+      }
+    }
     if (i < code.length - 1) {
       await new Promise((r) => setTimeout(r, unitGapMs));
     }
   }
 }
-
 export async function playMorseForText(
   text: string,
   unitGapMs = getMorseUnitMs(),

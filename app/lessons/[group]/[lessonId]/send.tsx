@@ -165,7 +165,7 @@ export default function SendSessionScreen() {
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
- 
+
   const currentMorseRef = React.useRef('');
 
   // Current question: target char + its Morse pattern
@@ -176,12 +176,13 @@ export default function SendSessionScreen() {
 
   // Responsive tuning for compact UI
   const screenH = Dimensions.get('window').height;
-  const layout =
-    screenH < 635 ? 'xsmall' :
-    screenH < 700 ? 'small' : 'regular';
-  const promptSlotHeight = layout === 'regular' ? 116 : layout === 'small' ? 96 : 84;
-  const keyerMinHeight   = layout === 'regular' ? 128 : layout === 'small' ? 104 : 92;
-  const inputFontSize    = layout === 'regular' ? 20 : layout === 'small' ? 18 : 16;
+  const layout = screenH < 635 ? 'xsmall' : screenH < 700 ? 'small' : 'regular';
+  const promptSlotHeight =
+    layout === 'regular' ? 116 : layout === 'small' ? 96 : 84;
+  const keyerMinHeight =
+    layout === 'regular' ? 128 : layout === 'small' ? 104 : 92;
+  const inputFontSize =
+    layout === 'regular' ? 20 : layout === 'small' ? 18 : 16;
 
   // Cleanup timer on unmount
   React.useEffect(() => {
@@ -251,6 +252,17 @@ export default function SendSessionScreen() {
       },
     });
   }, [runFlash, hapticTick]);
+  const playTargetRef = React.useRef<() => Promise<void> | void>(() => {});
+  React.useEffect(() => {
+    playTargetRef.current = playTarget;
+  }, [playTarget]);
+  React.useEffect(() => {
+    if (!started || !currentTarget || summary || feedback !== 'idle') return;
+    const timer = setTimeout(() => {
+      playTargetRef.current?.();
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [started, currentTarget, summary, feedback]);
 
   /**
    * Finish current question and advance.
@@ -453,8 +465,8 @@ export default function SendSessionScreen() {
     feedback === 'correct'
       ? colors.gold
       : feedback === 'wrong'
-      ? '#FF6B6B'
-      : colors.blueNeon;
+        ? '#FF6B6B'
+        : colors.blueNeon;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -481,7 +493,11 @@ export default function SendSessionScreen() {
             labelBottom="SEND"
             onClose={handleCloseCleanup}
           />
-          <ProgressBar value={results.length} total={TOTAL_QUESTIONS} streak={streak} />
+          <ProgressBar
+            value={results.length}
+            total={TOTAL_QUESTIONS}
+            streak={streak}
+          />
         </View>
 
         {/* CENTER: Prompt card only (moves based on screen height) */}
@@ -614,4 +630,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
