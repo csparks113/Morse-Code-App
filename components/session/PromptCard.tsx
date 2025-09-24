@@ -1,11 +1,20 @@
-// components/session/PromptCard.tsx
+﻿// components/session/PromptCard.tsx
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import ActionButton from '@/components/session/ActionButton';
-import RevealBar from '@/components/session/RevealBar';
 import { colors, spacing } from '@/theme/lessonTheme';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
+
+type IconName = React.ComponentProps<typeof ActionButton>['icon'];
+
+type PromptCardAction = {
+  icon: IconName;
+  accessibilityLabel: string;
+  onPress: () => void;
+  disabled?: boolean;
+  active?: boolean;
+};
 
 type Props = {
   title?: string;
@@ -14,14 +23,16 @@ type Props = {
   feedback: FeedbackState;
   morse?: string | null;
   showReveal: boolean;
-  canInteract: boolean;
   onStart: () => void;
-  onRevealToggle: () => void;
-  onReplay: () => void;
+  onRevealToggle?: () => void;
+  onReplay?: () => void;
+  canInteract?: boolean;
   mainSlotMinHeight?: number;
   belowReveal?: React.ReactNode;
   compact?: boolean;
   revealSize?: 'sm' | 'md' | 'lg';
+  revealAction?: PromptCardAction;
+  replayAction?: PromptCardAction;
 };
 
 export default function PromptCard({
@@ -29,39 +40,59 @@ export default function PromptCard({
   started,
   visibleChar,
   feedback,
-  morse,
+/*   morse, */
   showReveal,
-  canInteract,
   onStart,
   onRevealToggle,
   onReplay,
+  canInteract,
   mainSlotMinHeight = 116,
   belowReveal,
   compact = false,
-  revealSize,
-}: Props) {
-  const titleText = title ?? 'Identify the character';
-  const revealVisible = (showReveal && started) || feedback !== 'idle';
+/*   revealSize, */
+  revealAction,
+  replayAction,
+}: Props) 
 
-  // compact spacing
-  const padV = compact ? spacing(1.75) : spacing(2.5);
-  const gap = compact ? spacing(1) : spacing(1.75);
-  const slotMinH = compact ? Math.min(92, mainSlotMinHeight) : mainSlotMinHeight;
-  const actionsGap = compact ? spacing(3) : spacing(4);
-  const labelSize = compact ? 14 : 15;
-  const belowMinH = compact ? 12 : 18;
-  const revealSz = revealSize ?? (compact ? 'sm' : 'md');
+{
+  const titleText = title ?? 'Identify the character';
+  const interactable = canInteract ?? true;
+
+  const resolvedRevealAction = React.useMemo<PromptCardAction>(() => {
+    if (revealAction) return revealAction;
+    const disabled = !interactable || !onRevealToggle;
+    return {
+      icon: showReveal ? 'eye-off-outline' : 'eye-outline',
+      accessibilityLabel: 'Reveal code',
+      onPress: onRevealToggle ?? (() => {}),
+      active: showReveal,
+      disabled,
+    };
+  }, [interactable, onRevealToggle, revealAction, showReveal]);
+
+  const resolvedReplayAction = React.useMemo<PromptCardAction>(() => {
+    if (replayAction) return replayAction;
+    const disabled = !interactable || !onReplay;
+    return {
+      icon: 'play',
+      accessibilityLabel: 'Play code',
+      onPress: onReplay ?? (() => {}),
+      active: false,
+      disabled,
+    };
+  }, [interactable, onReplay, replayAction]);
 
   return (
-    <View style={[styles.card, { paddingVertical: padV, gap }]}>
-      <Text style={[styles.label, { fontSize: labelSize }]}>{titleText}</Text>
+    <View style={[styles.card,]}>
 
-      <View style={[styles.main, { minHeight: slotMinH }]}>
+      <Text style={[styles.label]}>{titleText}</Text>
+
+      <View style={[styles.main]}>
         {!started ? (
           <Pressable
             accessibilityRole="button"
             onPress={onStart}
-            style={({ pressed }) => [styles.startBtn, pressed && { opacity: 0.92 }]}
+            style={({ pressed }) => [styles.startBtn, pressed && { opacity: 0.9 }]}
           >
             <Text style={styles.startText}>Start</Text>
           </Pressable>
@@ -69,8 +100,8 @@ export default function PromptCard({
           <Text
             style={[
               styles.char,
-              feedback === 'correct' && { color: colors.gold },
-              feedback === 'wrong' && { color: '#FF6B6B' },
+              feedback === 'correct' && styles.charCorrect,
+              feedback === 'wrong' && styles.charWrong,
             ]}
           >
             {visibleChar}
@@ -78,25 +109,24 @@ export default function PromptCard({
         )}
       </View>
 
-      <RevealBar morse={morse} visible={!!morse && revealVisible} size={revealSz} />
-
-      <View style={[styles.below, { minHeight: belowMinH }]}>
+      <View style={[styles.revealMorse]}>
         {belowReveal}
       </View>
 
-      <View style={[styles.actions, { gap: actionsGap }]}>
+      <View style={[styles.actions]}>
         <ActionButton
-          icon={showReveal ? 'eye-off-outline' : 'eye-outline'}
-          accessibilityLabel="Reveal code"
-          onPress={onRevealToggle}
-          active={showReveal}
-          disabled={!canInteract}
+          icon={resolvedRevealAction.icon}
+          accessibilityLabel={resolvedRevealAction.accessibilityLabel}
+          onPress={resolvedRevealAction.onPress}
+          active={!!resolvedRevealAction.active}
+          disabled={!!resolvedRevealAction.disabled}
         />
         <ActionButton
-          icon="play"
-          accessibilityLabel="Play code"
-          onPress={onReplay}
-          disabled={!canInteract}
+          icon={resolvedReplayAction.icon}
+          accessibilityLabel={resolvedReplayAction.accessibilityLabel}
+          onPress={resolvedReplayAction.onPress}
+          active={!!resolvedReplayAction.active}
+          disabled={!!resolvedReplayAction.disabled}
         />
       </View>
     </View>
@@ -104,38 +134,60 @@ export default function PromptCard({
 }
 
 const styles = StyleSheet.create({
+  // --- Main container -------------------------------------------------------------
   card: {
     alignSelf: 'center',
     backgroundColor: colors.card,
     borderWidth: 1.5,
     borderColor: '#2A2F36',
     borderRadius: 18,
-    paddingHorizontal: spacing(3),
+    paddingHorizontal: spacing(2),
     alignItems: 'center',
-    minWidth: '70%',
-    maxWidth: 560,
-  },
-  label: { color: colors.textDim, textAlign: 'center', letterSpacing: 0.6 },
-  main: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
+    minWidth: 225,
+    maxWidth: 560, 
+    paddingVertical: spacing(2),
+    gap: spacing(1)
+,  },
 
-  // Big letter shown during the question
+  // --- Text at Top ----------------------------------------------------------------
+  label: { 
+    color: colors.textDim, 
+    textAlign: 'center', 
+    letterSpacing: 0.6, 
+    fontSize: 15,
+  },
+
+  // --- Glyph/Letter & Start Button Outer Container --------------------------------
+  main: { 
+    alignSelf: 'stretch', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    minHeight: 110,
+  },
+
+  // --- Glyph/Letter -------------------------------------------------------------
   char: {
     fontSize: 104,
     lineHeight: 104,
     fontWeight: '900',
     color: colors.text,
-    letterSpacing: 6,
+    //letterSpacing: 6,
     textAlign: 'center',
   },
 
-  // Classic Start button (solid)
+  charCorrect: { color: colors.gold },
+
+  charWrong: { color: '#FF6B6B' },
+
+  // --- Start Button --------------------------------------------------------------
   startBtn: {
-    minWidth: 180,
+    minWidth: 150,
     paddingVertical: spacing(2.25),
     paddingHorizontal: spacing(5.5),
     borderRadius: 32,
     backgroundColor: colors.blueNeon,
   },
+
   startText: {
     color: colors.bg,
     fontWeight: '800',
@@ -143,7 +195,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  below: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
-
-  actions: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  // --- reveals morse code (correct answer & user input) -----------------
+  revealMorse: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 60,
+  },
+  
+  // --- action button row --------------------------------------------------
+  actions: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    gap: spacing(3),
+  },
 });

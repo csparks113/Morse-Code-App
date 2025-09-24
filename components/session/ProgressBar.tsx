@@ -61,15 +61,15 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing(1.5),
-    marginBottom: spacing(3),
+    gap: spacing(.25),        //Progress Bar Length (horizontal margins)
+    marginBottom: spacing(0),
   },
   countLabel: {
     width: 60,
     color: colors.text,
     fontSize: 16,
     fontWeight: '700',
-    textAlign: 'left',
+    textAlign: 'center',
   },
   track: {
     flex: 1,
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing(0.5),
     minWidth: 46,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
   },
   streakText: {
     fontSize: 16,

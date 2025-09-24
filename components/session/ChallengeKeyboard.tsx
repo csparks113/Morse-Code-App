@@ -58,6 +58,7 @@ const styles = StyleSheet.create({
     gap: spacing(0.6),
     alignItems: 'center',
   },
+  
   keyboardRow: {
     flexDirection: 'row',
     gap: spacing(0.6),

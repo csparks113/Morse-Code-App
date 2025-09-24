@@ -82,9 +82,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
 
     // same paddings as before
-    paddingVertical: spacing(2.5),
-    paddingHorizontal: spacing(3),
-    marginBottom: spacing(3),
+    paddingVertical: spacing(2),
+    paddingHorizontal: spacing(2),
+    marginBottom: spacing(1.5),
 
     ...glow.neon,
   },
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.9 },
 
-  center: { flex: 1, alignItems: 'center', gap: spacing(0.5), paddingHorizontal: spacing(1) },
+  center: { flex: 1, alignItems: 'center', gap: spacing(0), paddingHorizontal: spacing(1) },
   top: {
     color: colors.text,
     fontSize: 18,

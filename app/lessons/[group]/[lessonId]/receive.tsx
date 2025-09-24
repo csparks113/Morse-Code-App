@@ -1,14 +1,16 @@
-/**
+﻿/**
+        setRevealUsed(false);
+        setIsPlaying(false);
  * RECEIVE SESSION SCREEN (Pinned layout)
  * --------------------------------------
  * Top:    SessionHeader + ProgressBar (fixed)
  * Center: PromptCard (centers in remaining space; only moving part)
  * Bottom: OutputTogglesRow (directly above) + Input (lesson choices OR challenge keyboard)
  *
- * Behavior preserved:
- * - Auto-play on each prompt
- * - Reveal inside PromptCard (above action buttons)
- * - Toggle audio/flash/haptics/torch with OutputTogglesRow
+ * Changes:
+ * - RevealBar timeline (mode="timeline") centered under the reveal area.
+ * - Old text-based reveal disabled (morse={''}) to prevent duplicates.
+ * - Correct answer auto-reveals after submit (right or wrong).
  */
 
 import React from 'react';
@@ -33,6 +35,7 @@ import SessionSummary from '@/components/session/SessionSummary';
 import PromptCard from '@/components/session/PromptCard';
 import OutputTogglesRow from '@/components/session/OutputTogglesRow';
 import ChallengeKeyboard from '@/components/session/ChallengeKeyboard';
+import RevealBar from '@/components/session/RevealBar';
 
 // Theme + utils
 import { colors, spacing } from '@/theme/lessonTheme';
@@ -47,34 +50,24 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 // Lesson meta
 import { buildSessionMeta } from './sessionMeta';
 
-// Number of questions per session
 const TOTAL_QUESTIONS = 20;
 
 type Summary = { correct: number; percent: number };
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 
-function formatMorse(code?: string | null) {
-  if (!code) return '';
-  return code.split('').join(' ');
-}
-
 export default function ReceiveSessionScreen() {
-  // Route params like /lessons/[group]/[lessonId]
   const { group, lessonId } = useLocalSearchParams<{
     group: string;
     lessonId: string;
   }>();
 
-  // Build lesson metadata (pool, labels, challenge flag)
   const meta = React.useMemo(
     () => buildSessionMeta(group || 'alphabet', lessonId),
     [group, lessonId],
   );
 
-  // Save score to progress store when done
   const setScore = useProgressStore((s) => s.setScore);
 
-  // Settings toggles (audio/flash/haptics)
   const {
     audioEnabled,
     lightEnabled,
@@ -86,10 +79,9 @@ export default function ReceiveSessionScreen() {
     setHapticsEnabled,
   } = useSettingsStore();
 
-  // Optional per-channel offsets (if present in store; otherwise 0)
+  // Optional per-channel offsets (defaults to 0 if not present)
   const { flashOffsetMs = 0, hapticOffsetMs = 0 } = useSettingsStore() as any;
 
-  // Session state
   const [started, setStarted] = React.useState(false);
   const [questions, setQuestions] = React.useState<string[]>([]);
   const [results, setResults] = React.useState<boolean[]>([]);
@@ -97,89 +89,82 @@ export default function ReceiveSessionScreen() {
   const [showReveal, setShowReveal] = React.useState(false);
   const [summary, setSummary] = React.useState<Summary | null>(null);
   const [streak, setStreak] = React.useState(0);
+  const [revealUsed, setRevealUsed] = React.useState(false);
+  const [isPlaying, setIsPlaying] = React.useState(false);
 
-  // Visual flash overlay
   const flash = React.useRef(new Animated.Value(0)).current;
 
-  // Timer to delay advancing / scheduling playback
-  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentMorseRef = React.useRef('');
 
-  // Current target + Morse code
   const currentIndex = results.length;
   const currentTarget = questions[currentIndex] ?? null;
   const currentMorse = currentTarget ? (toMorse(currentTarget) ?? '') : '';
   currentMorseRef.current = currentMorse;
 
-  // Learned set (for challenge keyboard enablement)
   const learnedSet = React.useMemo(
     () => new Set(meta.pool.map((c) => c.toUpperCase())),
     [meta.pool],
   );
 
-  // Responsive card main slot height (keeps PromptCard compact on small screens)
   const screenH = Dimensions.get('window').height;
   const layout = screenH < 635 ? 'xsmall' : screenH < 700 ? 'small' : 'regular';
   const promptSlotHeight =
     layout === 'regular' ? 116 : layout === 'small' ? 96 : 84;
+/*   const inputZoneMinHeight = meta.isChallenge
+    ? layout === 'regular'
+      ? 236
+      : layout === 'small'
+        ? 220
+        : 206
+    : layout === 'regular'
+      ? 168
+      : layout === 'small'
+        ? 152
+        : 140; */
 
-  // Cleanup timer on unmount
   React.useEffect(() => {
     return () => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
     };
   }, []);
 
-  /**
-   * Flash overlay for playback feedback.
-   * CHANGE: Start on the next frame and fade immediately (no JS delay)
-   * to minimize animation jitter.
-   */
-// Hold for (duration - fade) fully on the native driver, then fade out.
-const runFlash = React.useCallback((durationMs: number) => {
-  if (!lightEnabled) return;
+  /** Flash overlay for playback feedback */
+  const runFlash = React.useCallback((durationMs: number) => {
+    if (!lightEnabled) return;
 
-  // Short, consistent fade; tweak if you want sharper/smoother tails
-  const fadeMs = Math.min(240, Math.max(120, Math.floor(durationMs * 0.35)));
-  const holdMs = Math.max(0, Math.floor(durationMs - fadeMs));
+    const fadeMs = Math.min(240, Math.max(120, Math.floor(durationMs * 0.35)));
+    const holdMs = Math.max(0, Math.floor(durationMs - fadeMs));
 
-  try {
-    flash.stopAnimation();
-  } catch {}
-  flash.setValue(1);
+    try {
+      flash.stopAnimation();
+    } catch {}
+    flash.setValue(1);
 
-  // Start on the next frame to avoid batching jitter
-  requestAnimationFrame(() => {
-    if (holdMs > 0) {
-      // Phase 1: HOLD at 1.0 (1 -> 1) for the symbol's hold duration.
-      Animated.timing(flash, {
-        toValue: 1,          // no-op change; acts as a native delay
-        duration: holdMs,    // full hold duration
-        useNativeDriver: true,
-      }).start(() => {
-        // Phase 2: FADE to 0
+    requestAnimationFrame(() => {
+      if (holdMs > 0) {
+        Animated.timing(flash, {
+          toValue: 1,
+          duration: holdMs,
+          useNativeDriver: true,
+        }).start(() => {
+          Animated.timing(flash, {
+            toValue: 0,
+            duration: fadeMs,
+            useNativeDriver: true,
+          }).start();
+        });
+      } else {
         Animated.timing(flash, {
           toValue: 0,
           duration: fadeMs,
           useNativeDriver: true,
         }).start();
-      });
-    } else {
-      // Very short symbols: just fade immediately
-      Animated.timing(flash, {
-        toValue: 0,
-        duration: fadeMs,
-        useNativeDriver: true,
-      }).start();
-    }
-  });
-}, [lightEnabled, flash]);
+      }
+    });
+  }, [lightEnabled, flash]);
 
-  /**
-   * Haptic tick per symbol during *playback* (optional).
-   */
+  /** Haptic tick per symbol during playback (optional) */
   const hapticTick = React.useCallback(
     (symbol: '.' | '-', durationMs: number) => {
       if (!hapticsEnabled) return;
@@ -205,35 +190,34 @@ const runFlash = React.useCallback((durationMs: number) => {
     [hapticsEnabled],
   );
 
-  /**
-   * Play the target character's Morse pattern using audio/haptics/flash.
-   * CHANGE: Keep UI the same; rely on playMorseCode's onSymbolStart (audio-anchored)
-   * and add small optional offsets for device calibration.
-   */
+  /** Play the target character's Morse pattern */
   const playTarget = React.useCallback(async () => {
+    if (isPlaying) return;
     const morse = currentMorseRef.current;
     if (!morse) return;
 
-    await playMorseCode(morse, getMorseUnitMs(), {
-      onSymbolStart: (symbol, duration) => {
-        // Optional tiny calibration per device; defaults are 0ms
-        if (flashOffsetMs > 0) setTimeout(() => runFlash(duration), flashOffsetMs);
-        else runFlash(duration);
+    setIsPlaying(true);
+    try {
+      await playMorseCode(morse, getMorseUnitMs(), {
+        onSymbolStart: (symbol, duration) => {
+          if (flashOffsetMs > 0) setTimeout(() => runFlash(duration), flashOffsetMs);
+          else runFlash(duration);
 
-        if (hapticOffsetMs > 0) setTimeout(() => hapticTick(symbol, duration), hapticOffsetMs);
-        else hapticTick(symbol, duration);
-      },
-    });
-  }, [runFlash, hapticTick, flashOffsetMs, hapticOffsetMs]);
+          if (hapticOffsetMs > 0) setTimeout(() => hapticTick(symbol, duration), hapticOffsetMs);
+          else hapticTick(symbol, duration);
+        },
+      });
+    } finally {
+      setIsPlaying(false);
+    }
+  }, [runFlash, hapticTick, flashOffsetMs, hapticOffsetMs, isPlaying]);
 
   const playTargetRef = React.useRef<() => Promise<void> | void>(() => {});
   React.useEffect(() => {
     playTargetRef.current = playTarget;
   }, [playTarget]);
 
-  /**
-   * Auto-play the target shortly after it appears (only while idle on the prompt).
-   */
+  /** Auto-play shortly after the prompt appears (only while idle on the prompt). */
   React.useEffect(() => {
     if (!started || !currentTarget || summary || feedback !== 'idle') return;
     const timer = setTimeout(() => {
@@ -242,9 +226,7 @@ const runFlash = React.useCallback((durationMs: number) => {
     return () => clearTimeout(timer);
   }, [started, currentTarget, summary, feedback]);
 
-  /**
-   * Start a new receive session (20 random characters from meta.pool).
-   */
+  /** Start a new receive session */
   const startSession = React.useCallback(() => {
     if (!meta.pool.length) return;
     if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
@@ -259,18 +241,19 @@ const runFlash = React.useCallback((durationMs: number) => {
     setResults([]);
     setFeedback('idle');
     setShowReveal(false);
+    setRevealUsed(false);
+    setIsPlaying(false);
     setSummary(null);
     setStreak(0);
     setStarted(true);
   }, [meta.pool]);
 
-  /**
-   * Finish a question and move forward (delay for quick visual feedback).
-   */
+  /** Finish a question and move forward (delay for quick visual feedback) */
   const finishQuestion = React.useCallback(
     (isCorrect: boolean) => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
       setFeedback(isCorrect ? 'correct' : 'wrong');
+      setShowReveal(true); // â† show canonical Morse after submit
       setStreak((prev) => (isCorrect ? prev + 1 : 0));
 
       advanceTimerRef.current = setTimeout(() => {
@@ -290,14 +273,14 @@ const runFlash = React.useCallback((durationMs: number) => {
 
         setShowReveal(false);
         setFeedback('idle');
+        setRevealUsed(false);
+        setIsPlaying(false);
       }, 450);
     },
     [group, lessonId, setScore],
   );
 
-  /**
-   * Handle a user choice (from lesson choices or keyboard).
-   */
+  /** Handle a user choice */
   const submitAnswer = React.useCallback(
     (choice: string) => {
       if (!started || !currentTarget || summary || feedback !== 'idle') return;
@@ -308,11 +291,29 @@ const runFlash = React.useCallback((durationMs: number) => {
     [started, currentTarget, summary, feedback, finishQuestion],
   );
 
-  // Only interactive when mid-session, idle, and we have a target
   const canInteract =
     started && !summary && !!currentTarget && feedback === 'idle';
 
-  // Large prompt char: '?' during idle thinking, else show the answer
+  const revealVisible = showReveal || feedback !== 'idle';
+  const revealDisabled = meta.isChallenge || !canInteract || revealUsed;
+  const revealActive = !meta.isChallenge && started && !summary && !revealUsed;
+  const revealIcon = revealVisible ? 'eye-off-outline' : 'eye-outline';
+
+  const replayDisabled = !canInteract || isPlaying;
+  const replayActive = !replayDisabled;
+
+  const handleRevealPress = React.useCallback(() => {
+    if (revealDisabled) return;
+    setShowReveal(true);
+    setRevealUsed(true);
+  }, [revealDisabled]);
+
+  const handleReplayPress = React.useCallback(() => {
+    if (replayDisabled) return;
+    playTarget();
+  }, [replayDisabled, playTarget]);
+
+  // Large prompt char: '?' while guessing, else show the answer at result frame
   const visibleChar = !started
     ? ''
     : feedback === 'idle'
@@ -321,7 +322,11 @@ const runFlash = React.useCallback((durationMs: number) => {
 
   const progressValue = results.length;
 
-  // Graceful empty state if meta has nothing to quiz on
+  // Compute WPM for the timeline (matches your audio timing)
+  const unitMs = getMorseUnitMs();
+  const wpm = unitMs > 0 ? 1200 / unitMs : 12;
+
+  // Empty state
   if (!meta.pool.length) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -332,7 +337,7 @@ const runFlash = React.useCallback((durationMs: number) => {
     );
   }
 
-  // Finished -> show summary
+  // Summary
   if (summary) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -366,6 +371,7 @@ const runFlash = React.useCallback((durationMs: number) => {
       />
 
       <View style={styles.container}>
+
         {/* --- TOP (fixed): header + progress --- */}
         <View style={styles.topGroup}>
           <SessionHeader labelTop={meta.headerTop} labelBottom="RECEIVE" />
@@ -385,13 +391,40 @@ const runFlash = React.useCallback((durationMs: number) => {
             started={started}
             visibleChar={visibleChar}
             feedback={feedback}
-            morse={currentMorse}
+            morse={''}                         // disable old text reveal (avoid duplicates)
             showReveal={showReveal}
-            canInteract={canInteract}
             onStart={startSession}
-            onRevealToggle={() => setShowReveal((v) => !v)}
-            onReplay={playTarget}
+            revealAction={{
+              icon: revealIcon,
+              accessibilityLabel: 'Reveal code',
+              onPress: handleRevealPress,
+              active: revealActive,
+              disabled: revealDisabled,
+            }}
+            replayAction={{
+              icon: 'play',
+              accessibilityLabel: 'Play code',
+              onPress: handleReplayPress,
+              active: replayActive,
+              disabled: replayDisabled,
+            }}
             mainSlotMinHeight={promptSlotHeight}
+            belowReveal={
+              (showReveal || feedback !== 'idle') && currentTarget ? (
+                <View style={{ alignSelf: 'stretch', alignItems: 'center' }}>
+                  <RevealBar
+                    mode="timeline"
+                    char={currentTarget}
+                    visible={true}
+                    size="md"
+                    wpm={wpm}
+                    unitPx={12}
+                    color={colors.blueNeon}
+                    align="center"
+                  />
+                </View>
+              ) : null
+            }
           />
         </View>
 
@@ -410,31 +443,32 @@ const runFlash = React.useCallback((durationMs: number) => {
             />
           </View>
 
-          {/* Input: lesson choices OR challenge keyboard */}
-          {meta.isChallenge ? (
-            <ChallengeKeyboard
-              learnedSet={learnedSet}
-              canInteract={canInteract}
-              onKeyPress={submitAnswer}
-            />
-          ) : (
-            <View style={styles.lessonChoices}>
-              {meta.pool.map((char) => (
-                <Pressable
-                  key={char}
-                  onPress={() => submitAnswer(char)}
-                  disabled={!canInteract}
-                  style={({ pressed }) => [
-                    styles.choice,
-                    pressed && styles.choicePressed,
-                    !canInteract && { opacity: 0.5 },
-                  ]}
-                >
-                  <Text style={styles.choiceText}>{char}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
+          <View style={[styles.inputZone,/*  { minHeight: inputZoneMinHeight } */]}>
+            {meta.isChallenge ? (
+              <ChallengeKeyboard
+                learnedSet={learnedSet}
+                canInteract={canInteract}
+                onKeyPress={submitAnswer}
+              />
+            ) : (
+              <View style={styles.lessonChoices}>
+                {meta.pool.map((char) => (
+                  <Pressable
+                    key={char}
+                    onPress={() => submitAnswer(char)}
+                    disabled={!canInteract}
+                    style={({ pressed }) => [
+                      styles.choice,
+                      pressed && styles.choicePressed,
+                      !canInteract && { opacity: 0.5 },
+                    ]}
+                  >
+                    <Text style={styles.choiceText}>{char}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -449,29 +483,42 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    paddingHorizontal: spacing(4),
-    paddingTop: spacing(3),
-    paddingBottom: spacing(3),
+    paddingHorizontal: spacing(3),
+    paddingTop: spacing(2),
+    paddingBottom: spacing(2),
+    justifyContent: 'space-between'
   },
 
   // --- layout bands ---------------------------------------------------------
   topGroup: {
-    marginBottom: spacing(0),
+    marginBottom: spacing(.5),
   },
+
   centerGroup: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center', // centers PromptCard in the available space
+    justifyContent: 'center', // vertically centers PromptCard in the available space
   },
+
   bottomGroup: {
-    // stays pinned to bottom
+    marginTop: spacing(.50,),
+    alignItems: 'stretch', 
+
   },
 
   // --- toggles right above input -------------------------------------------
   togglesWrap: {
     alignSelf: 'stretch',
-    paddingHorizontal: spacing(2.5),
-    marginBottom: spacing(2.75), // space between toggles and input
+    minHeight: 64,        
+    justifyContent: 'center',
+  },
+
+  // --- input container -----------------------------------------------------
+  inputZone: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 140             //height of input block (user input buttons)
   },
 
   // --- lesson choices row ---------------------------------------------------
@@ -480,6 +527,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing(2),
   },
+
   choice: {
     flex: 1,
     borderRadius: 18,
@@ -490,7 +538,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: spacing(3),
   },
+
   choicePressed: { backgroundColor: '#15202A' },
+
   choiceText: {
     color: colors.text,
     fontSize: 32,
@@ -506,9 +556,11 @@ const styles = StyleSheet.create({
     gap: spacing(4),
     padding: spacing(4),
   },
+
   emptyText: {
     color: colors.text,
     fontSize: 18,
     fontWeight: '700',
   },
 });
+

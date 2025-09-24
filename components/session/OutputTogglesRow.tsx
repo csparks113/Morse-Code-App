@@ -1,4 +1,4 @@
-// components/session/OutputTogglesRow.tsx
+﻿// components/session/OutputTogglesRow.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { colors, spacing } from '@/theme/lessonTheme';
@@ -60,17 +60,17 @@ export default function OutputTogglesRow({
 const styles = StyleSheet.create({
   outputContainer: {
     alignSelf: 'stretch',
-    paddingHorizontal: spacing(2.5),
-    paddingTop: spacing(1),
+    paddingHorizontal: spacing(0),
+    paddingVertical: spacing(.5),
+    justifyContent: 'center',
   },
+
   toggleRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-evenly',
     columnGap: spacing(1.5),
-    rowGap: spacing(1.5),
+    flexWrap: 'nowrap',
     width: '100%',
   },
 });
-
