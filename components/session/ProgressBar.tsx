@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from '@/theme/lessonTheme';
@@ -33,12 +33,14 @@ export default function ProgressBar({ value, total, streak = 0 }: Props) {
 
       <View style={styles.track}>
         {fraction > 0 && (
-          <LinearGradient
-            colors={['#FFEE94', colors.gold]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={[styles.fill, { width: percentWidth }]}
-          />
+          <View style={[styles.fillWrapper, { width: percentWidth } as ViewStyle]}> 
+            <LinearGradient
+              colors={['#FFEE94', colors.gold]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
         )}
       </View>
 
@@ -78,7 +80,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 215, 0, 0.15)',
     overflow: 'hidden',
   },
-  fill: {
+  fillWrapper: {
     height: '100%',
   },
   streakWrap: {

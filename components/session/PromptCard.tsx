@@ -46,9 +46,9 @@ export default function PromptCard({
   onRevealToggle,
   onReplay,
   canInteract,
-  mainSlotMinHeight = 116,
+/*   mainSlotMinHeight = 116, */
   belowReveal,
-  compact = false,
+/*   compact = false, */
 /*   revealSize, */
   revealAction,
   replayAction,

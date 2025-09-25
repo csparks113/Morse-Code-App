@@ -18,7 +18,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   Animated,
   Dimensions,
   Platform,
@@ -34,8 +33,10 @@ import ProgressBar from '@/components/session/ProgressBar';
 import SessionSummary from '@/components/session/SessionSummary';
 import PromptCard from '@/components/session/PromptCard';
 import OutputTogglesRow from '@/components/session/OutputTogglesRow';
+import FlashOverlay from '@/components/session/FlashOverlay';
+import LessonChoices from '@/components/session/LessonChoices';
+import MorseCompare from '@/components/session/MorseCompare';
 import ChallengeKeyboard from '@/components/session/ChallengeKeyboard';
-import RevealBar from '@/components/session/RevealBar';
 
 // Theme + utils
 import { colors, spacing } from '@/theme/lessonTheme';
@@ -111,17 +112,6 @@ export default function ReceiveSessionScreen() {
   const layout = screenH < 635 ? 'xsmall' : screenH < 700 ? 'small' : 'regular';
   const promptSlotHeight =
     layout === 'regular' ? 116 : layout === 'small' ? 96 : 84;
-/*   const inputZoneMinHeight = meta.isChallenge
-    ? layout === 'regular'
-      ? 236
-      : layout === 'small'
-        ? 220
-        : 206
-    : layout === 'regular'
-      ? 168
-      : layout === 'small'
-        ? 152
-        : 140; */
 
   React.useEffect(() => {
     return () => {
@@ -355,20 +345,9 @@ export default function ReceiveSessionScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      
       {/* Flash overlay for playback */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            backgroundColor: colors.text,
-            opacity: flash.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 0.2],
-            }),
-          },
-        ]}
-      />
+      <FlashOverlay opacity={flash} color={colors.text} maxOpacity={0.2} />
 
       <View style={styles.container}>
 
@@ -411,18 +390,16 @@ export default function ReceiveSessionScreen() {
             mainSlotMinHeight={promptSlotHeight}
             belowReveal={
               (showReveal || feedback !== 'idle') && currentTarget ? (
-                <View style={{ alignSelf: 'stretch', alignItems: 'center' }}>
-                  <RevealBar
-                    mode="timeline"
-                    char={currentTarget}
-                    visible={true}
-                    size="md"
-                    wpm={wpm}
-                    unitPx={12}
-                    color={colors.blueNeon}
-                    align="center"
-                  />
-                </View>
+                <MorseCompare
+                  mode="compare"
+                  char={currentTarget}
+                  presses={[]}
+                  wpm={wpm}
+                  size="md"
+                  topColor={colors.blueNeon}
+                  bottomColor={colors.gold}
+                  align="center"
+                />
               ) : null
             }
           />
@@ -443,7 +420,7 @@ export default function ReceiveSessionScreen() {
             />
           </View>
 
-          <View style={[styles.inputZone,/*  { minHeight: inputZoneMinHeight } */]}>
+          <View style={[styles.inputZone]}>
             {meta.isChallenge ? (
               <ChallengeKeyboard
                 learnedSet={learnedSet}
@@ -451,22 +428,12 @@ export default function ReceiveSessionScreen() {
                 onKeyPress={submitAnswer}
               />
             ) : (
-              <View style={styles.lessonChoices}>
-                {meta.pool.map((char) => (
-                  <Pressable
-                    key={char}
-                    onPress={() => submitAnswer(char)}
-                    disabled={!canInteract}
-                    style={({ pressed }) => [
-                      styles.choice,
-                      pressed && styles.choicePressed,
-                      !canInteract && { opacity: 0.5 },
-                    ]}
-                  >
-                    <Text style={styles.choiceText}>{char}</Text>
-                  </Pressable>
-                ))}
-              </View>
+              <LessonChoices
+                choices={meta.pool}
+                disabled={!canInteract}
+                onChoose={submitAnswer}
+                style={styles.lessonChoices}
+              />
             )}
           </View>
         </View>
@@ -503,7 +470,6 @@ const styles = StyleSheet.create({
   bottomGroup: {
     marginTop: spacing(.50,),
     alignItems: 'stretch', 
-
   },
 
   // --- toggles right above input -------------------------------------------
@@ -527,27 +493,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing(2),
   },
-
-  choice: {
-    flex: 1,
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: '#0F151D',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing(3),
-  },
-
-  choicePressed: { backgroundColor: '#15202A' },
-
-  choiceText: {
-    color: colors.text,
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: 4,
-  },
-
   // --- empty state ----------------------------------------------------------
   emptyState: {
     flex: 1,
