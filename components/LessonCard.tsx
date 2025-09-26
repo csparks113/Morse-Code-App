@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '@/theme/lessonTheme';
 
 type Props = {
-  kind: 'lesson' | 'challenge';
+  kind: 'lesson' | 'review' | 'challenge';
   title: string;
   subtitle?: string;
   locked: boolean;
@@ -29,7 +29,7 @@ type Props = {
 
 /** Palette */
 const GOLD_OUTLINE = colors.gold;
-const GOLD_FILL = '#B8860B'; // keep if you like the warmer fill; or use colors.gold as both
+const GOLD_FILL = '#B8860B';
 const CARD_BG = '#101214';
 const GRAY_BORDER = '#2A2F36';
 const GRAY_FILL = '#15171C';
@@ -40,6 +40,7 @@ const DEEP_BLUE = colors.blueDeep; // unlocked / available
 const NEON_BLUE = colors.blueNeon; // active / pulsing
 
 const CROWN_SIZE = 28;
+const BOOK_SIZE = 24;
 const CIRCLE_SIZE = 52;
 
 type CircleState = { active: boolean; completed: boolean; locked: boolean };
@@ -163,27 +164,35 @@ export default function LessonCard(p: Props) {
   const cardBorder = bothComplete
     ? GOLD_OUTLINE
     : anyActive
-      ? NEON_BLUE
-      : anyUnlockedIdle
-        ? DEEP_BLUE
-        : GRAY_BORDER;
+    ? NEON_BLUE
+    : anyUnlockedIdle
+    ? DEEP_BLUE
+    : GRAY_BORDER;
 
   const subtitleColor = bothComplete
     ? GOLD_OUTLINE
     : anyActive
-      ? NEON_BLUE
-      : anyUnlockedIdle
-        ? DEEP_BLUE
-        : MUTED_ICON;
+    ? NEON_BLUE
+    : anyUnlockedIdle
+    ? DEEP_BLUE
+    : MUTED_ICON;
 
-  // Crown state (Challenge)
-  const crownState: 'none' | 'partial' | 'complete' = bothComplete
+  // Badge state for review/challenge icon
+  const badgeState: 'none' | 'partial' | 'complete' = bothComplete
     ? 'complete'
     : anyActive
-      ? 'partial'
-      : 'none';
+    ? 'partial'
+    : 'none';
 
+  // Accessibility label
   const label = p.subtitle ? `${p.title} ${p.subtitle}` : p.title;
+
+  // Visible title rules:
+  const visibleTitle =
+    p.kind === 'review' ? 'Review' : p.kind === 'challenge' ? 'Challenge' : p.title;
+
+  // Subtitle only for lesson
+  const visibleSubtitle = p.kind === 'lesson' ? p.subtitle : undefined;
 
   return (
     <View
@@ -198,21 +207,17 @@ export default function LessonCard(p: Props) {
       />
 
       <View style={styles.center}>
-        {p.kind === 'lesson' ? (
-          <>
-            <Text style={styles.title}>{p.title}</Text>
-            {!!p.subtitle && (
-              <Text style={[styles.subtitle, { color: subtitleColor }]}>
-                {p.subtitle}
-              </Text>
-            )}
-          </>
-        ) : (
-          <>
-            <Text style={styles.title}>Challenge</Text>
-            <ChallengeCrown state={crownState} />
-          </>
+        <Text style={styles.title}>{visibleTitle}</Text>
+
+        {!!visibleSubtitle && (
+          <Text style={[styles.subtitle, { color: subtitleColor }]}>
+            {visibleSubtitle}
+          </Text>
         )}
+
+        {/* Badge under the title: Review (book), Challenge (crown) */}
+        {p.kind === 'review' && <ReviewBook state={badgeState} />}
+        {p.kind === 'challenge' && <ChallengeCrown state={badgeState} />}
       </View>
 
       <CircleButton
@@ -270,6 +275,51 @@ function ChallengeCrown({ state }: { state: 'none' | 'partial' | 'complete' }) {
   );
 }
 
+// Book: gray (none) → NEON blue (partial) → gold gradient (complete)
+function ReviewBook({ state }: { state: 'none' | 'partial' | 'complete' }) {
+  if (state === 'complete') {
+    return (
+      <MaskedView
+        style={styles.bookMask}
+        maskElement={
+          <View style={styles.bookMask}>
+            <MaterialCommunityIcons
+              name="book-open-variant"
+              size={BOOK_SIZE}
+              color="#fff"
+            />
+          </View>
+        }
+      >
+        <LinearGradient
+          colors={['#FFD700', '#FFC837', '#FFB347']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.bookGradient}
+        />
+      </MaskedView>
+    );
+  }
+  if (state === 'partial') {
+    return (
+      <MaterialCommunityIcons
+        name="book-open-variant"
+        size={BOOK_SIZE}
+        color={NEON_BLUE}
+        accessibilityLabel="Review (in progress)"
+      />
+    );
+  }
+  return (
+    <MaterialCommunityIcons
+      name="book-open-variant"
+      size={BOOK_SIZE}
+      color={GRAY_BORDER}
+      accessibilityLabel="Review"
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
@@ -302,11 +352,24 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', flex: 1, gap: 4 },
   title: { color: '#FFFFFF', fontWeight: '800', fontSize: 18 },
   subtitle: { fontWeight: '800' },
+
+  // Crown mask/gradient
   crownMask: {
     width: CROWN_SIZE,
     height: CROWN_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 6,
   },
   crownGradient: { flex: 1 },
+
+  // Book mask/gradient
+  bookMask: {
+    width: BOOK_SIZE,
+    height: BOOK_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  bookGradient: { flex: 1 },
 });

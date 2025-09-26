@@ -1,6 +1,6 @@
-﻿/**
-        setRevealUsed(false);
-        setIsPlaying(false);
+﻿// app/lessons/[group]/[lessonId]/receive.tsx
+
+/**
  * RECEIVE SESSION SCREEN (Pinned layout)
  * --------------------------------------
  * Top:    SessionHeader + ProgressBar (fixed)
@@ -8,9 +8,10 @@
  * Bottom: OutputTogglesRow (directly above) + Input (lesson choices OR challenge keyboard)
  *
  * Changes:
- * - RevealBar timeline (mode="timeline") centered under the reveal area.
+ * - RevealBar timeline (mode="compare") centered under the reveal area.
  * - Old text-based reveal disabled (morse={''}) to prevent duplicates.
  * - Correct answer auto-reveals after submit (right or wrong).
+ * - Reviews now use the keyboard like Challenges, with a cumulative pool.
  */
 
 import React from 'react';
@@ -67,6 +68,12 @@ export default function ReceiveSessionScreen() {
     [group, lessonId],
   );
 
+  // Header mode (no hearts here)
+  const isReview = React.useMemo(
+    () => /^\d+-review$/.test(String(lessonId)),
+    [lessonId],
+  );
+
   const setScore = useProgressStore((s) => s.setScore);
 
   const {
@@ -95,12 +102,14 @@ export default function ReceiveSessionScreen() {
 
   const flash = React.useRef(new Animated.Value(0)).current;
 
-  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const currentMorseRef = React.useRef('');
 
   const currentIndex = results.length;
   const currentTarget = questions[currentIndex] ?? null;
-  const currentMorse = currentTarget ? (toMorse(currentTarget) ?? '') : '';
+  const currentMorse = currentTarget ? toMorse(currentTarget) ?? '' : '';
   currentMorseRef.current = currentMorse;
 
   const learnedSet = React.useMemo(
@@ -120,39 +129,42 @@ export default function ReceiveSessionScreen() {
   }, []);
 
   /** Flash overlay for playback feedback */
-  const runFlash = React.useCallback((durationMs: number) => {
-    if (!lightEnabled) return;
+  const runFlash = React.useCallback(
+    (durationMs: number) => {
+      if (!lightEnabled) return;
 
-    const fadeMs = Math.min(240, Math.max(120, Math.floor(durationMs * 0.35)));
-    const holdMs = Math.max(0, Math.floor(durationMs - fadeMs));
+      const fadeMs = Math.min(240, Math.max(120, Math.floor(durationMs * 0.35)));
+      const holdMs = Math.max(0, Math.floor(durationMs - fadeMs));
 
-    try {
-      flash.stopAnimation();
-    } catch {}
-    flash.setValue(1);
+      try {
+        flash.stopAnimation();
+      } catch {}
+      flash.setValue(1);
 
-    requestAnimationFrame(() => {
-      if (holdMs > 0) {
-        Animated.timing(flash, {
-          toValue: 1,
-          duration: holdMs,
-          useNativeDriver: true,
-        }).start(() => {
+      requestAnimationFrame(() => {
+        if (holdMs > 0) {
+          Animated.timing(flash, {
+            toValue: 1,
+            duration: holdMs,
+            useNativeDriver: true,
+          }).start(() => {
+            Animated.timing(flash, {
+              toValue: 0,
+              duration: fadeMs,
+              useNativeDriver: true,
+            }).start();
+          });
+        } else {
           Animated.timing(flash, {
             toValue: 0,
             duration: fadeMs,
             useNativeDriver: true,
           }).start();
-        });
-      } else {
-        Animated.timing(flash, {
-          toValue: 0,
-          duration: fadeMs,
-          useNativeDriver: true,
-        }).start();
-      }
-    });
-  }, [lightEnabled, flash]);
+        }
+      });
+    },
+    [lightEnabled, flash],
+  );
 
   /** Haptic tick per symbol during playback (optional) */
   const hapticTick = React.useCallback(
@@ -243,7 +255,7 @@ export default function ReceiveSessionScreen() {
     (isCorrect: boolean) => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
       setFeedback(isCorrect ? 'correct' : 'wrong');
-      setShowReveal(true); // â† show canonical Morse after submit
+      setShowReveal(true); // show canonical Morse after submit
       setStreak((prev) => (isCorrect ? prev + 1 : 0));
 
       advanceTimerRef.current = setTimeout(() => {
@@ -307,8 +319,8 @@ export default function ReceiveSessionScreen() {
   const visibleChar = !started
     ? ''
     : feedback === 'idle'
-      ? '?'
-      : (currentTarget ?? '?');
+    ? '?'
+    : (currentTarget ?? '?');
 
   const progressValue = results.length;
 
@@ -331,6 +343,12 @@ export default function ReceiveSessionScreen() {
   if (summary) {
     return (
       <SafeAreaView style={styles.safe}>
+        <SessionHeader
+          labelTop={meta.headerTop} // "Review" | "Challenge" | "Lesson N - ..."
+          labelBottom="RECEIVE"
+          mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
+        />
+
         <SessionSummary
           percent={summary.percent}
           correct={summary.correct}
@@ -345,20 +363,19 @@ export default function ReceiveSessionScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      
       {/* Flash overlay for playback */}
       <FlashOverlay opacity={flash} color={colors.text} maxOpacity={0.2} />
 
       <View style={styles.container}>
-
         {/* --- TOP (fixed): header + progress --- */}
         <View style={styles.topGroup}>
-          <SessionHeader labelTop={meta.headerTop} labelBottom="RECEIVE" />
-          <ProgressBar
-            value={progressValue}
-            total={TOTAL_QUESTIONS}
-            streak={streak}
+          <SessionHeader
+            labelTop={meta.headerTop}
+            labelBottom="RECEIVE"
+            mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
           />
+
+          <ProgressBar value={progressValue} total={TOTAL_QUESTIONS} streak={streak} />
         </View>
 
         {/* --- CENTER (flex, centered): PromptCard only --- */}
@@ -370,7 +387,7 @@ export default function ReceiveSessionScreen() {
             started={started}
             visibleChar={visibleChar}
             feedback={feedback}
-            morse={''}                         // disable old text reveal (avoid duplicates)
+            morse={''} // disable old text reveal (avoid duplicates)
             showReveal={showReveal}
             onStart={startSession}
             revealAction={{
@@ -421,7 +438,7 @@ export default function ReceiveSessionScreen() {
           </View>
 
           <View style={[styles.inputZone]}>
-            {meta.isChallenge ? (
+            {meta.isChallenge || isReview ? (
               <ChallengeKeyboard
                 learnedSet={learnedSet}
                 canInteract={canInteract}
@@ -453,12 +470,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(3),
     paddingTop: spacing(2),
     paddingBottom: spacing(2),
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
   },
 
   // --- layout bands ---------------------------------------------------------
   topGroup: {
-    marginBottom: spacing(.5),
+    marginBottom: spacing(0.5),
   },
 
   centerGroup: {
@@ -468,14 +485,14 @@ const styles = StyleSheet.create({
   },
 
   bottomGroup: {
-    marginTop: spacing(.50,),
-    alignItems: 'stretch', 
+    marginTop: spacing(0.5),
+    alignItems: 'stretch',
   },
 
   // --- toggles right above input -------------------------------------------
   togglesWrap: {
     alignSelf: 'stretch',
-    minHeight: 64,        
+    minHeight: 64,
     justifyContent: 'center',
   },
 
@@ -484,7 +501,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 140             //height of input block (user input buttons)
+    minHeight: 140, // height of input block (user input buttons)
   },
 
   // --- lesson choices row ---------------------------------------------------
@@ -493,6 +510,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing(2),
   },
+
   // --- empty state ----------------------------------------------------------
   emptyState: {
     flex: 1,
@@ -508,4 +526,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

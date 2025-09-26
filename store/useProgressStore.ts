@@ -1,4 +1,4 @@
-// store/useProgressStore.ts
+﻿// store/useProgressStore.ts
 // -------------------------
 // Minimal persistent state for tracking lesson progress.
 // We keep both boolean flags (backward compatible with earlier code)
@@ -125,7 +125,7 @@ export const useProgressStore = create<ProgressState>()(
             const send =
               (lp.sendScore ?? (lp.send ? 100 : 0)) >= thresholds.send;
             const both = receive && send;
-            const isChallenge = id.startsWith('ch-');
+            const isChallenge = id.includes('challenge');
             if (isChallenge) {
               if (both) out.challengeBoth += 1;
               else if (receive) out.challengeReceive += 1;

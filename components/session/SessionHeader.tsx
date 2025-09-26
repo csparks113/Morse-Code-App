@@ -1,4 +1,4 @@
-// components/session/SessionHeader.tsx
+﻿// components/session/SessionHeader.tsx
 /**
  * SESSION HEADER — Compact single line
  * ------------------------------------
@@ -21,6 +21,8 @@ export type SessionHeaderProps = {
   labelTop: string;       // e.g., "Lesson 1 - E & T" or "Challenge"
   labelBottom: string;    // "SEND" or "RECEIVE"
   onClose?: () => void;   // cleanup only — navigation handled here
+  mode?: 'normal' | 'review' | 'challenge'; // new
+  hearts?: number;                           // new
 };
 
 // Keep only "Lesson N" or "Challenge" from labelTop
@@ -35,15 +37,17 @@ export default function SessionHeader({
   labelTop,
   labelBottom,
   onClose,
+  mode = 'normal',
+  hearts = 3,
 }: SessionHeaderProps) {
   const handlePressClose = React.useCallback(() => {
-    onClose?.();          // cancel timers, audio, etc.
-    router.dismissAll();  // prevent back-stack loops
-    router.replace('/');  // land on tabs/index (home)
+    onClose?.();
+    router.dismissAll();
+    router.replace('/');
   }, [onClose]);
 
   const topLine = extractPrimary(labelTop);
-  const mode = (labelBottom || '').toUpperCase();
+  const bottomLabel = (labelBottom || '').toUpperCase();
 
   return (
     <View style={styles.wrap}>
@@ -56,16 +60,29 @@ export default function SessionHeader({
         <Ionicons name="close" size={22} color={colors.text} />
       </Pressable>
 
-      {/* Center: two lines (subtitle removed) */}
+      {/* Center: two lines */}
       <View style={styles.center}>
         <Text style={styles.top} numberOfLines={1} ellipsizeMode="tail">
           {topLine}
         </Text>
-        <Text style={styles.bottom}>{mode}</Text>
+        <Text style={styles.bottom}>{bottomLabel}</Text>
       </View>
 
-      {/* Right: spacer to keep title centered */}
-      <View style={styles.spacer} />
+      {/* Right: hearts only in challenge mode */}
+      {mode === 'challenge' ? (
+        <View style={styles.heartsWrap}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Text
+              key={i}
+              style={[styles.heart, i < hearts ? styles.heartFull : styles.heartEmpty]}
+            >
+              ❤
+            </Text>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.spacer} />
+      )}
     </View>
   );
 }
@@ -81,7 +98,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
 
-    // same paddings as before
     paddingVertical: spacing(2),
     paddingHorizontal: spacing(2),
     marginBottom: spacing(1.5),
@@ -107,11 +123,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   bottom: {
-    color: colors.blueNeon,   // always blue (SEND/RECEIVE)
+    color: colors.blueNeon,
     fontSize: 24,
     fontWeight: '900',
     letterSpacing: 1,
   },
 
   spacer: { width: 44, height: 44 },
+
+  heartsWrap: {
+    minWidth: 60,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 4,
+  },
+  heart: { fontSize: 16 },
+  heartFull: { color: '#FF5A5F' },
+  heartEmpty: { color: '#444' },
 });

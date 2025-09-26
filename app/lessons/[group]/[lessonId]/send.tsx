@@ -1,19 +1,21 @@
-﻿// app/lessons/[group]/[lessonId]/send.tsx
+// app/lessons/[group]/[lessonId]/send.tsx
 /**
  * SEND SESSION SCREEN (Pinned layout)
  * -----------------------------------
- * Visual + layout now mirrors RECEIVE:
- * - Top:    SessionHeader + ProgressBar (tight gap)
- * - Center: PromptCard (only moving part; centered vertically)
+ * Visual + layout mirrors RECEIVE:
+ * - Top:    SessionHeader + ProgressBar
+ * - Center: PromptCard
  * - Bottom: OutputTogglesRow above Keyer button
  *
- * Outputs tied to keyer:
- * - Press-in: tone + held flash + haptics
- * - Press-out: stop tone + fade flash + stop haptics
+ * Review behavior:
+ * - Header shows "Review" (from sessionMeta)
+ * - Reveal toggle ENABLED; no hearts
+ * - Pool is cumulative via sessionMeta
  *
- * Compare view:
- * - While guessing: user-only MorseTimeline
- * - After correct OR if revealed: RevealBar compare (target vs user)
+ * Challenge behavior:
+ * - Header shows hearts (3)
+ * - Reveal toggle DISABLED; no replay
+ * - Hearts decrement on mistakes; end early at 0 with summary
  */
 
 import React from "react";
@@ -21,7 +23,7 @@ import { Dimensions, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 
-// Shared, presentational UI building blocks (no business logic inside)
+// Shared UI
 import SessionHeader from "@/components/session/SessionHeader";
 import ProgressBar from "@/components/session/ProgressBar";
 import SessionSummary from "@/components/session/SessionSummary";
@@ -31,54 +33,55 @@ import KeyerButton from "@/components/session/KeyerButton";
 import FlashOverlay from "@/components/session/FlashOverlay";
 import MorseCompare from "@/components/session/MorseCompare";
 
-// Theme tokens and Morse helpers
+// Theme + helpers
 import { colors, spacing } from "@/theme/lessonTheme";
 import { theme } from "@/theme/theme";
 import { toMorse } from "@/utils/morse";
 import {
-  classifyGapDuration,    // map a measured gap into intra/inter/word (or null)
-  classifySignalDuration, // map a press length into '.' / '-' (or null)
-  getMorseUnitMs,         // current dot unit in ms (derived from Settings)
+  classifyGapDuration,
+  classifySignalDuration,
+  getMorseUnitMs,
 } from "@/utils/morseTiming";
 
-// App state + reusable hooks
+// State/hooks
 import { useProgressStore } from "@/store/useProgressStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
-import { useKeyerOutputs } from "@/hooks/useKeyerOutputs"; // encapsulates audio/haptics/flash side-effects
-import { useSessionFlow } from "@/hooks/useSessionFlow";   // orchestrates questions/results/summary
+import { useKeyerOutputs } from "@/hooks/useKeyerOutputs";
+import { useSessionFlow } from "@/hooks/useSessionFlow";
 
-// Builds lesson metadata (pool, titles, etc.)
+// Meta
 import { buildSessionMeta } from "./sessionMeta";
 
-const TOTAL_QUESTIONS = 20; // session length
+const TOTAL_QUESTIONS = 20;
 
 type FeedbackState = "idle" | "correct" | "wrong";
 type PressWindow = { startMs: number; endMs: number };
 
+function getStoreIdForProgress(rawId: string) {
+  const m = String(rawId).match(/^(\d+)-review$/);
+  if (m) return m[1];          // save review scores to base lesson
+  return String(rawId);        // lessons/challenges (choose to save or skip challenges)
+}
+
 export default function SendSessionScreen() {
   // -----------------------------
-  // 1) ROUTE & LESSON BOOTSTRAP
+  // 1) ROUTE & META
   // -----------------------------
-  // Grab the current lesson identifiers from the route, then create the
-  // "meta" descriptor (includes the question pool, header labels, etc.)
-  const { group, lessonId } = useLocalSearchParams<{
-    group: string;
-    lessonId: string;
-  }>();
-
+  const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
   const meta = React.useMemo(
     () => buildSessionMeta(group || "alphabet", lessonId),
     [group, lessonId],
   );
+  const isReview = React.useMemo(
+    () => /^\d+-review$/.test(String(lessonId)),
+    [lessonId]
+  );
 
-  // Write back the final score when the session completes
   const setScore = useProgressStore((s) => s.setScore);
 
   // -----------------------------
-  // 2) USER SETTINGS (OUTPUTS)
+  // 2) SETTINGS (OUTPUTS)
   // -----------------------------
-  // These flags control whether audio, screen flash, torch, or haptics
-  // should activate when the keyer is pressed, plus the audio tone frequency.
   const settings = useSettingsStore();
   const {
     audioEnabled,
@@ -92,20 +95,14 @@ export default function SendSessionScreen() {
     toneHz,
   } = settings;
 
-  // Tolerances govern how strict we are when classifying presses & gaps
   const signalTolerancePercent =
-    typeof settings.signalTolerancePercent === "number"
-      ? settings.signalTolerancePercent
-      : 30;
+    typeof settings.signalTolerancePercent === "number" ? settings.signalTolerancePercent : 30;
   const gapTolerancePercent =
-    typeof settings.gapTolerancePercent === "number"
-      ? settings.gapTolerancePercent
-      : 50;
+    typeof settings.gapTolerancePercent === "number" ? settings.gapTolerancePercent : 50;
 
   const signalTolerance = signalTolerancePercent / 100;
   const gapTolerance = gapTolerancePercent / 100;
 
-  // Normalize toneHz to a sane, numeric value with fallback
   const toneHzValue = React.useMemo(() => {
     const parsed = Number(toneHz);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 600;
@@ -114,35 +111,27 @@ export default function SendSessionScreen() {
   // -----------------------------
   // 3) SESSION ORCHESTRATION
   // -----------------------------
-  // useSessionFlow manages the list of questions, the streak, results,
-  // and the computed summary. We just push "correct/incorrect" into it.
   const {
     started,
-    summary,
-    start,          // begin a fresh session
-    results,
+    summary,            // summary from natural completion
+    start,              // begin a fresh session
+    results,            // boolean[] so far
     streak,
-    currentTarget,  // the current letter/number user needs to key
-    setResult,      // push result for current question (true/false)
+    currentTarget,      // character to key
+    setResult,          // push true/false, advances or finishes
   } = useSessionFlow({
     pool: meta.pool,
     total: TOTAL_QUESTIONS,
     onFinished: ({ percent }) => {
-      // On completion, persist a score record for this lesson
       if (group && lessonId) {
-        setScore(group, lessonId, "send", percent);
+        setScore(group, getStoreIdForProgress(String(lessonId)), "send", percent);
       }
     },
   });
 
   // -----------------------------
-  // 4) OUTPUT SIDE EFFECTS HOOK
+  // 4) OUTPUT SIDE EFFECTS (keyer)
   // -----------------------------
-  // This encapsulates tone/haptics/flash behavior for keyer presses.
-  // - onDown(): press-in effects (start tone, start haptics, flash -> 1)
-  // - onUp():   release effects (stop tone, stop haptics, flash -> fade out)
-  // - flashOpacity: Animated.Value 0..1, rendered by <FlashOverlay />
-  // - prepare/teardown: audio warm-up and cleanup
   const { onDown, onUp, flashOpacity, prepare, teardown } = useKeyerOutputs({
     audioEnabled,
     hapticsEnabled,
@@ -150,177 +139,132 @@ export default function SendSessionScreen() {
     toneHz: toneHzValue,
   });
 
-  // Warm up audio buffers etc. at mount/focus
-  React.useEffect(() => {
-    prepare().catch(() => {});
-  }, [prepare]);
-
-  // Cleanup at unmount (stop sound, timers, etc.)
-  React.useEffect(() => {
-    return () => {
-      teardown().catch(() => {});
-    };
-  }, [teardown]);
+  React.useEffect(() => { prepare().catch(() => {}); }, [prepare]);
+  React.useEffect(() => () => { teardown().catch(() => {}); }, [teardown]);
 
   // -----------------------------
   // 5) LOCAL VIEW STATE
   // -----------------------------
-  // feedback: drives UI accents (e.g., red bar on "wrong")
-  // showReveal: whether to show the compare bar before "correct"
-  // inputRef + setInput: the typed morse so far ("." and "-")
-  // presses: raw press windows for the timeline visualization
   const [feedback, setFeedback] = React.useState<FeedbackState>("idle");
   const [showReveal, setShowReveal] = React.useState(false);
   const [, setInput] = React.useState("");
   const [presses, setPresses] = React.useState<PressWindow[]>([]);
 
-  // Keep the input string in a ref so we can read synchronously inside handlers
+  // Challenge hearts + early summary
+  const [hearts, setHearts] = React.useState(3);
+  const [earlySummary, setEarlySummary] = React.useState<null | { percent: number; correct: number }>(null);
+
+  // Input & timers
   const inputRef = React.useRef("");
-  const updateInput = React.useCallback((next: string) => {
-    inputRef.current = next;
-    setInput(next);
-  }, []);
-
-  // Cache the current target's Morse string for fast prefix checks
+  const updateInput = React.useCallback((next: string) => { inputRef.current = next; setInput(next); }, []);
   const currentMorseRef = React.useRef("");
-
-  // Refs to track press timing and cross-press validation state
   const pressStartRef = React.useRef<number | null>(null);
   const lastReleaseRef = React.useRef<number | null>(null);
   const ignorePressRef = React.useRef(false);
-  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Clear any pending "advance to next question" timer if we unmount early
   React.useEffect(() => {
-    return () => {
-      if (advanceTimerRef.current) {
-        clearTimeout(advanceTimerRef.current);
-        advanceTimerRef.current = null;
-      }
-    };
+    return () => { if (advanceTimerRef.current) { clearTimeout(advanceTimerRef.current); advanceTimerRef.current = null; } };
   }, []);
 
   // -----------------------------
-  // 6) RESPONSIVE LAYOUT METRICS
+  // 6) LAYOUT METRICS
   // -----------------------------
-  // We compute a screen-size bucket to keep the PromptCard and Keyer sizes
-  // feeling balanced on small devices.
   const screenH = Dimensions.get("window").height;
   const layout = screenH < 635 ? "xsmall" : screenH < 700 ? "small" : "regular";
-  const promptSlotHeight =
-    layout === "regular" ? 116 : layout === "small" ? 96 : 84;
-  const keyerMinHeight =
-    layout === "regular" ? 128 : layout === "small" ? 104 : 92;
+  const promptSlotHeight = layout === "regular" ? 116 : layout === "small" ? 96 : 84;
+  const keyerMinHeight = layout === "regular" ? 128 : layout === "small" ? 104 : 92;
 
-  // Compute the canonical Morse for the current target (e.g., "K" -> "-.-")
+  // -----------------------------
+  // 7) MORSE & SPEED
+  // -----------------------------
   const currentMorse = currentTarget ? toMorse(currentTarget) ?? "" : "";
   currentMorseRef.current = currentMorse;
 
-  // The dot-unit in ms (user-adjustable WPM); used both for classification
-  // and for drawing the timeline/compare visualizations with the right scale.
   const unitMs = getMorseUnitMs();
   const wpm = unitMs > 0 ? 1200 / unitMs : 12;
 
   // -----------------------------
-  // 7) SESSION CONTROLS
+  // 8) SESSION CONTROLS
   // -----------------------------
-  // Start a new session; clear any state that should reset between runs.
   const startSession = React.useCallback(() => {
     if (!meta.pool.length) return;
-    if (advanceTimerRef.current) {
-      clearTimeout(advanceTimerRef.current);
-      advanceTimerRef.current = null;
-    }
+    if (advanceTimerRef.current) { clearTimeout(advanceTimerRef.current); advanceTimerRef.current = null; }
 
-    start();            // tell useSessionFlow to (re)generate questions
-    updateInput("");    // clear current morse input
-    setPresses([]);     // clear visualization
+    start();
+    updateInput("");
+    setPresses([]);
     setShowReveal(false);
     setFeedback("idle");
 
-    // Reset timing refs so the first press isn't contaminated by stale data
+    // Reset timing refs
     pressStartRef.current = null;
     lastReleaseRef.current = null;
     ignorePressRef.current = false;
-  }, [meta.pool, start, updateInput]);
 
-  // Finish the current question:
-  // - show instant feedback (correct/wrong)
-  // - after a brief pause, push the result to useSessionFlow and advance
-  const finishQuestion = React.useCallback(
-    (isCorrect: boolean) => {
-      if (advanceTimerRef.current) {
-        clearTimeout(advanceTimerRef.current);
-        advanceTimerRef.current = null;
-      }
+    // Reset hearts in challenge
+    if (meta.isChallenge) setHearts(3);
 
-      setFeedback(isCorrect ? "correct" : "wrong");
-      if (isCorrect) setShowReveal(true); // show compare bar on success
+    // Clear any prior early summary
+    setEarlySummary(null);
+  }, [meta.pool, meta.isChallenge, start, updateInput]);
 
-      // reset low-level timing refs before the next item
-      ignorePressRef.current = false;
-      pressStartRef.current = null;
-      lastReleaseRef.current = null;
+  const finishQuestion = React.useCallback((isCorrect: boolean) => {
+    if (advanceTimerRef.current) { clearTimeout(advanceTimerRef.current); advanceTimerRef.current = null; }
 
-      // small delay so users can register the feedback, then advance
-      advanceTimerRef.current = setTimeout(() => {
-        setResult(isCorrect); // increments progress, handles summary if last
-        updateInput("");
-        setPresses([]);
-        setShowReveal(false);
-        setFeedback("idle");
-        advanceTimerRef.current = null;
-      }, 650);
-    },
-    [setResult, updateInput],
-  );
+    setFeedback(isCorrect ? "correct" : "wrong");
+    if (isCorrect) setShowReveal(true);
 
-  // Append a "." or "-" to the current input and evaluate against target.
-  // If the prefix deviates, it's instantly wrong; if it fully matches, it's correct.
-  const appendSymbol = React.useCallback(
-    (symbol: "." | "-") => {
-      if (!currentTarget) return;
-      const targetMorse = currentMorseRef.current;
-      const next = `${inputRef.current}${symbol}`;
-      updateInput(next);
+    // Challenge hearts: decrement on mistakes
+    if (!isCorrect && meta.isChallenge) {
+      setHearts((h) => Math.max(0, h - 1));
+    }
 
-      if (!targetMorse.startsWith(next)) {
-        // user deviated from correct sequence
-        finishQuestion(false);
-        return;
-      }
+    // reset refs so next item starts clean
+    ignorePressRef.current = false;
+    pressStartRef.current = null;
+    lastReleaseRef.current = null;
 
-      if (targetMorse === next) {
-        // user finished the character exactly
-        finishQuestion(true);
-      }
-    },
-    [currentTarget, finishQuestion, updateInput],
-  );
+    advanceTimerRef.current = setTimeout(() => {
+      setResult(isCorrect);
+      updateInput("");
+      setPresses([]);
+      setShowReveal(false);
+      setFeedback("idle");
+      advanceTimerRef.current = null;
+    }, 650);
+  }, [meta.isChallenge, setResult, updateInput]);
+
+  // Early end on hearts == 0 (Challenge only)
+  React.useEffect(() => {
+    if (!meta.isChallenge) return;
+    if (hearts > 0) return;
+    if (earlySummary) return; // already ended
+    // compute score so far
+    const correct = results.filter(Boolean).length;
+    const percent = Math.round((correct / TOTAL_QUESTIONS) * 100);
+    setEarlySummary({ correct, percent });
+
+    // persist score to store (challenge write optional; reviews already normalized)
+    if (group && lessonId) {
+      setScore(group, getStoreIdForProgress(String(lessonId)), "send", percent);
+    }
+  }, [hearts, meta.isChallenge, results, group, lessonId, setScore, earlySummary]);
 
   // -----------------------------
-  // 8) KEYER HANDLERS
+  // 9) KEYER HANDLERS
   // -----------------------------
-  // Press-in rules:
-  // - Must be in an interactive moment (session in progress, no summary, etc.)
-  // - If we already typed at least one element, then the gap before this press
-  //   must be an "intra-character" gap (1 unit). Otherwise it's a mistake.
-  // - If valid, begin a new press window and trigger outputs (onDown()).
+  const canInteractBase =
+    started && !summary && !earlySummary && !!currentTarget && feedback === "idle";
+
   const onPressIn = React.useCallback(() => {
-    if (!started || summary || !currentTarget || feedback !== "idle") return;
-
+    if (!canInteractBase) return;
     const now = Date.now();
 
-    // Validate gap from the last release if we've already entered something
     if (inputRef.current.length > 0 && lastReleaseRef.current !== null) {
       const gapDuration = now - lastReleaseRef.current;
       const gapType = classifyGapDuration(gapDuration, unitMs, gapTolerance);
-
-      // Only intra-character gaps are allowed between elements within a letter
       if (gapType !== "intra") {
-        // mark wrong and ignore the duration of this "press" (it's not valid)
         ignorePressRef.current = true;
         lastReleaseRef.current = null;
         finishQuestion(false);
@@ -328,29 +272,35 @@ export default function SendSessionScreen() {
       }
     }
 
-    // Start a valid press
     ignorePressRef.current = false;
     pressStartRef.current = now;
-
-    // Fire outputs (tone/haptics/flash). These are decoupled from classification.
     onDown();
-  }, [started, summary, currentTarget, feedback, unitMs, gapTolerance, finishQuestion, onDown]);
+  }, [canInteractBase, unitMs, gapTolerance, finishQuestion, onDown]);
 
-  // Press-out rules:
-  // - Turn outputs off first (onUp()) so the UI feels snappy.
-  // - If this release shouldn't count (ignorePressRef), bail.
-  // - Otherwise, measure duration -> classify -> append symbol or fail.
+  const appendSymbol = React.useCallback((symbol: "." | "-") => {
+    if (!currentTarget) return;
+    const target = currentMorseRef.current;
+    const next = `${inputRef.current}${symbol}`;
+    updateInput(next);
+
+    if (!target.startsWith(next)) {
+      finishQuestion(false);
+      return;
+    }
+    if (target === next) {
+      finishQuestion(true);
+    }
+  }, [currentTarget, finishQuestion, updateInput]);
+
   const onPressOut = React.useCallback(() => {
-    onUp(); // stop tone/haptics, start flash fade-out immediately
+    onUp();
 
-    // If we can't interact (paused/finished), just reset transient refs
-    if (!started || summary || !currentTarget || feedback !== "idle") {
+    if (!canInteractBase) {
       ignorePressRef.current = false;
       pressStartRef.current = null;
       return;
     }
 
-    // The previous "press-in" was invalidated (wrong gap), so ignore this one
     if (ignorePressRef.current) {
       ignorePressRef.current = false;
       pressStartRef.current = null;
@@ -359,38 +309,27 @@ export default function SendSessionScreen() {
 
     const startAt = pressStartRef.current;
     pressStartRef.current = null;
-    if (!startAt) {
-      // defensive: if we somehow missed recording press start, do nothing
-      return;
-    }
+    if (!startAt) return;
 
     const releaseAt = Date.now();
     const duration = releaseAt - startAt;
 
-    // Save the raw press window for the timeline visualization
     setPresses((prev) => [...prev, { startMs: startAt, endMs: releaseAt }]);
 
-    // Classify press length into dot/dash given the current unit and tolerance
     const symbol = classifySignalDuration(duration, unitMs, signalTolerance);
     if (!symbol) {
-      // Could not classify (too long/short); it's a wrong answer
       lastReleaseRef.current = null;
       finishQuestion(false);
       return;
     }
 
-    // Store the release time so the next press can validate the gap
     lastReleaseRef.current = releaseAt;
-
-    // Append "." or "-" and evaluate against target
     appendSymbol(symbol);
-  }, [started, summary, currentTarget, feedback, appendSymbol, finishQuestion, unitMs, signalTolerance, onUp]);
+  }, [canInteractBase, unitMs, signalTolerance, finishQuestion, appendSymbol, onUp]);
 
-  // Whether the UI should allow input at this moment
-  const canInteract =
-    started && !summary && !!currentTarget && feedback === "idle";
-
-  // When closing the screen early, clear any pending timers
+  // -----------------------------
+  // 10) RENDER
+  // -----------------------------
   const handleCloseCleanup = React.useCallback(() => {
     if (advanceTimerRef.current) {
       clearTimeout(advanceTimerRef.current);
@@ -398,9 +337,13 @@ export default function SendSessionScreen() {
     }
   }, []);
 
-  // -----------------------------
-  // 9) EARLY RETURNS (EMPTY / SUMMARY)
-  // -----------------------------
+  // Disable/enable PromptCard actions (reveal/replay)
+  const revealEnabled = !meta.isChallenge;  // enabled for lessons & reviews
+  const replayEnabled = !meta.isChallenge;  // Send has no audio replay; keep disabled on challenge
+
+  const compareMode = showReveal || feedback === "correct" ? "compare" : "guessing";
+  const bottomBarColor = feedback === "wrong" ? "#FF6B6B" : colors.gold;
+
   if (!meta.pool.length) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -411,12 +354,20 @@ export default function SendSessionScreen() {
     );
   }
 
-  if (summary) {
+  const finalSummary = earlySummary || summary || null;
+
+  if (finalSummary) {
     return (
       <SafeAreaView style={styles.safe}>
+        <SessionHeader
+          labelTop={meta.headerTop}   // "Review" | "Challenge" | "Lesson N - ..."
+          labelBottom="SEND"
+          mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
+          hearts={meta.isChallenge ? hearts : undefined}
+        />
         <SessionSummary
-          percent={summary.percent}
-          correct={summary.correct}
+          percent={finalSummary.percent}
+          correct={finalSummary.correct}
           total={TOTAL_QUESTIONS}
           onContinue={handleCloseCleanup}
         />
@@ -424,35 +375,26 @@ export default function SendSessionScreen() {
     );
   }
 
-  // -----------------------------
-  // 10) RENDER (Pinned layout)
-  // -----------------------------
-  // Visual accents for compare bar:
-  const bottomBarColor = feedback === "wrong" ? "#FF6B6B" : colors.gold;
-  const compareMode =
-    showReveal || feedback === "correct" ? "compare" : "guessing";
+  const canInteract = canInteractBase;
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Full-screen flash overlay, driven by useKeyerOutputs' Animated.Value */}
       <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={0.28} />
 
       <View style={styles.container}>
-        {/* TOP: header + progress (tight spacing to match Receive) */}
+        {/* TOP: header + progress */}
         <View style={styles.topGroup}>
           <SessionHeader
             labelTop={meta.headerTop}
             labelBottom="SEND"
-            onClose={handleCloseCleanup}
+            mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
+            hearts={meta.isChallenge ? hearts : undefined}
           />
-          <ProgressBar
-            value={results.length}
-            total={TOTAL_QUESTIONS}
-            streak={streak}
-          />
+
+          <ProgressBar value={results.length} total={TOTAL_QUESTIONS} streak={streak} />
         </View>
 
-        {/* CENTER: PromptCard is vertically centered; only moving piece */}
+        {/* CENTER */}
         <View style={styles.centerGroup}>
           <PromptCard
             compact
@@ -465,12 +407,17 @@ export default function SendSessionScreen() {
             showReveal={showReveal}
             canInteract={canInteract}
             onStart={startSession}
-            onRevealToggle={() => setShowReveal((prev) => !prev)}
-            onReplay={() => {}} // Send has keyer-driven output; no "replay"
+            // Gating for actions:
+            onRevealToggle={() => {
+              if (!revealEnabled) return; // disabled in challenges
+              setShowReveal((prev) => !prev);
+            }}
+            onReplay={() => {
+              // Send has keyer-driven output; do nothing.
+              // Keep handler to satisfy prop, but it's disabled for challenges anyway.
+            }}
             mainSlotMinHeight={promptSlotHeight}
             belowReveal={
-              // Compare block toggles between timeline (guessing) and
-              // target vs user overlay (compare) while keeping sizing consistent
               <MorseCompare
                 mode={compareMode}
                 char={currentTarget ?? undefined}
@@ -485,7 +432,7 @@ export default function SendSessionScreen() {
           />
         </View>
 
-        {/* BOTTOM: Output toggles sit directly above the keyer button */}
+        {/* BOTTOM */}
         <View style={styles.bottomGroup}>
           <View style={styles.togglesWrap}>
             <OutputTogglesRow
@@ -513,13 +460,11 @@ export default function SendSessionScreen() {
 }
 
 // -----------------------------
-// 11) STYLES (parity with Receive)
+// STYLES
 // -----------------------------
 const styles = StyleSheet.create({
-  // App background
   safe: { flex: 1, backgroundColor: theme.colors.background },
 
-  // The pinned layout frame with consistent horizontal/vertical padding
   container: {
     flex: 1,
     paddingHorizontal: spacing(3),
@@ -527,16 +472,12 @@ const styles = StyleSheet.create({
     paddingBottom: spacing(2),
   },
 
-  // Small gap between header and progress bar (matches Receive)
   topGroup: { marginBottom: spacing(0.5) },
 
-  // Center the PromptCard in the available space
   centerGroup: { flex: 1, alignItems: "center", justifyContent: "center" },
 
-  // Bottom stack: toggles (small gap) then keyer
   bottomGroup: { marginTop: spacing(0.5), alignItems: "stretch" },
 
-  // Keep toggles vertically centered and reserved in height
   togglesWrap: {
     alignSelf: "stretch",
     minHeight: 64,
@@ -544,7 +485,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing(2),
   },
 
-  // Fallback empty state if the lesson pool is missing
   emptyState: {
     flex: 1,
     alignItems: "center",
