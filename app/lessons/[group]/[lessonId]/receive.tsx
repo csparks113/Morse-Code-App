@@ -3,15 +3,14 @@
 /**
  * RECEIVE SESSION SCREEN (Pinned layout)
  * --------------------------------------
- * Top:    SessionHeader + ProgressBar (fixed)
- * Center: PromptCard (centers in remaining space; only moving part)
- * Bottom: OutputTogglesRow (directly above) + Input (lesson choices OR challenge keyboard)
+ * Top:    SessionHeader + ProgressBar
+ * Center: PromptCard (timeline compare under reveal)
+ * Bottom: OutputTogglesRow + Input (LessonChoices OR ChallengeKeyboard)
  *
- * Changes:
- * - RevealBar timeline (mode="compare") centered under the reveal area.
- * - Old text-based reveal disabled (morse={''}) to prevent duplicates.
- * - Correct answer auto-reveals after submit (right or wrong).
- * - Reviews now use the keyboard like Challenges, with a cumulative pool.
+ * Updates:
+ * - Reviews use cumulative pool + keyboard (like challenges).
+ * - Challenge hearts: decrement on wrong; early end at 0.
+ * - Review scores save to base lesson id ("2" instead of "2-review").
  */
 
 import React from 'react';
@@ -57,6 +56,13 @@ const TOTAL_QUESTIONS = 20;
 type Summary = { correct: number; percent: number };
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 
+// Map "<n>-review" to "<n>" so review scores aggregate to the base lesson
+function getStoreIdForProgress(rawId: string) {
+  const m = String(rawId).match(/^(\d+)-review$/);
+  if (m) return m[1];
+  return String(rawId);
+}
+
 export default function ReceiveSessionScreen() {
   const { group, lessonId } = useLocalSearchParams<{
     group: string;
@@ -68,10 +74,9 @@ export default function ReceiveSessionScreen() {
     [group, lessonId],
   );
 
-  // Header mode (no hearts here)
   const isReview = React.useMemo(
     () => /^\d+-review$/.test(String(lessonId)),
-    [lessonId],
+    [lessonId]
   );
 
   const setScore = useProgressStore((s) => s.setScore);
@@ -100,16 +105,18 @@ export default function ReceiveSessionScreen() {
   const [revealUsed, setRevealUsed] = React.useState(false);
   const [isPlaying, setIsPlaying] = React.useState(false);
 
+  // ❤️ Hearts for CHALLENGE mode
+  const [hearts, setHearts] = React.useState(3);
+  // (Receive doesn’t need a separate earlySummary object — we can set `summary` directly)
+
   const flash = React.useRef(new Animated.Value(0)).current;
 
-  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentMorseRef = React.useRef('');
 
   const currentIndex = results.length;
   const currentTarget = questions[currentIndex] ?? null;
-  const currentMorse = currentTarget ? toMorse(currentTarget) ?? '' : '';
+  const currentMorse = currentTarget ? (toMorse(currentTarget) ?? '') : '';
   currentMorseRef.current = currentMorse;
 
   const learnedSet = React.useMemo(
@@ -129,42 +136,39 @@ export default function ReceiveSessionScreen() {
   }, []);
 
   /** Flash overlay for playback feedback */
-  const runFlash = React.useCallback(
-    (durationMs: number) => {
-      if (!lightEnabled) return;
+  const runFlash = React.useCallback((durationMs: number) => {
+    if (!lightEnabled) return;
 
-      const fadeMs = Math.min(240, Math.max(120, Math.floor(durationMs * 0.35)));
-      const holdMs = Math.max(0, Math.floor(durationMs - fadeMs));
+    const fadeMs = Math.min(240, Math.max(120, Math.floor(durationMs * 0.35)));
+    const holdMs = Math.max(0, Math.floor(durationMs - fadeMs));
 
-      try {
-        flash.stopAnimation();
-      } catch {}
-      flash.setValue(1);
+    try {
+      flash.stopAnimation();
+    } catch {}
+    flash.setValue(1);
 
-      requestAnimationFrame(() => {
-        if (holdMs > 0) {
-          Animated.timing(flash, {
-            toValue: 1,
-            duration: holdMs,
-            useNativeDriver: true,
-          }).start(() => {
-            Animated.timing(flash, {
-              toValue: 0,
-              duration: fadeMs,
-              useNativeDriver: true,
-            }).start();
-          });
-        } else {
+    requestAnimationFrame(() => {
+      if (holdMs > 0) {
+        Animated.timing(flash, {
+          toValue: 1,
+          duration: holdMs,
+          useNativeDriver: true,
+        }).start(() => {
           Animated.timing(flash, {
             toValue: 0,
             duration: fadeMs,
             useNativeDriver: true,
           }).start();
-        }
-      });
-    },
-    [lightEnabled, flash],
-  );
+        });
+      } else {
+        Animated.timing(flash, {
+          toValue: 0,
+          duration: fadeMs,
+          useNativeDriver: true,
+        }).start();
+      }
+    });
+  }, [lightEnabled, flash]);
 
   /** Haptic tick per symbol during playback (optional) */
   const hapticTick = React.useCallback(
@@ -248,38 +252,64 @@ export default function ReceiveSessionScreen() {
     setSummary(null);
     setStreak(0);
     setStarted(true);
-  }, [meta.pool]);
+
+    // Reset hearts for challenges
+    if (meta.isChallenge) setHearts(3);
+  }, [meta.pool, meta.isChallenge]);
 
   /** Finish a question and move forward (delay for quick visual feedback) */
   const finishQuestion = React.useCallback(
     (isCorrect: boolean) => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-      setFeedback(isCorrect ? 'correct' : 'wrong');
-      setShowReveal(true); // show canonical Morse after submit
-      setStreak((prev) => (isCorrect ? prev + 1 : 0));
 
+      const willExhaustHearts =
+        meta.isChallenge && !isCorrect && hearts <= 1; // this wrong will drop to 0
+
+      setFeedback(isCorrect ? 'correct' : 'wrong');
+      setShowReveal(true);
+
+      if (!isCorrect && meta.isChallenge) {
+        setHearts((h) => Math.max(0, h - 1));
+      }
+
+      if (willExhaustHearts) {
+        // Keep the red state on screen briefly, then end.
+        const delay = 650;
+        setTimeout(() => {
+          const correctCount = results.filter(Boolean).length; // last was wrong
+          const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
+          setSummary({ correct: correctCount, percent: pct });
+          setStarted(false);
+          if (group && lessonId) {
+            setScore(group, getStoreIdForProgress(String(lessonId)), 'receive', pct);
+          }
+        }, delay);
+        return; // do NOT schedule advance/reset
+      }
+
+      // Normal advance path
       advanceTimerRef.current = setTimeout(() => {
         setResults((prev) => {
           if (prev.length >= TOTAL_QUESTIONS) return prev;
           const next = [...prev, isCorrect];
-
           if (next.length === TOTAL_QUESTIONS) {
             const correctCount = next.filter(Boolean).length;
             const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
             setSummary({ correct: correctCount, percent: pct });
             setStarted(false);
-            if (group && lessonId) setScore(group, lessonId, 'receive', pct);
+            if (group && lessonId) {
+              setScore(group, getStoreIdForProgress(String(lessonId)), 'receive', pct);
+            }
           }
           return next;
         });
-
         setShowReveal(false);
         setFeedback('idle');
         setRevealUsed(false);
         setIsPlaying(false);
       }, 450);
     },
-    [group, lessonId, setScore],
+    [group, lessonId, meta.isChallenge, hearts, results, setScore],
   );
 
   /** Handle a user choice */
@@ -293,8 +323,9 @@ export default function ReceiveSessionScreen() {
     [started, currentTarget, summary, feedback, finishQuestion],
   );
 
+
   const canInteract =
-    started && !summary && !!currentTarget && feedback === 'idle';
+    started && !summary && !!currentTarget && feedback === 'idle' && (!meta.isChallenge || hearts > 0);
 
   const revealVisible = showReveal || feedback !== 'idle';
   const revealDisabled = meta.isChallenge || !canInteract || revealUsed;
@@ -319,8 +350,8 @@ export default function ReceiveSessionScreen() {
   const visibleChar = !started
     ? ''
     : feedback === 'idle'
-    ? '?'
-    : (currentTarget ?? '?');
+      ? '?'
+      : (currentTarget ?? '?');
 
   const progressValue = results.length;
 
@@ -344,9 +375,10 @@ export default function ReceiveSessionScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <SessionHeader
-          labelTop={meta.headerTop} // "Review" | "Challenge" | "Lesson N - ..."
+          labelTop={meta.headerTop}
           labelBottom="RECEIVE"
           mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
+          hearts={meta.isChallenge ? hearts : undefined}
         />
 
         <SessionSummary
@@ -373,9 +405,14 @@ export default function ReceiveSessionScreen() {
             labelTop={meta.headerTop}
             labelBottom="RECEIVE"
             mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
+            hearts={meta.isChallenge ? hearts : undefined}
           />
 
-          <ProgressBar value={progressValue} total={TOTAL_QUESTIONS} streak={streak} />
+          <ProgressBar
+            value={progressValue}
+            total={TOTAL_QUESTIONS}
+            streak={streak}
+          />
         </View>
 
         {/* --- CENTER (flex, centered): PromptCard only --- */}
@@ -470,29 +507,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(3),
     paddingTop: spacing(2),
     paddingBottom: spacing(2),
-    justifyContent: 'space-between',
+    justifyContent: 'space-between'
   },
 
   // --- layout bands ---------------------------------------------------------
   topGroup: {
-    marginBottom: spacing(0.5),
+    marginBottom: spacing(.5),
   },
 
   centerGroup: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center', // vertically centers PromptCard in the available space
+    justifyContent: 'center',
   },
 
   bottomGroup: {
-    marginTop: spacing(0.5),
-    alignItems: 'stretch',
+    marginTop: spacing(.50,),
+    alignItems: 'stretch', 
   },
 
   // --- toggles right above input -------------------------------------------
   togglesWrap: {
     alignSelf: 'stretch',
-    minHeight: 64,
+    minHeight: 64,        
     justifyContent: 'center',
   },
 
@@ -501,7 +538,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 140, // height of input block (user input buttons)
+    minHeight: 140
   },
 
   // --- lesson choices row ---------------------------------------------------

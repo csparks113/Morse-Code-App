@@ -15,7 +15,7 @@
  * Challenge behavior:
  * - Header shows hearts (3)
  * - Reveal toggle DISABLED; no replay
- * - Hearts decrement on mistakes; end early at 0 with summary
+ * - Hearts decrement on mistakes; graceful early end on 3rd miss
  */
 
 import React from "react";
@@ -117,7 +117,7 @@ export default function SendSessionScreen() {
     start,              // begin a fresh session
     results,            // boolean[] so far
     streak,
-    currentTarget,      // character to key
+    currentTarget,      // the character to key
     setResult,          // push true/false, advances or finishes
   } = useSessionFlow({
     pool: meta.pool,
@@ -209,8 +209,11 @@ export default function SendSessionScreen() {
     setEarlySummary(null);
   }, [meta.pool, meta.isChallenge, start, updateInput]);
 
+  // Graceful finish: keep red state visible on 3rd miss, then show summary
   const finishQuestion = React.useCallback((isCorrect: boolean) => {
     if (advanceTimerRef.current) { clearTimeout(advanceTimerRef.current); advanceTimerRef.current = null; }
+
+    const willExhaustHearts = meta.isChallenge && !isCorrect && hearts <= 1;
 
     setFeedback(isCorrect ? "correct" : "wrong");
     if (isCorrect) setShowReveal(true);
@@ -225,6 +228,21 @@ export default function SendSessionScreen() {
     pressStartRef.current = null;
     lastReleaseRef.current = null;
 
+    if (willExhaustHearts) {
+      // Hold the red state briefly, then end with a summary
+      const delay = 650;
+      setTimeout(() => {
+        const correct = results.filter(Boolean).length; // last was wrong
+        const percent = Math.round((correct / TOTAL_QUESTIONS) * 100);
+        setEarlySummary({ correct, percent }); // summary UI uses earlySummary
+        if (group && lessonId) {
+          setScore(group, getStoreIdForProgress(String(lessonId)), "send", percent);
+        }
+      }, delay);
+      return; // do NOT queue normal advance/reset
+    }
+
+    // Normal advance
     advanceTimerRef.current = setTimeout(() => {
       setResult(isCorrect);
       updateInput("");
@@ -233,23 +251,7 @@ export default function SendSessionScreen() {
       setFeedback("idle");
       advanceTimerRef.current = null;
     }, 650);
-  }, [meta.isChallenge, setResult, updateInput]);
-
-  // Early end on hearts == 0 (Challenge only)
-  React.useEffect(() => {
-    if (!meta.isChallenge) return;
-    if (hearts > 0) return;
-    if (earlySummary) return; // already ended
-    // compute score so far
-    const correct = results.filter(Boolean).length;
-    const percent = Math.round((correct / TOTAL_QUESTIONS) * 100);
-    setEarlySummary({ correct, percent });
-
-    // persist score to store (challenge write optional; reviews already normalized)
-    if (group && lessonId) {
-      setScore(group, getStoreIdForProgress(String(lessonId)), "send", percent);
-    }
-  }, [hearts, meta.isChallenge, results, group, lessonId, setScore, earlySummary]);
+  }, [meta.isChallenge, hearts, results, group, lessonId, setScore, setResult, updateInput]);
 
   // -----------------------------
   // 9) KEYER HANDLERS
@@ -414,7 +416,6 @@ export default function SendSessionScreen() {
             }}
             onReplay={() => {
               // Send has keyer-driven output; do nothing.
-              // Keep handler to satisfy prop, but it's disabled for challenges anyway.
             }}
             mainSlotMinHeight={promptSlotHeight}
             belowReveal={
@@ -498,3 +499,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

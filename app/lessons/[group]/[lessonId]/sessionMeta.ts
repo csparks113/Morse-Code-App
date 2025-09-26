@@ -46,32 +46,41 @@ export function buildSessionMeta(
 
   const lid = String(lessonId).toLowerCase();
 
-  // --- CHALLENGE PATH -------------------------------------------------------
-  // Accepts: "challenge-1", "challenge-2", ..., "challenge-final"
-  if (/^challenge/.test(lid)) {
-    const m = lid.match(/^challenge-(\d+)$/);
-    const isFinal = lid === 'challenge-final';
-    const k = m ? Math.max(1, parseInt(m[1], 10)) : NaN;
-    const limit = isFinal
-      ? Number.POSITIVE_INFINITY
-      : (Number.isFinite(k) ? k * 2 : Number.POSITIVE_INFINITY);
+// --- CHALLENGE ------------------------------------------------------------
+if (String(lessonId).startsWith('challenge-')) {
+  const idxMatch = String(lessonId).match(/^challenge-(\d+|final)$/);
+  if (idxMatch) {
+    const token = idxMatch[1];
+    const lessonsArr = group.lessons;
+    let boundaryIdx: number;
 
-    const chars: string[] = [];
-    let counted = 0;
-    for (const lesson of group.lessons) {
-      const n = parseInt(String(lesson.id), 10);
-      if (!Number.isFinite(n)) continue;
-      chars.push(...lesson.chars);
-      counted += 1;
-      if (counted >= limit) break;
+    if (token === 'final') {
+      boundaryIdx = lessonsArr.length - 1;
+    } else {
+      const challengeIndex = Math.max(1, parseInt(token, 10)); // 1-based
+      // Reviews start after L2; every 2 reviews => after L3, L5, L7...
+      boundaryIdx = Math.min(lessonsArr.length - 1, challengeIndex * 2);
     }
+
+    // Collect ALL learned chars up to boundary (inclusive), in order, no dups
+    const ordered: string[] = [];
+    for (let i = 0; i <= boundaryIdx; i += 1) {
+      for (const c of lessonsArr[i].chars) {
+        const up = c.toUpperCase();
+        if (!ordered.includes(up)) ordered.push(up);
+      }
+    }
+
+    // ✅ INCLUDE the last two learned as well (no slicing)
+    const pool = ordered;
 
     return {
       headerTop: 'Challenge',
-      pool: Array.from(new Set(chars)),
+      pool,
       isChallenge: true,
     };
   }
+}
 
   // --- REVIEW PATH ----------------------------------------------------------
   // Accepts: "<n>-review" -> header "Review", pool = cumulative up to lesson n

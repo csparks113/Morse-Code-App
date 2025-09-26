@@ -194,9 +194,16 @@ export default function LessonCard(p: Props) {
   // Subtitle only for lesson
   const visibleSubtitle = p.kind === 'lesson' ? p.subtitle : undefined;
 
+  const activeChallengeGlow = p.kind === 'challenge' && p.isActive;
+
   return (
     <View
-      style={[styles.card, { borderColor: cardBorder }, p.style]}
+      style={[
+        styles.card,
+        { borderColor: cardBorder },
+        activeChallengeGlow && styles.activeChallengeGlow, // ★ faint neon glow on active Challenge
+        p.style,
+      ]}
       accessibilityLabel={label}
     >
       <CircleButton
@@ -233,26 +240,14 @@ export default function LessonCard(p: Props) {
 // Crown: gray (none) → NEON blue (partial) → gold gradient (complete)
 function ChallengeCrown({ state }: { state: 'none' | 'partial' | 'complete' }) {
   if (state === 'complete') {
+    // Solid gold crown (no MaskedView), reliable across platforms
     return (
-      <MaskedView
-        style={styles.crownMask}
-        maskElement={
-          <View style={styles.crownMask}>
-            <MaterialCommunityIcons
-              name="crown"
-              size={CROWN_SIZE}
-              color="#fff"
-            />
-          </View>
-        }
-      >
-        <LinearGradient
-          colors={['#FFD700', '#FFC837', '#FFB347']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.crownGradient}
-        />
-      </MaskedView>
+      <MaterialCommunityIcons
+        name="crown"
+        size={CROWN_SIZE}
+        color={GOLD_OUTLINE}
+        accessibilityLabel="Challenge complete"
+      />
     );
   }
   if (state === 'partial') {
@@ -278,26 +273,14 @@ function ChallengeCrown({ state }: { state: 'none' | 'partial' | 'complete' }) {
 // Book: gray (none) → NEON blue (partial) → gold gradient (complete)
 function ReviewBook({ state }: { state: 'none' | 'partial' | 'complete' }) {
   if (state === 'complete') {
+    // Solid gold book (no MaskedView), reliable across platforms
     return (
-      <MaskedView
-        style={styles.bookMask}
-        maskElement={
-          <View style={styles.bookMask}>
-            <MaterialCommunityIcons
-              name="book-open-variant"
-              size={BOOK_SIZE}
-              color="#fff"
-            />
-          </View>
-        }
-      >
-        <LinearGradient
-          colors={['#FFD700', '#FFC837', '#FFB347']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.bookGradient}
-        />
-      </MaskedView>
+      <MaterialCommunityIcons
+        name="book-open-variant"
+        size={BOOK_SIZE}
+        color={GOLD_OUTLINE}
+        accessibilityLabel="Review complete"
+      />
     );
   }
   if (state === 'partial') {
@@ -320,6 +303,7 @@ function ReviewBook({ state }: { state: 'none' | 'partial' | 'complete' }) {
   );
 }
 
+
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
@@ -333,6 +317,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     marginVertical: 10,
   },
+
+  /** ★ Added: faint neon glow for active Challenge (iOS: shadowColor; Android: elevation) */
+  activeChallengeGlow: {
+    shadowColor: NEON_BLUE,
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8, // Android glow approximation
+  },
+
   circleBase: {
     width: CIRCLE_SIZE,
     height: CIRCLE_SIZE,

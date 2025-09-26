@@ -6,6 +6,8 @@
 // DEV behavior matches the original:
 // - DEV_UNLOCK_ALL = true unlocks everything and enables Send regardless of Receive.
 // - Status colors still reflect real thresholds (so “Complete” still means scores >= thresholds).
+// - DEV_STRICT_UNLOCKING = true enforces “Challenge after its preceding Review”
+//   and tighter availability rules.
 // -----------------------------------------------------------------------------
 
 import React from 'react';
@@ -17,8 +19,10 @@ import { useProgressStore } from '../store/useProgressStore';
 import LessonCard from './LessonCard';
 import { LessonCompletion, ChallengeCompletion } from '@/types/progress';
 
-// 🔧 DEV TOGGLE — identical semantics to your original file
-const DEV_UNLOCK_ALL = true;
+// 🔧 DEV TOGGLES
+const DEV_UNLOCK_ALL = true;          // identical semantics to your original file
+const DEV_STRICT_UNLOCKING = false;   // turn on when you’re happy
+const CHALLENGE_REQUIRES_SEND_TOO = false; // when strict: also require preceding review's base lesson SEND
 
 type Lesson = { id: string; label: string; chars: string[] };
 type Props = { groupId: string; lessons: Lesson[] };
@@ -91,7 +95,7 @@ export default function LessonPath({ groupId, lessons }: Props) {
       return { lessonNumber: n, chars: l.chars, id: l.id, label: l.label };
     });
 
-    normalized.forEach((l, idx) => {
+    normalized.forEach((l) => {
       // LESSON
       out.push({
         kind: 'lesson',
@@ -167,13 +171,19 @@ export default function LessonPath({ groupId, lessons }: Props) {
     [firstPad, insets.bottom],
   );
 
-  // Compute each node's status the same way as your original list:
+  // Compute each node's status:
   // - Uses the underlying lesson’s progress for review/challenge, too.
+  // - When DEV_STRICT_UNLOCKING=true, enforce:
+  //   * Review unlocks when its base lesson's RECEIVE passed
+  //   * Challenge unlocks only if immediately preceded by a Review whose base lesson meets criteria
   const statuses = React.useMemo(() => {
     const out: (LessonCompletion | ChallengeCompletion)[] = [];
     let activeAssigned = false; // only one "active" at a time (unless DEV unlocks)
 
-    derivedNodes.forEach((n) => {
+    const recvOK = (score: number) => score >= thresholds.receive;
+    const sendOK = (score: number) => score >= thresholds.send;
+
+    derivedNodes.forEach((n, idx) => {
       // Map node to *base lesson id* to read progress
       const baseLessonId =
         n.kind === 'lesson'
@@ -185,44 +195,86 @@ export default function LessonPath({ groupId, lessons }: Props) {
       const p = getLessonProgress(baseLessonId);
 
       // Passed thresholds?
-      const receive = p.receiveScore >= thresholds.receive;
-      const send = p.sendScore >= thresholds.send;
+      const hasReceive = recvOK(p.receiveScore);
+      const hasSend = sendOK(p.sendScore);
 
       // Is node "available" (unlocked)?
-      let available = (() => {
+      let available: boolean;
+
+      if (!DEV_STRICT_UNLOCKING) {
+        // Original, more permissive availability:
+        available = (() => {
+          if (n.kind === 'lesson') {
+            // First lesson always available; otherwise require previous lesson receive
+            const pos = derivedNodes.findIndex((x) => x.key === n.key);
+            // Find previous *lesson* node before this one
+            let prevLessonId: string | null = null;
+            for (let i = pos - 1; i >= 0; i--) {
+              if (derivedNodes[i].kind === 'lesson') {
+                prevLessonId = String((derivedNodes[i] as any).lessonNumber);
+                break;
+              }
+            }
+            if (!prevLessonId) return true;
+            const prevProg = getLessonProgress(prevLessonId);
+            return recvOK(prevProg.receiveScore);
+          }
+
+          if (n.kind === 'review') {
+            // Review becomes available once its source lesson is learned (receive passed)
+            return hasReceive;
+          }
+
+          // challenge: available after latest lesson's receive
+          const lastProg = getLessonProgress(String(n.sourceLessonNumber));
+          return recvOK(lastProg.receiveScore);
+        })();
+      } else {
+        // Strict availability:
         if (n.kind === 'lesson') {
-          // First lesson always available; otherwise require previous lesson receive
-          const pos = derivedNodes.findIndex((x) => x.key === n.key);
-          // Find previous *lesson* node before this one
-          let prevLessonId: string | null = null;
-          for (let i = pos - 1; i >= 0; i--) {
-            if (derivedNodes[i].kind === 'lesson') {
-              prevLessonId = String((derivedNodes[i] as any).lessonNumber);
+          // First lesson unlocked; others require previous LESSON receive
+          // Find previous *lesson* node
+          let prevLessonNum: number | null = null;
+          for (let j = idx - 1; j >= 0; j--) {
+            if (derivedNodes[j].kind === 'lesson') {
+              prevLessonNum = (derivedNodes[j] as any).lessonNumber;
               break;
             }
           }
-          if (!prevLessonId) return true;
-          const prevProg = getLessonProgress(prevLessonId);
-          return prevProg.receiveScore >= thresholds.receive;
+          if (prevLessonNum == null) {
+            available = true;
+          } else {
+            const prev = getLessonProgress(String(prevLessonNum));
+            available = recvOK(prev.receiveScore);
+          }
+        } else if (n.kind === 'review') {
+          // Review unlocks when its source LESSON receive is passed
+          available = hasReceive;
+        } else {
+          // Challenge unlocks ONLY if the immediately preceding node is a Review,
+          // whose base lesson meets criteria (receive + optional send).
+          const prev = derivedNodes[idx - 1];
+          if (!prev || prev.kind !== 'review') {
+            available = false;
+          } else {
+            const reviewBase = (prev as any).lessonNumber as number;
+            const rp = getLessonProgress(String(reviewBase));
+            const ok = CHALLENGE_REQUIRES_SEND_TOO
+              ? recvOK(rp.receiveScore) && sendOK(rp.sendScore)
+              : recvOK(rp.receiveScore);
+            available = ok;
+          }
         }
+      }
 
-        if (n.kind === 'review') {
-          // Review becomes available once its source lesson is learned (receive passed)
-          return receive;
-        }
-
-        // challenge: keep simple—available after latest lesson's receive (like your original logic)
-        const lastProg = getLessonProgress(String(n.sourceLessonNumber));
-        return lastProg.receiveScore >= thresholds.receive;
-      })();
-
+      // 🔧 DEV OVERRIDE: force everything to be "available"
       if (DEV_UNLOCK_ALL) available = true;
 
       // Determine status (visuals)
       let status: LessonCompletion | ChallengeCompletion;
-      if (receive && send) {
+      if (hasReceive && hasSend) {
         status = 'bothComplete';
-      } else if (receive) {
+      } else if (hasReceive) {
         status = 'receiveComplete';
       } else if (DEV_UNLOCK_ALL) {
         status = 'active'; // many can be active in DEV

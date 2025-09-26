@@ -12,22 +12,22 @@
  */
 
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors, glow, radii, spacing } from '@/theme/lessonTheme';
 
 export type SessionHeaderProps = {
-  labelTop: string;       // e.g., "Lesson 1 - E & T" or "Challenge"
-  labelBottom: string;    // "SEND" or "RECEIVE"
-  onClose?: () => void;   // cleanup only — navigation handled here
-  mode?: 'normal' | 'review' | 'challenge'; // new
-  hearts?: number;                           // new
+  labelTop: string;       // "Lesson 1 - E & T" | "Review" | "Challenge"
+  labelBottom: string;    // "SEND" | "RECEIVE"
+  onClose?: () => void;
+  mode?: 'normal' | 'review' | 'challenge';
+  hearts?: number;        // only meaningful in challenge mode
 };
 
 // Keep only "Lesson N" or "Challenge" from labelTop
 function extractPrimary(labelTop: string): string {
-  const m = labelTop.match(/^(Lesson\s*\d+)|^Challenge/i);
+  const m = labelTop.match(/^(Lesson\s*\d+)|^Challenge|^Review/i);
   if (m) return m[0].replace(/\s+/g, ' ').trim();
   const first = labelTop.split(/[-–—|]/)[0];
   return first.trim() || labelTop.trim();
@@ -48,6 +48,35 @@ export default function SessionHeader({
 
   const topLine = extractPrimary(labelTop);
   const bottomLabel = (labelBottom || '').toUpperCase();
+
+  // --- Hearts loss animation (scale + shake) -------------------------------
+  const prevHeartsRef = React.useRef<number>(hearts);
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+  const shakeAnim = React.useRef(new Animated.Value(0)).current; // -1..1
+
+  React.useEffect(() => {
+    const prev = prevHeartsRef.current;
+    if (mode === 'challenge' && hearts < prev) {
+      // bump + shake when a heart is lost
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(scaleAnim, { toValue: 1.12, duration: 90, useNativeDriver: true }),
+          Animated.spring(scaleAnim, { toValue: 1, speed: 12, bounciness: 6, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(shakeAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: -1, duration: 80, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 0, duration: 80, useNativeDriver: true }),
+        ]),
+      ]).start();
+    }
+    prevHeartsRef.current = hearts;
+  }, [hearts, mode, scaleAnim, shakeAnim]);
+
+  const shakeTranslateX = shakeAnim.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [-6, 0, 6],
+  });
 
   return (
     <View style={styles.wrap}>
@@ -70,16 +99,18 @@ export default function SessionHeader({
 
       {/* Right: hearts only in challenge mode */}
       {mode === 'challenge' ? (
-        <View style={styles.heartsWrap}>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Text
-              key={i}
-              style={[styles.heart, i < hearts ? styles.heartFull : styles.heartEmpty]}
-            >
-              ❤
-            </Text>
-          ))}
-        </View>
+        <Animated.View
+          style={[
+            styles.heartsWrap,
+            { transform: [{ scale: scaleAnim }, { translateX: shakeTranslateX }] },
+          ]}
+        >
+          <View style={styles.heartsRow}>
+            {Array.from({ length: Math.max(0, hearts) }).map((_, i) => (
+              <Text key={i} style={[styles.heart, styles.heartFull]}>❤</Text>
+            ))}
+          </View>
+        </Animated.View>
       ) : (
         <View style={styles.spacer} />
       )}
@@ -141,4 +172,11 @@ const styles = StyleSheet.create({
   heart: { fontSize: 16 },
   heartFull: { color: '#FF5A5F' },
   heartEmpty: { color: '#444' },
+
+  heartsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
 });
+
