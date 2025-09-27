@@ -1,13 +1,20 @@
-import React from "react";
+﻿import React from "react";
 import { Animated, Platform, Vibration } from "react-native";
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Haptics from "expo-haptics";
+import {
+  acquireTorch,
+  releaseTorch,
+  resetTorch,
+  isTorchAvailable,
+} from "@/utils/torch";
 
 type UseKeyerOutputsOptions = {
   audioEnabled: boolean;   // play a continuous sidetone while the keyer is held
   hapticsEnabled: boolean; // vibrate / haptic feedback while the keyer is held
   lightEnabled: boolean;   // show a fullscreen flash overlay while held
+  torchEnabled: boolean;   // toggle the physical flashlight while held
   toneHz: number;          // sidetone frequency in Hz (e.g., 600)
 };
 
@@ -125,7 +132,9 @@ function generateLoopingSineWav(
  * Those live elsewhere so this hook stays focused on outputs only.
  */
 export function useKeyerOutputs(options: UseKeyerOutputsOptions): UseKeyerOutputsResult {
-  const { audioEnabled, hapticsEnabled, lightEnabled, toneHz } = options;
+  const { audioEnabled, hapticsEnabled, lightEnabled, torchEnabled, toneHz } = options;
+  const torchSupported = isTorchAvailable();
+  const torchPressRef = React.useRef(false);
 
   // Resolve an acceptable tone Hz (guarding against undefined/NaN/bad inputs)
   const resolveToneHz = React.useCallback(() => {
@@ -140,7 +149,7 @@ export function useKeyerOutputs(options: UseKeyerOutputsOptions): UseKeyerOutput
   const soundRef = React.useRef<Audio.Sound | null>(null);
   const currentToneRef = React.useRef<number | null>(null);
 
-  // iOS can't do continuous vibration—simulate with periodic impacts
+  // iOS can't do continuous vibrationâ€”simulate with periodic impacts
   const hapticIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   /**
@@ -360,25 +369,44 @@ export function useKeyerOutputs(options: UseKeyerOutputsOptions): UseKeyerOutput
 
     // Reset overlay
     flashOpacity.setValue(0);
+
+    torchPressRef.current = false;
+    await resetTorch();
   }, [flashOpacity]);
 
   /**
    * Public press handlers
    * ---------------------
    * Wire these directly to your KeyerButton onPressIn/onPressOut.
-   * They do NOT do any timing/classification—only side effects.
+   * They do NOT do any timing/classificationâ€”only side effects.
    */
   const onDown = React.useCallback(() => {
     flashOn();
     startHaptics();
+    if (torchSupported && torchEnabled) {
+      torchPressRef.current = true;
+      acquireTorch().catch(() => {});
+    }
     startTone().catch(() => {});
-  }, [flashOn, startHaptics, startTone]);
+  }, [flashOn, startHaptics, startTone, torchEnabled, torchSupported]);
 
   const onUp = React.useCallback(() => {
     flashOff();
     stopHaptics();
+    if (torchPressRef.current) {
+      torchPressRef.current = false;
+      releaseTorch().catch(() => {});
+    }
     stopTone().catch(() => {});
   }, [flashOff, stopHaptics, stopTone]);
+
+  React.useEffect(() => {
+    if (!torchSupported) return;
+    if (!torchEnabled && torchPressRef.current) {
+      torchPressRef.current = false;
+      resetTorch().catch(() => {});
+    }
+  }, [torchEnabled, torchSupported]);
 
   // Safety: auto-clean if the component using this hook unmounts.
   React.useEffect(() => {
@@ -395,3 +423,4 @@ export function useKeyerOutputs(options: UseKeyerOutputsOptions): UseKeyerOutput
     teardown,
   };
 }
+

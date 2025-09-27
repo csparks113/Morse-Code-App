@@ -210,7 +210,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(4),
     alignSelf: 'stretch',
     marginHorizontal: -spacing(3),
-    marginBottom: spacing(2.5), // more breathing room below header
     ...glow.neon,
   },
 

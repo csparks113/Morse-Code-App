@@ -1,4 +1,4 @@
-// app/lessons/[group]/[lessonId]/send.tsx
+﻿// app/lessons/[group]/[lessonId]/send.tsx
 /**
  * SEND SESSION SCREEN (Pinned layout)
  * -----------------------------------
@@ -136,6 +136,7 @@ export default function SendSessionScreen() {
     audioEnabled,
     hapticsEnabled,
     lightEnabled,
+    torchEnabled,
     toneHz: toneHzValue,
   });
 
@@ -499,4 +500,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+
 
