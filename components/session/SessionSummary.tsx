@@ -30,6 +30,7 @@ import Svg, {
 } from 'react-native-svg';
 import { router } from 'expo-router';              // ⬅️ use static router for dismissAll()
 import { colors, spacing } from '@/theme/lessonTheme';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   percent: number;
@@ -50,6 +51,7 @@ export default function SessionSummary({
   total,
   onContinue,
 }: Props) {
+  const { t } = useTranslation(['session', 'common']);
   const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
   const strokeId = safePercent >= 80 ? 'ringGold' : 'ringBlue';
   const dash = CIRC * (1 - safePercent / 100);
@@ -65,7 +67,7 @@ export default function SessionSummary({
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>Session Complete</Text>
+      <Text style={styles.title}>{t('session:sessionComplete')}</Text>
 
       <View style={styles.ringWrap}>
         <Svg width={SIZE} height={SIZE}>
@@ -109,7 +111,7 @@ export default function SessionSummary({
         <View style={styles.center}>
           <Text style={[styles.percent, { color: accent }]}>{safePercent}%</Text>
           <Text style={styles.sub}>
-            {correct} / {total} correct
+            {t('session:correctCount', { correct, total })}
           </Text>
         </View>
       </View>
@@ -117,11 +119,11 @@ export default function SessionSummary({
       {/* Continue button -> cleanup (optional) + dismissAll + replace('/') */}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Continue"
+        accessibilityLabel={t('common:continue')}
         onPress={handleContinue}
         style={({ pressed }) => [styles.continue, pressed && { opacity: 0.92 }]}
       >
-        <Text style={styles.continueText}>Continue</Text>
+        <Text style={styles.continueText}>{t('common:continue')}</Text>
       </Pressable>
     </View>
   );

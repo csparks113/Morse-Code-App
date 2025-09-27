@@ -19,6 +19,7 @@ import { colors, glow, radii, spacing, thresholds } from '../theme/lessonTheme';
 import { LESSON_GROUPS } from '../data/lessons';
 import { useProgressStore } from '../store/useProgressStore';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   groupId: string;
@@ -27,6 +28,7 @@ type Props = {
 
 export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
   const router = useRouter();
+  const { t } = useTranslation(['lessons', 'common']);
   const [open, setOpen] = React.useState(false);
   const group = React.useMemo(
     () => LESSON_GROUPS.find((g) => g.id === groupId)!,
@@ -37,6 +39,7 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
       0,
       LESSON_GROUPS.findIndex((g) => g.id === groupId),
     ) + 1;
+  const groupTitle = t(`lessons:${group.id}`, { defaultValue: group.title });
 
   const getCompletionRatio = useProgressStore((s) => s.getCompletionRatio);
   const progress = useProgressStore((s) => s.progress);
@@ -80,20 +83,20 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
                 styles.iconBtn,
                 pressed && styles.pressed,
               ]}
-              accessibilityLabel="Open groups"
+              accessibilityLabel={t("lessons:openGroups")}
             >
               <Ionicons name="menu" size={24} color={colors.bg} />
             </Pressable>
           </View>
 
           <View style={styles.centerTextWrap}>
-            <Text style={styles.section}>Section {sectionIndex}</Text>
-            <Text style={styles.title}>{group.title}</Text>
+            <Text style={styles.section}>{t("lessons:sectionLabel", { num: sectionIndex })}</Text>
+            <Text style={styles.title} numberOfLines={2}>{groupTitle}</Text>
 
             <View
               style={styles.headerBarTrack}
               accessibilityRole="progressbar"
-              accessibilityLabel="Section progress"
+              accessibilityLabel={t("lessons:groupProgress")}
               accessibilityValue={{ min: 0, max: bar.total, now: bar.done }}
             >
               <LinearGradient
@@ -112,7 +115,7 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
                 styles.iconBtn,
                 pressed && styles.pressed,
               ]}
-              accessibilityLabel="Help"
+              accessibilityLabel={t("lessons:overview")}
             >
               <Ionicons name="help" size={24} color={colors.bg} />
             </Pressable>
@@ -129,7 +132,7 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Lesson Groups</Text>
+            <Text style={styles.modalTitle}>{t("lessons:modalTitle")}</Text>
             <FlatList
               data={LESSON_GROUPS}
               keyExtractor={(item) => item.id}
@@ -150,7 +153,9 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
                     ]}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.groupTitle}>{item.title}</Text>
+                      <Text style={styles.groupTitle} numberOfLines={2}>
+                      {t(`lessons:${item.id}`, { defaultValue: item.title })}
+                    </Text>
                       <View style={styles.progressTrack}>
                         <View
                           style={[
@@ -172,9 +177,9 @@ export default function NeonHeaderCard({ groupId, onChangeGroup }: Props) {
             <Pressable
               onPress={() => setOpen(false)}
               style={styles.closeBtn}
-              accessibilityLabel="Close"
+              accessibilityLabel={t("common:close")}
             >
-              <Text style={styles.closeBtnText}>Close</Text>
+              <Text style={styles.closeBtnText}>{t("common:close")}</Text>
             </Pressable>
           </View>
         </View>
@@ -214,8 +219,8 @@ const styles = StyleSheet.create({
   },
 
   centerTextWrap: { alignItems: 'center', justifyContent: 'center', flex: 1 },
-  section: { color: colors.textDim, fontSize: 13, marginBottom: 2 }, // smaller section label
-  title: { color: colors.text, fontWeight: '800', fontSize: 30 }, // larger title
+  section: { color: colors.textDim, fontSize: 13, marginBottom: 2, textAlign: 'auto' }, // smaller section label
+  title: { color: colors.text, fontWeight: '800', fontSize: 30, textAlign: 'auto' }, // larger title
 
   headerBarTrack: {
     height: 10, // thicker bar
@@ -244,6 +249,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 20,
     marginBottom: spacing(1),
+    textAlign: 'auto',
   },
   groupRow: {
     flexDirection: 'row',
@@ -255,6 +261,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: '700',
     marginBottom: spacing(1),
+    textAlign: 'auto',
   },
   progressTrack: {
     height: 10,
@@ -270,5 +277,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(2),
   },
-  closeBtnText: { color: colors.bg, fontWeight: '800' },
+  closeBtnText: { color: colors.bg, fontWeight: '800', textAlign: 'auto' },
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

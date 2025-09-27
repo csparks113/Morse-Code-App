@@ -1,0 +1,18 @@
+{
+  "reveal": "Reveal",
+  "replay": "Replay",
+  "mistake": "Mistake",
+  "correct": "Correct!",
+  "summaryTitle": "Session Summary",
+  "tapToKey": "Tap to key the Morse code",
+  "contentUnavailable": "Content unavailable.",
+  "challengeFailedTitle": "Challenge failed",
+  "challengeFailedBody": "All hearts are gone. Reset and try again when ready.",
+  "tryAgain": "Try Again",
+  "sendMode": "SEND",
+  "receiveMode": "RECEIVE",
+  "hearts": "Hearts",
+  "sessionComplete": "Session Complete",
+  "correctCount": "{{correct}} / {{total}} correct",
+  "identifyCharacter": "Identify the character"
+}

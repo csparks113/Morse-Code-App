@@ -1,0 +1,18 @@
+{
+  "alphabet": "Alphabet",
+  "progress": "Progress",
+  "numbers": "Numbers",
+  "sectionLabel": "Section {{num}}",
+  "openGroups": "Open sections",
+  "modalTitle": "Choose a section",
+  "groupProgress": "Section progress",
+  "overview": "Overview",
+  "receiveAction": "Receive",
+  "sendAction": "Send",
+  "challengeCompleteA11y": "Challenge complete",
+  "challengeInProgressA11y": "Challenge in progress",
+  "challengeLockedA11y": "Challenge",
+  "reviewCompleteA11y": "Review complete",
+  "reviewInProgressA11y": "Review in progress",
+  "reviewLockedA11y": "Review"
+}

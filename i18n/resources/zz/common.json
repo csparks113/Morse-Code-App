@@ -1,0 +1,15 @@
+﻿{
+  "lesson": "[!! Lesson {{num}} !!]",
+  "review": "[!! Review !!]",
+  "challenge": "[!! Challenge !!]",
+  "lettersPair": "[!! {{a}} & {{b}} !!]",
+  "heartsLeft_one": "[!! {{count}} heart left !!]",
+  "heartsLeft_other": "[!! {{count}} hearts left !!]",
+  "close": "[!! Close !!]",
+  "start": "[!! Start !!]",
+  "continue": "[!! Continue !!]",
+  "back": "[!! Back !!]",
+  "help": "[!! Help !!]",
+  "menu": "[!! Menu !!]",
+  "loading": "[!! Loading... !!]"
+}

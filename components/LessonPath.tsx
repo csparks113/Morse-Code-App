@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { useProgressStore } from '../store/useProgressStore';
 import LessonCard from './LessonCard';
 import { LessonCompletion, ChallengeCompletion } from '@/types/progress';
+import { useTranslation } from 'react-i18next';
 
 // 🔧 DEV TOGGLES
 const DEV_UNLOCK_ALL = true;          // identical semantics to your original file
@@ -58,6 +59,7 @@ type Node =
     };
 
 export default function LessonPath({ groupId, lessons }: Props) {
+  const { t } = useTranslation(['common', 'lessons']);
   // Global progress store (tracks what the user has completed)
   const progress = useProgressStore((s) => s.progress);
 
@@ -78,6 +80,17 @@ export default function LessonPath({ groupId, lessons }: Props) {
       };
     },
     [groupId, progress],
+  );
+
+  const formatChars = React.useCallback(
+    (chars: string[]) => {
+      if (!chars || chars.length === 0) return '';
+      if (chars.length === 2) {
+        return t('common:lettersPair', { a: chars[0], b: chars[1] });
+      }
+      return chars.join(', ');
+    },
+    [t],
   );
 
   // Build nodes: lessons + reviews (>=2) + challenges (every 2 reviews) + final challenge
@@ -326,12 +339,15 @@ export default function LessonPath({ groupId, lessons }: Props) {
           const locked = status === 'locked';
 
           // Title + subtitle
-          const title =
-            isChallenge ? 'Challenge' :
-            isReview ? 'Review' :
-            (n as any).label;
+          const baseLessonNumber = isChallenge ? (n as any).sourceLessonNumber : (n as any).lessonNumber;
 
-          const subtitle = isLesson ? formatChars((n as any).chars) : undefined;
+          const title = isChallenge
+            ? t('common:challenge')
+            : isReview
+            ? t('common:lesson', { num: baseLessonNumber }) + ' — ' + t('common:review')
+            : t('common:lesson', { num: baseLessonNumber });
+
+          const subtitle = (isLesson || isReview) ? formatChars((n as any).chars) : undefined;
 
           // Route param per kind
           const lessonIdParam = isChallenge
@@ -372,12 +388,19 @@ export default function LessonPath({ groupId, lessons }: Props) {
 }
 
 // Formats a list of characters like ["E", "T"] into "E & T"
-function formatChars(chars: string[]) {
-  return chars.join(' & ');
-}
-
 const styles = StyleSheet.create({
   list: {
     width: '100%',
   },
 });
+
+
+
+
+
+
+
+
+
+
+

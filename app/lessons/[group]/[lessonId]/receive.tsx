@@ -25,6 +25,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 
 // Shared UI
@@ -69,6 +70,7 @@ export default function ReceiveSessionScreen() {
     lessonId: string;
   }>();
 
+  const { t } = useTranslation(['session', 'common']);
   const meta = React.useMemo(
     () => buildSessionMeta(group || 'alphabet', lessonId),
     [group, lessonId],
@@ -364,7 +366,7 @@ export default function ReceiveSessionScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Content unavailable.</Text>
+          <Text style={styles.emptyText}>{t('session:contentUnavailable')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -376,7 +378,7 @@ export default function ReceiveSessionScreen() {
       <SafeAreaView style={styles.safe}>
         <SessionHeader
           labelTop={meta.headerTop}
-          labelBottom="RECEIVE"
+          labelBottom={t('session:receiveMode')}
           mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
           hearts={meta.isChallenge ? hearts : undefined}
         />
@@ -403,7 +405,7 @@ export default function ReceiveSessionScreen() {
         <View style={styles.topGroup}>
           <SessionHeader
             labelTop={meta.headerTop}
-            labelBottom="RECEIVE"
+            labelBottom={t('session:receiveMode')}
             mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
             hearts={meta.isChallenge ? hearts : undefined}
           />
@@ -420,7 +422,7 @@ export default function ReceiveSessionScreen() {
           <PromptCard
             compact
             revealSize="sm"
-            title="Identify the character"
+            title={t('session:identifyCharacter')}
             started={started}
             visibleChar={visibleChar}
             feedback={feedback}
@@ -429,14 +431,14 @@ export default function ReceiveSessionScreen() {
             onStart={startSession}
             revealAction={{
               icon: revealIcon,
-              accessibilityLabel: 'Reveal code',
+              accessibilityLabel: t('session:reveal'),
               onPress: handleRevealPress,
               active: revealActive,
               disabled: revealDisabled,
             }}
             replayAction={{
               icon: 'play',
-              accessibilityLabel: 'Play code',
+              accessibilityLabel: t('session:replay'),
               onPress: handleReplayPress,
               active: replayActive,
               disabled: replayDisabled,

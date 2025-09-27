@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import ActionButton from '@/components/session/ActionButton';
 import { colors, spacing } from '@/theme/lessonTheme';
+import { useTranslation } from 'react-i18next';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 
@@ -52,10 +53,10 @@ export default function PromptCard({
 /*   revealSize, */
   revealAction,
   replayAction,
-}: Props) 
-
-{
-  const titleText = title ?? 'Identify the character';
+}: Props) {
+  const revealVisible = (showReveal || feedback !== 'idle');
+  const { t } = useTranslation(['session', 'common']);
+  const titleText = title ?? t('session:tapToKey');
   const interactable = canInteract ?? true;
 
   const resolvedRevealAction = React.useMemo<PromptCardAction>(() => {
@@ -63,7 +64,7 @@ export default function PromptCard({
     const disabled = !interactable || !onRevealToggle;
     return {
       icon: showReveal ? 'eye-off-outline' : 'eye-outline',
-      accessibilityLabel: 'Reveal code',
+      accessibilityLabel: t('session:reveal'),
       onPress: onRevealToggle ?? (() => {}),
       active: showReveal,
       disabled,
@@ -75,7 +76,7 @@ export default function PromptCard({
     const disabled = !interactable || !onReplay;
     return {
       icon: 'play',
-      accessibilityLabel: 'Play code',
+      accessibilityLabel: t('session:replay'),
       onPress: onReplay ?? (() => {}),
       active: false,
       disabled,
@@ -94,7 +95,7 @@ export default function PromptCard({
             onPress={onStart}
             style={({ pressed }) => [styles.startBtn, pressed && { opacity: 0.9 }]}
           >
-            <Text style={styles.startText}>Start</Text>
+            <Text style={styles.startText}>{t('common:start')}</Text>
           </Pressable>
         ) : (
           <Text
@@ -134,7 +135,9 @@ export default function PromptCard({
 }
 
 const styles = StyleSheet.create({
-  // --- Main container -------------------------------------------------------------
+  revealBlock: { minHeight: 60, justifyContent: 'center' },
+revealHidden: { opacity: 0, pointerEvents: 'none' },
+// --- Main container -------------------------------------------------------------
   card: {
     alignSelf: 'center',
     backgroundColor: colors.card,

@@ -22,6 +22,7 @@ import React from "react";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
+import { useTranslation } from 'react-i18next';
 
 // Shared UI
 import SessionHeader from "@/components/session/SessionHeader";
@@ -68,6 +69,7 @@ export default function SendSessionScreen() {
   // 1) ROUTE & META
   // -----------------------------
   const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
+  const { t } = useTranslation(['session', 'common']);
   const meta = React.useMemo(
     () => buildSessionMeta(group || "alphabet", lessonId),
     [group, lessonId],
@@ -340,6 +342,17 @@ export default function SendSessionScreen() {
     }
   }, []);
 
+
+    if (!meta.pool.length) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>{t('session:contentUnavailable')}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  
   // Disable/enable PromptCard actions (reveal/replay)
   const revealEnabled = !meta.isChallenge;  // enabled for lessons & reviews
   const replayEnabled = !meta.isChallenge;  // Send has no audio replay; keep disabled on challenge
@@ -347,15 +360,7 @@ export default function SendSessionScreen() {
   const compareMode = showReveal || feedback === "correct" ? "compare" : "guessing";
   const bottomBarColor = feedback === "wrong" ? "#FF6B6B" : colors.gold;
 
-  if (!meta.pool.length) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Content unavailable.</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const initializing = !meta.pool.length;
 
   const finalSummary = earlySummary || summary || null;
 
@@ -364,7 +369,7 @@ export default function SendSessionScreen() {
       <SafeAreaView style={styles.safe}>
         <SessionHeader
           labelTop={meta.headerTop}   // "Review" | "Challenge" | "Lesson N - ..."
-          labelBottom="SEND"
+          labelBottom={t('session:sendMode')}
           mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
           hearts={meta.isChallenge ? hearts : undefined}
         />
@@ -389,7 +394,7 @@ export default function SendSessionScreen() {
         <View style={styles.topGroup}>
           <SessionHeader
             labelTop={meta.headerTop}
-            labelBottom="SEND"
+            labelBottom={t('session:sendMode')}
             mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
             hearts={meta.isChallenge ? hearts : undefined}
           />
@@ -402,14 +407,14 @@ export default function SendSessionScreen() {
           <PromptCard
             compact
             revealSize="sm"
-            title="Tap to key the Morse code"
-            started={started}
+            title={t('session:tapToKey')}
+            started={initializing ? false : started}
             visibleChar={started ? currentTarget ?? "" : ""}
             feedback={feedback}
             morse="" // text reveal suppressed (visual compare handles this)
-            showReveal={showReveal}
-            canInteract={canInteract}
-            onStart={startSession}
+            showReveal={initializing ? false : showReveal}
+            canInteract={initializing ? false : canInteract}
+            onStart={initializing ? () => {} : startSession}
             // Gating for actions:
             onRevealToggle={() => {
               if (!revealEnabled) return; // disabled in challenges
@@ -449,12 +454,15 @@ export default function SendSessionScreen() {
             />
           </View>
 
-          <KeyerButton
-            onPressIn={onPressIn}
-            onPressOut={onPressOut}
-            disabled={!canInteract}
-            minHeight={keyerMinHeight}
-          />
+          <View style={[styles.inputZone]}>
+            <KeyerButton
+              onPressIn={onPressIn}
+              onPressOut={onPressOut}
+              disabled={!canInteract}
+              minHeight={keyerMinHeight}
+            />
+           </View>
+
         </View>
       </View>
     </SafeAreaView>
@@ -472,6 +480,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(3),
     paddingTop: spacing(2),
     paddingBottom: spacing(2),
+    justifyContent: 'space-between',
   },
 
   topGroup: { marginBottom: spacing(0.5) },
@@ -484,7 +493,15 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     minHeight: 64,
     justifyContent: "center",
-    marginBottom: spacing(2),
+    //marginBottom: spacing(2),
+  },
+
+  // --- input container -----------------------------------------------------
+  inputZone: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 140
   },
 
   emptyState: {
@@ -499,6 +516,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
   },
+
+
 });
+
 
 

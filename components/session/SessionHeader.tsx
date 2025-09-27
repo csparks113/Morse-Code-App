@@ -16,6 +16,7 @@ import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors, glow, radii, spacing } from '@/theme/lessonTheme';
+import { useTranslation } from 'react-i18next';
 
 export type SessionHeaderProps = {
   labelTop: string;       // "Lesson 1 - E & T" | "Review" | "Challenge"
@@ -40,14 +41,23 @@ export default function SessionHeader({
   mode = 'normal',
   hearts = 3,
 }: SessionHeaderProps) {
+  const { t } = useTranslation(['common', 'session']);
   const handlePressClose = React.useCallback(() => {
     onClose?.();
     router.dismissAll();
     router.replace('/');
   }, [onClose]);
 
-  const topLine = extractPrimary(labelTop);
-  const bottomLabel = (labelBottom || '').toUpperCase();
+// Compute primary line: prefer explicit mode labels
+let topLine: string;
+if (mode === 'review') {
+  topLine = t('common:review');
+} else if (mode === 'challenge') {
+  topLine = t('common:challenge');
+} else {
+  topLine = extractPrimary(labelTop);
+}
+const bottomLabel = labelBottom;
 
   // --- Hearts loss animation (scale + shake) -------------------------------
   const prevHeartsRef = React.useRef<number>(hearts);
@@ -82,7 +92,7 @@ export default function SessionHeader({
     <View style={styles.wrap}>
       {/* Left: Close */}
       <Pressable
-        accessibilityLabel="Close"
+        accessibilityLabel={t('common:close')}
         onPress={handlePressClose}
         style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}
       >
@@ -99,21 +109,33 @@ export default function SessionHeader({
 
       {/* Right: hearts only in challenge mode */}
       {mode === 'challenge' ? (
-        <Animated.View
-          style={[
-            styles.heartsWrap,
-            { transform: [{ scale: scaleAnim }, { translateX: shakeTranslateX }] },
-          ]}
-        >
-          <View style={styles.heartsRow}>
-            {Array.from({ length: Math.max(0, hearts) }).map((_, i) => (
-              <Text key={i} style={[styles.heart, styles.heartFull]}>❤</Text>
-            ))}
-          </View>
-        </Animated.View>
-      ) : (
-        <View style={styles.spacer} />
-      )}
+  <Animated.View
+    style={[
+      styles.right,
+      {
+        transform: [
+          { scale: scaleAnim },
+          {
+            translateX: shakeAnim.interpolate({
+              inputRange: [-1, 1],
+              outputRange: [-3, 3],
+            }),
+          },
+        ],
+      },
+    ]}
+  >
+    <View style={[styles.heartsRow, { flexDirection: 'row-reverse' }]}>
+      {Array.from({ length: Math.max(0, Math.min(3, hearts)) }).map((_, i) => (
+        <Text key={i} style={[styles.heart, styles.heartFull]}>
+          ❤
+        </Text>
+      ))}
+    </View>
+  </Animated.View>
+) : (
+  <View style={styles.spacer} />
+)}
     </View>
   );
 }
@@ -158,6 +180,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '900',
     letterSpacing: 1,
+    textAlign: 'center',
   },
 
   spacer: { width: 44, height: 44 },
