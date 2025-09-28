@@ -314,8 +314,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: GRAY_BORDER,
     paddingVertical: 16,
-    paddingHorizontal: 18,
-    marginVertical: 10,
+    paddingHorizontal: 24,
+    marginVertical: 16,
   },
 
   /** ★ Added: faint neon glow for active Challenge (iOS: shadowColor; Android: elevation) */
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   },
   center: { alignItems: 'center', justifyContent: 'center', flex: 1, gap: 4 },
   title: { color: '#FFFFFF', fontWeight: '800', fontSize: 18 },
-  subtitle: { fontWeight: '800' },
+  subtitle: { fontWeight: '800' , fontSize: 18},
 
   // Crown mask/gradient
   crownMask: {

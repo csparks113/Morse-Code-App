@@ -97,18 +97,10 @@ export default function SettingsScreen() {
   const { t } = useTranslation(['settings', 'common']);
 
   const {
-    audioEnabled,
-    lightEnabled,
-    torchEnabled,
-    hapticsEnabled,
     wpm,
     toneHz,
     signalTolerancePercent,
     gapTolerancePercent,
-    setAudioEnabled,
-    setLightEnabled,
-    setTorchEnabled,
-    setHapticsEnabled,
     setWpm,
     setToneHz,
     setSignalTolerancePercent,
@@ -165,33 +157,6 @@ export default function SettingsScreen() {
             <Text style={styles.languageValue}>{languageLabel}</Text>
           </Pressable>
 
-          <Row
-            title={t('settings:audio')}
-            sub={t('settings:audioDescription')}
-            value={audioEnabled}
-            onChange={setAudioEnabled}
-          />
-
-          <Row
-            title={t('settings:screenFlash')}
-            sub={t('settings:screenFlashDescription')}
-            value={lightEnabled}
-            onChange={setLightEnabled}
-          />
-
-          <Row
-            title={t('settings:flashlight')}
-            sub={t('settings:flashlightDescription')}
-            value={torchEnabled}
-            onChange={setTorchEnabled}
-          />
-
-          <Row
-            title={t('settings:haptics')}
-            sub={t('settings:hapticsDescription')}
-            value={hapticsEnabled}
-            onChange={setHapticsEnabled}
-          />
 
           <StepperRow
             title={t('settings:sendSpeed')}

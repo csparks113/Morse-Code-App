@@ -398,7 +398,7 @@ export default function ReceiveSessionScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       {/* Flash overlay for playback */}
-      <FlashOverlay opacity={flash} color={colors.text} maxOpacity={0.2} />
+      <FlashOverlay opacity={flash} color={colors.text} maxOpacity={0.28} />
 
       <View style={styles.container}>
         {/* --- TOP (fixed): header + progress --- */}

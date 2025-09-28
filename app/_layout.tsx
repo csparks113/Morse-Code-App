@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import React from 'react';
+import {ActivityIndicator, View, StyleSheet} from "react-native";
 import { Stack } from 'expo-router';
 import { ThemeProvider, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -73,3 +73,8 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: theme.colors.background },
+});

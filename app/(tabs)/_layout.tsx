@@ -1,8 +1,8 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {StyleSheet, StyleSheet} from "react-native";
+import {useSafeAreaInsets, SafeAreaProvider, initialWindowMetrics} from "react-native-safe-area-context";
 import { theme } from '../../theme/theme';
 
 export default function TabLayout() {
@@ -12,7 +12,8 @@ export default function TabLayout() {
   const padBottom = Math.max(0, insets.bottom);
 
   return (
-    <Tabs
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <Tabs
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
@@ -59,3 +60,8 @@ export default function TabLayout() {
 }
 
 
+
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: theme.colors.background },
+});

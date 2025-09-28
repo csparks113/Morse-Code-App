@@ -1,4 +1,4 @@
-﻿// app/lessons/[group]/[lessonId]/send.tsx
+// app/lessons/[group]/[lessonId]/send.tsx
 /**
  * SEND SESSION SCREEN (Pinned layout)
  * -----------------------------------
@@ -7,22 +7,17 @@
  * - Center: PromptCard
  * - Bottom: OutputTogglesRow above Keyer button
  *
- * Review behavior:
- * - Header shows "Review" (from sessionMeta)
- * - Reveal toggle ENABLED; no hearts
- * - Pool is cumulative via sessionMeta
- *
- * Challenge behavior:
- * - Header shows hearts (3)
- * - Reveal toggle DISABLED; no replay
- * - Hearts decrement on mistakes; graceful early end on 3rd miss
+ * Jitter/first-frame fixes applied:
+ * - Use SafeAreaView with a matching background color
+ * - Manually apply safe-area insets via useSafeAreaInsets() so fixed
+ *   header/footer don’t “jump” when insets arrive on second pass
  */
 
 import React from "react";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from "react-i18next";
 
 // Shared UI
 import SessionHeader from "@/components/session/SessionHeader";
@@ -60,23 +55,25 @@ type PressWindow = { startMs: number; endMs: number };
 
 function getStoreIdForProgress(rawId: string) {
   const m = String(rawId).match(/^(\d+)-review$/);
-  if (m) return m[1];          // save review scores to base lesson
-  return String(rawId);        // lessons/challenges (choose to save or skip challenges)
+  if (m) return m[1];
+  return String(rawId);
 }
 
 export default function SendSessionScreen() {
+  const insets = useSafeAreaInsets(); // ← manual insets to avoid first-frame jump
+
   // -----------------------------
   // 1) ROUTE & META
   // -----------------------------
   const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
-  const { t } = useTranslation(['session', 'common']);
+  const { t } = useTranslation(["session", "common"]);
   const meta = React.useMemo(
     () => buildSessionMeta(group || "alphabet", lessonId),
     [group, lessonId],
   );
   const isReview = React.useMemo(
     () => /^\d+-review$/.test(String(lessonId)),
-    [lessonId]
+    [lessonId],
   );
 
   const setScore = useProgressStore((s) => s.setScore);
@@ -115,12 +112,12 @@ export default function SendSessionScreen() {
   // -----------------------------
   const {
     started,
-    summary,            // summary from natural completion
-    start,              // begin a fresh session
-    results,            // boolean[] so far
+    summary,
+    start,
+    results,
     streak,
-    currentTarget,      // the character to key
-    setResult,          // push true/false, advances or finishes
+    currentTarget,
+    setResult,
   } = useSessionFlow({
     pool: meta.pool,
     total: TOTAL_QUESTIONS,
@@ -142,8 +139,14 @@ export default function SendSessionScreen() {
     toneHz: toneHzValue,
   });
 
-  React.useEffect(() => { prepare().catch(() => {}); }, [prepare]);
-  React.useEffect(() => () => { teardown().catch(() => {}); }, [teardown]);
+  React.useEffect(() => {
+    prepare().catch(() => {});
+  }, [prepare]);
+  React.useEffect(() => {
+    return () => {
+      teardown().catch(() => {});
+    };
+  }, [teardown]);
 
   // -----------------------------
   // 5) LOCAL VIEW STATE
@@ -159,7 +162,10 @@ export default function SendSessionScreen() {
 
   // Input & timers
   const inputRef = React.useRef("");
-  const updateInput = React.useCallback((next: string) => { inputRef.current = next; setInput(next); }, []);
+  const updateInput = React.useCallback((next: string) => {
+    inputRef.current = next;
+    setInput(next);
+  }, []);
   const currentMorseRef = React.useRef("");
   const pressStartRef = React.useRef<number | null>(null);
   const lastReleaseRef = React.useRef<number | null>(null);
@@ -167,7 +173,12 @@ export default function SendSessionScreen() {
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
-    return () => { if (advanceTimerRef.current) { clearTimeout(advanceTimerRef.current); advanceTimerRef.current = null; } };
+    return () => {
+      if (advanceTimerRef.current) {
+        clearTimeout(advanceTimerRef.current);
+        advanceTimerRef.current = null;
+      }
+    };
   }, []);
 
   // -----------------------------
@@ -192,7 +203,10 @@ export default function SendSessionScreen() {
   // -----------------------------
   const startSession = React.useCallback(() => {
     if (!meta.pool.length) return;
-    if (advanceTimerRef.current) { clearTimeout(advanceTimerRef.current); advanceTimerRef.current = null; }
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
 
     start();
     updateInput("");
@@ -212,49 +226,52 @@ export default function SendSessionScreen() {
     setEarlySummary(null);
   }, [meta.pool, meta.isChallenge, start, updateInput]);
 
-  // Graceful finish: keep red state visible on 3rd miss, then show summary
-  const finishQuestion = React.useCallback((isCorrect: boolean) => {
-    if (advanceTimerRef.current) { clearTimeout(advanceTimerRef.current); advanceTimerRef.current = null; }
+  // Graceful finish
+  const finishQuestion = React.useCallback(
+    (isCorrect: boolean) => {
+      if (advanceTimerRef.current) {
+        clearTimeout(advanceTimerRef.current);
+        advanceTimerRef.current = null;
+      }
 
-    const willExhaustHearts = meta.isChallenge && !isCorrect && hearts <= 1;
+      const willExhaustHearts = meta.isChallenge && !isCorrect && hearts <= 1;
 
-    setFeedback(isCorrect ? "correct" : "wrong");
-    if (isCorrect) setShowReveal(true);
+      setFeedback(isCorrect ? "correct" : "wrong");
+      if (isCorrect) setShowReveal(true);
 
-    // Challenge hearts: decrement on mistakes
-    if (!isCorrect && meta.isChallenge) {
-      setHearts((h) => Math.max(0, h - 1));
-    }
+      if (!isCorrect && meta.isChallenge) {
+        setHearts((h) => Math.max(0, h - 1));
+      }
 
-    // reset refs so next item starts clean
-    ignorePressRef.current = false;
-    pressStartRef.current = null;
-    lastReleaseRef.current = null;
+      // reset refs
+      ignorePressRef.current = false;
+      pressStartRef.current = null;
+      lastReleaseRef.current = null;
 
-    if (willExhaustHearts) {
-      // Hold the red state briefly, then end with a summary
-      const delay = 650;
-      setTimeout(() => {
-        const correct = results.filter(Boolean).length; // last was wrong
-        const percent = Math.round((correct / TOTAL_QUESTIONS) * 100);
-        setEarlySummary({ correct, percent }); // summary UI uses earlySummary
-        if (group && lessonId) {
-          setScore(group, getStoreIdForProgress(String(lessonId)), "send", percent);
-        }
-      }, delay);
-      return; // do NOT queue normal advance/reset
-    }
+      if (willExhaustHearts) {
+        const delay = 650;
+        setTimeout(() => {
+          const correct = results.filter(Boolean).length; // last was wrong
+          const percent = Math.round((correct / TOTAL_QUESTIONS) * 100);
+          setEarlySummary({ correct, percent });
+          if (group && lessonId) {
+            setScore(group, getStoreIdForProgress(String(lessonId)), "send", percent);
+          }
+        }, delay);
+        return;
+      }
 
-    // Normal advance
-    advanceTimerRef.current = setTimeout(() => {
-      setResult(isCorrect);
-      updateInput("");
-      setPresses([]);
-      setShowReveal(false);
-      setFeedback("idle");
-      advanceTimerRef.current = null;
-    }, 650);
-  }, [meta.isChallenge, hearts, results, group, lessonId, setScore, setResult, updateInput]);
+      advanceTimerRef.current = setTimeout(() => {
+        setResult(isCorrect);
+        updateInput("");
+        setPresses([]);
+        setShowReveal(false);
+        setFeedback("idle");
+        advanceTimerRef.current = null;
+      }, 650);
+    },
+    [meta.isChallenge, hearts, results, group, lessonId, setScore, setResult, updateInput],
+  );
 
   // -----------------------------
   // 9) KEYER HANDLERS
@@ -282,20 +299,23 @@ export default function SendSessionScreen() {
     onDown();
   }, [canInteractBase, unitMs, gapTolerance, finishQuestion, onDown]);
 
-  const appendSymbol = React.useCallback((symbol: "." | "-") => {
-    if (!currentTarget) return;
-    const target = currentMorseRef.current;
-    const next = `${inputRef.current}${symbol}`;
-    updateInput(next);
+  const appendSymbol = React.useCallback(
+    (symbol: "." | "-") => {
+      if (!currentTarget) return;
+      const target = currentMorseRef.current;
+      const next = `${inputRef.current}${symbol}`;
+      updateInput(next);
 
-    if (!target.startsWith(next)) {
-      finishQuestion(false);
-      return;
-    }
-    if (target === next) {
-      finishQuestion(true);
-    }
-  }, [currentTarget, finishQuestion, updateInput]);
+      if (!target.startsWith(next)) {
+        finishQuestion(false);
+        return;
+      }
+      if (target === next) {
+        finishQuestion(true);
+      }
+    },
+    [currentTarget, finishQuestion, updateInput],
+  );
 
   const onPressOut = React.useCallback(() => {
     onUp();
@@ -342,43 +362,60 @@ export default function SendSessionScreen() {
     }
   }, []);
 
-
-    if (!meta.pool.length) {
+  if (!meta.pool.length) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>{t('session:contentUnavailable')}</Text>
+      <SafeAreaView style={styles.safe} edges={[]}>
+        <View
+          style={[
+            styles.container,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+            },
+          ]}
+        >
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>{t("session:contentUnavailable")}</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
   }
-  
-  // Disable/enable PromptCard actions (reveal/replay)
-  const revealEnabled = !meta.isChallenge;  // enabled for lessons & reviews
-  const replayEnabled = !meta.isChallenge;  // Send has no audio replay; keep disabled on challenge
+
+  const revealEnabled = !meta.isChallenge;
+  const replayEnabled = !meta.isChallenge; // (kept for future parity)
+  void replayEnabled;
 
   const compareMode = showReveal || feedback === "correct" ? "compare" : "guessing";
   const bottomBarColor = feedback === "wrong" ? "#FF6B6B" : colors.gold;
-
-  const initializing = !meta.pool.length;
 
   const finalSummary = earlySummary || summary || null;
 
   if (finalSummary) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <SessionHeader
-          labelTop={meta.headerTop}   // "Review" | "Challenge" | "Lesson N - ..."
-          labelBottom={t('session:sendMode')}
-          mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
-          hearts={meta.isChallenge ? hearts : undefined}
-        />
-        <SessionSummary
-          percent={finalSummary.percent}
-          correct={finalSummary.correct}
-          total={TOTAL_QUESTIONS}
-          onContinue={handleCloseCleanup}
-        />
+      <SafeAreaView style={styles.safe} edges={[]}>
+        <View
+          style={[
+            styles.container,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+            },
+          ]}
+        >
+          <SessionHeader
+            labelTop={meta.headerTop}
+            labelBottom={t("session:sendMode")}
+            mode={meta.isChallenge ? "challenge" : isReview ? "review" : "normal"}
+            hearts={meta.isChallenge ? hearts : undefined}
+          />
+          <SessionSummary
+            percent={finalSummary.percent}
+            correct={finalSummary.correct}
+            total={TOTAL_QUESTIONS}
+            onContinue={handleCloseCleanup}
+          />
+        </View>
       </SafeAreaView>
     );
   }
@@ -386,19 +423,28 @@ export default function SendSessionScreen() {
   const canInteract = canInteractBase;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={[]}>
+      {/* Flash overlay covers the full screen area; background matches to avoid flash */}
       <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={0.28} />
 
-      <View style={styles.container}>
+      <View
+        style={[
+          styles.container,
+          {
+            // Manually apply top/bottom insets so header/footer don’t jump
+            paddingTop: insets.top + spacing(2),
+            paddingBottom: insets.bottom + spacing(2),
+          },
+        ]}
+      >
         {/* TOP: header + progress */}
         <View style={styles.topGroup}>
           <SessionHeader
             labelTop={meta.headerTop}
-            labelBottom={t('session:sendMode')}
-            mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
+            labelBottom={t("session:sendMode")}
+            mode={meta.isChallenge ? "challenge" : isReview ? "review" : "normal"}
             hearts={meta.isChallenge ? hearts : undefined}
           />
-
           <ProgressBar value={results.length} total={TOTAL_QUESTIONS} streak={streak} />
         </View>
 
@@ -407,22 +453,19 @@ export default function SendSessionScreen() {
           <PromptCard
             compact
             revealSize="sm"
-            title={t('session:tapToKey')}
-            started={initializing ? false : started}
+            title={t("session:tapToKey")}
+            started={!!started}
             visibleChar={started ? currentTarget ?? "" : ""}
             feedback={feedback}
-            morse="" // text reveal suppressed (visual compare handles this)
-            showReveal={initializing ? false : showReveal}
-            canInteract={initializing ? false : canInteract}
-            onStart={initializing ? () => {} : startSession}
-            // Gating for actions:
+            morse=""
+            showReveal={showReveal}
+            canInteract={canInteract}
+            onStart={startSession}
             onRevealToggle={() => {
-              if (!revealEnabled) return; // disabled in challenges
+              if (!revealEnabled) return;
               setShowReveal((prev) => !prev);
             }}
-            onReplay={() => {
-              // Send has keyer-driven output; do nothing.
-            }}
+            onReplay={() => {}}
             mainSlotMinHeight={promptSlotHeight}
             belowReveal={
               <MorseCompare
@@ -454,15 +497,14 @@ export default function SendSessionScreen() {
             />
           </View>
 
-          <View style={[styles.inputZone]}>
+          <View style={styles.inputZone}>
             <KeyerButton
               onPressIn={onPressIn}
               onPressOut={onPressOut}
               disabled={!canInteract}
               minHeight={keyerMinHeight}
             />
-           </View>
-
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -473,14 +515,14 @@ export default function SendSessionScreen() {
 // STYLES
 // -----------------------------
 const styles = StyleSheet.create({
+  // Matching background to hide first-frame flash
   safe: { flex: 1, backgroundColor: theme.colors.background },
 
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background, // match SafeAreaView bg
     paddingHorizontal: spacing(3),
-    paddingTop: spacing(2),
-    paddingBottom: spacing(2),
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
 
   topGroup: { marginBottom: spacing(0.5) },
@@ -493,15 +535,13 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     minHeight: 64,
     justifyContent: "center",
-    //marginBottom: spacing(2),
   },
 
-  // --- input container -----------------------------------------------------
   inputZone: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 140
+    alignSelf: "stretch",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 140,
   },
 
   emptyState: {
@@ -516,9 +556,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
   },
-
-
 });
-
-
-

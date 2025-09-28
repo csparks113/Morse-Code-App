@@ -1,4 +1,4 @@
-import { View, StyleSheet } from 'react-native';
+import {View, StyleSheet, StyleSheet} from "react-native";
 import { Link, Stack } from 'expo-router';
 
 export default function NotFoundScreen() {
@@ -15,6 +15,7 @@ export default function NotFoundScreen() {
 }
 
 const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: 'white' },
   container: {
     flex: 1,
     backgroundColor: '#25292e',
