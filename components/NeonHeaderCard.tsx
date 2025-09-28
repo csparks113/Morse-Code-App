@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(3),
     paddingHorizontal: spacing(4),
     alignSelf: 'stretch',
-    marginHorizontal: -spacing(3),
+    marginHorizontal: spacing(1),
     ...glow.neon,
   },
 
@@ -279,21 +279,3 @@ const styles = StyleSheet.create({
   },
   closeBtnText: { color: colors.bg, fontWeight: '800', textAlign: 'auto' },
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

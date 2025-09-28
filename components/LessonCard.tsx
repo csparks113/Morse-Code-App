@@ -8,10 +8,9 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import MaskedView from '@react-native-masked-view/masked-view';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from '@/theme/lessonTheme';
+import { colors, spacing } from '@/theme/lessonTheme';
+import DishWithWifi from './icons/DishWithWifi';
 
 type Props = {
   kind: 'lesson' | 'review' | 'challenge';
@@ -21,7 +20,7 @@ type Props = {
   receiveDone: boolean;
   sendDone: boolean;
   isActive: boolean; // receive available
-  canSend: boolean; // send available
+  canSend: boolean;  // send available
   onReceive: () => void;
   onSend: () => void;
   style?: ViewStyle;
@@ -41,7 +40,7 @@ const NEON_BLUE = colors.blueNeon; // active / pulsing
 
 const CROWN_SIZE = 28;
 const BOOK_SIZE = 24;
-const CIRCLE_SIZE = 52;
+const CIRCLE_SIZE = 60;
 
 type CircleState = { active: boolean; completed: boolean; locked: boolean };
 
@@ -72,16 +71,26 @@ function usePulse(enabled: boolean) {
   return scale;
 }
 
+/**
+ * Generic circular icon button.
+ * - If `renderIcon` is provided, it renders instead of the default Material icon.
+ */
 function CircleButton({
   state,
   iconName,
   onPress,
   accessibilityLabel,
+  renderIcon,
 }: {
   state: CircleState;
-  iconName: keyof typeof MaterialCommunityIcons.glyphMap;
+  iconName?: keyof typeof MaterialCommunityIcons.glyphMap;
   onPress: () => void;
   accessibilityLabel: string;
+  renderIcon?: (args: {
+    size: number;
+    color: string;
+    state: CircleState;
+  }) => React.ReactNode;
 }) {
   const isActiveOutline = state.active && !state.completed && !state.locked;
   const isUnlockedIdle = !state.locked && !state.completed && !state.active;
@@ -111,6 +120,8 @@ function CircleButton({
     iconColor = DEEP_BLUE;
   }
 
+  const innerSize = CIRCLE_SIZE - 8;
+
   return (
     <Pressable
       disabled={state.locked}
@@ -135,9 +146,37 @@ function CircleButton({
           ]}
         />
       )}
-      <MaterialCommunityIcons name={iconName} size={22} color={iconColor} />
+
+      {/* Icon slot */}
+      <View
+        style={{
+          width: innerSize,
+          height: innerSize,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        pointerEvents="none"
+      >
+        {renderIcon ? (
+          renderIcon({ size: innerSize, color: iconColor, state })
+        ) : iconName ? (
+          <MaterialCommunityIcons
+            name={iconName}
+            size={Math.round(innerSize * 0.56)}   // scales with circle
+            color={iconColor}
+            style={{ transform: [{ translateY: 1 }] }} // tiny optical center
+          />
+        ) : null}
+      </View>
     </Pressable>
   );
+}
+
+/** Map CircleState -> Dish visual state */
+function toReceiveState(s: CircleState): 'active' | 'inactive' | 'completed' {
+  if (s.completed) return 'completed';
+  if (s.active) return 'active';
+  return 'inactive';
 }
 
 export default function LessonCard(p: Props) {
@@ -206,13 +245,45 @@ export default function LessonCard(p: Props) {
       ]}
       accessibilityLabel={label}
     >
+      {/* LEFT: Receive (dish + Wi-Fi overlay) */}
       <CircleButton
         state={left}
-        iconName="radar"
         onPress={p.onReceive}
         accessibilityLabel="Receive"
+        renderIcon={({ size, state }) => (
+          <DishWithWifi
+            state={toReceiveState(state)}
+            size={size}
+            // independent scaling controls
+            dishScale={0.5}
+            wifiScale={1.02}
+            // overall micro-nudge for optical centering
+            style={{ transform: [{ translateY: 1 }] }}
+            // make completed state gold instead of black
+            completedTint={GOLD_OUTLINE}
+            inactiveTint={MUTED_ICON}
+            wifi={{
+              // wifi position (DO NOT CHANGE)
+              originX: .87,
+              originY: 0.18,
+              rotationDeg: 150,
+              spanDeg: 105,
+              baseRadius: size * 0.10,
+              gap: size * 0.085,
+              strokeWidth: 2,
+              colorActive: '#00E5FF',
+              colorCompleted: GOLD_OUTLINE,
+              // micro-adjust waves independently
+              offsetX: 0,
+              offsetY: -0.5,
+            }}
+            // dish position (DO NOT CHANGE)
+            imageStyle={{ transform: [{ translateX: 0-5 }, { translateY: 2 }] }}
+          />
+        )}
       />
 
+      {/* CENTER: Title + subtitle + badges */}
       <View style={styles.center}>
         <Text style={styles.title}>{visibleTitle}</Text>
 
@@ -227,6 +298,7 @@ export default function LessonCard(p: Props) {
         {p.kind === 'challenge' && <ChallengeCrown state={badgeState} />}
       </View>
 
+      {/* RIGHT: Send (antenna) */}
       <CircleButton
         state={right}
         iconName="antenna"
@@ -237,10 +309,9 @@ export default function LessonCard(p: Props) {
   );
 }
 
-// Crown: gray (none) → NEON blue (partial) → gold gradient (complete)
+// Crown: gray (none) → NEON blue (partial) → gold (complete)
 function ChallengeCrown({ state }: { state: 'none' | 'partial' | 'complete' }) {
   if (state === 'complete') {
-    // Solid gold crown (no MaskedView), reliable across platforms
     return (
       <MaterialCommunityIcons
         name="crown"
@@ -270,10 +341,9 @@ function ChallengeCrown({ state }: { state: 'none' | 'partial' | 'complete' }) {
   );
 }
 
-// Book: gray (none) → NEON blue (partial) → gold gradient (complete)
+// Book: gray (none) → NEON blue (partial) → gold (complete)
 function ReviewBook({ state }: { state: 'none' | 'partial' | 'complete' }) {
   if (state === 'complete') {
-    // Solid gold book (no MaskedView), reliable across platforms
     return (
       <MaterialCommunityIcons
         name="book-open-variant"
@@ -303,7 +373,6 @@ function ReviewBook({ state }: { state: 'none' | 'partial' | 'complete' }) {
   );
 }
 
-
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
@@ -315,16 +384,17 @@ const styles = StyleSheet.create({
     borderColor: GRAY_BORDER,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    marginVertical: 16,
+    marginVertical: 8,
+    marginHorizontal: 32
   },
 
-  /** ★ Added: faint neon glow for active Challenge (iOS: shadowColor; Android: elevation) */
+  /** ★ faint neon glow on active Challenge */
   activeChallengeGlow: {
     shadowColor: NEON_BLUE,
     shadowOpacity: 0.45,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 8, // Android glow approximation
+    elevation: 8,
   },
 
   circleBase: {
@@ -345,8 +415,7 @@ const styles = StyleSheet.create({
   },
   center: { alignItems: 'center', justifyContent: 'center', flex: 1, gap: 4 },
   title: { color: '#FFFFFF', fontWeight: '800', fontSize: 18 },
-  subtitle: { fontWeight: '800' , fontSize: 18},
-
+  subtitle: { fontWeight: '800', fontSize: 18 },
   // Crown mask/gradient
   crownMask: {
     width: CROWN_SIZE,
@@ -367,3 +436,4 @@ const styles = StyleSheet.create({
   },
   bookGradient: { flex: 1 },
 });
+

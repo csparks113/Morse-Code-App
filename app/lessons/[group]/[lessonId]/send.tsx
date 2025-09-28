@@ -20,33 +20,33 @@ import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 
 // Shared UI
-import SessionHeader from "@/components/session/SessionHeader";
-import ProgressBar from "@/components/session/ProgressBar";
-import SessionSummary from "@/components/session/SessionSummary";
-import PromptCard from "@/components/session/PromptCard";
-import OutputTogglesRow from "@/components/session/OutputTogglesRow";
-import KeyerButton from "@/components/session/KeyerButton";
-import FlashOverlay from "@/components/session/FlashOverlay";
-import MorseCompare from "@/components/session/MorseCompare";
+import SessionHeader from "../../../../components/session/SessionHeader";
+import ProgressBar from "../../../../components/session/ProgressBar";
+import SessionSummary from "../../../../components/session/SessionSummary";
+import PromptCard from "../../../../components/session/PromptCard";
+import OutputTogglesRow from "../../../../components/session/OutputTogglesRow";
+import KeyerButton from "../../../../components/session/KeyerButton";
+import FlashOverlay from "../../../../components/session/FlashOverlay";
+import MorseCompare from "../../../../components/session/MorseCompare";
 
 // Theme + helpers
-import { colors, spacing } from "@/theme/lessonTheme";
-import { theme } from "@/theme/theme";
-import { toMorse } from "@/utils/morse";
+import { colors, spacing } from "../../../../theme/lessonTheme";
+import { theme } from "../../../../theme/theme";
+import { toMorse } from "../../../../utils/morse";
 import {
   classifyGapDuration,
   classifySignalDuration,
   getMorseUnitMs,
-} from "@/utils/morseTiming";
+} from "../../../../utils/morseTiming";
 
 // State/hooks
-import { useProgressStore } from "@/store/useProgressStore";
-import { useSettingsStore } from "@/store/useSettingsStore";
-import { useKeyerOutputs } from "@/hooks/useKeyerOutputs";
-import { useSessionFlow } from "@/hooks/useSessionFlow";
+import { useProgressStore } from "../../../../store/useProgressStore";
+import { useSettingsStore } from "../../../../store/useSettingsStore";
+import { useKeyerOutputs } from "../../../../hooks/useKeyerOutputs";
+import { useSessionFlow } from "../../../../hooks/useSessionFlow";
 
 // Meta
-import { buildSessionMeta } from "./sessionMeta";
+import { buildSessionMeta } from '../../../../session/sessionMeta';
 
 const TOTAL_QUESTIONS = 20;
 

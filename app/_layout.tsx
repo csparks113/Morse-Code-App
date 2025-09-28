@@ -1,12 +1,12 @@
 import React from 'react';
-import {ActivityIndicator, View, StyleSheet} from "react-native";
+import {ActivityIndicator, View} from "react-native";
 import { Stack } from 'expo-router';
 import { ThemeProvider, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { I18nextProvider } from 'react-i18next';
 
-import i18n, { initI18n } from '@/i18n';
+import i18n, { initI18n } from '../i18n';
 import { theme } from '../theme/theme';
 
 const navTheme = {
@@ -75,6 +75,3 @@ export default function RootLayout() {
 }
 
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: theme.colors.background },
-});

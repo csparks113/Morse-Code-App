@@ -27,10 +27,11 @@ export default function LessonsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
+
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-    paddingTop: spacing(4),
-    paddingHorizontal: spacing(4),
+    paddingTop: spacing(2),
+    paddingHorizontal: spacing(0),
   },
 });

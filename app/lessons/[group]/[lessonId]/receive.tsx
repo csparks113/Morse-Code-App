@@ -29,28 +29,28 @@ import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 
 // Shared UI
-import SessionHeader from '@/components/session/SessionHeader';
-import ProgressBar from '@/components/session/ProgressBar';
-import SessionSummary from '@/components/session/SessionSummary';
-import PromptCard from '@/components/session/PromptCard';
-import OutputTogglesRow from '@/components/session/OutputTogglesRow';
-import FlashOverlay from '@/components/session/FlashOverlay';
-import LessonChoices from '@/components/session/LessonChoices';
-import MorseCompare from '@/components/session/MorseCompare';
-import ChallengeKeyboard from '@/components/session/ChallengeKeyboard';
+import SessionHeader from '../../../../components/session/SessionHeader';
+import ProgressBar from '../../../../components/session/ProgressBar';
+import SessionSummary from '../../../../components/session/SessionSummary';
+import PromptCard from '../../../../components/session/PromptCard';
+import OutputTogglesRow from '../../../../components/session/OutputTogglesRow';
+import FlashOverlay from '../../../../components/session/FlashOverlay';
+import LessonChoices from '../../../../components/session/LessonChoices';
+import MorseCompare from '../../../../components/session/MorseCompare';
+import ChallengeKeyboard from '../../../../components/session/ChallengeKeyboard';
 
 // Theme + utils
-import { colors, spacing } from '@/theme/lessonTheme';
-import { theme } from '@/theme/theme';
-import { toMorse } from '@/utils/morse';
-import { playMorseCode, getMorseUnitMs } from '@/utils/audio';
+import { colors, spacing } from '../../../../theme/lessonTheme';
+import { theme } from '../../../../theme/theme';
+import { toMorse } from '../../../../utils/morse';
+import { playMorseCode, getMorseUnitMs } from '../../../../utils/audio';
 
 // Stores
-import { useProgressStore } from '@/store/useProgressStore';
-import { useSettingsStore } from '@/store/useSettingsStore';
+import { useProgressStore } from '../../../../store/useProgressStore';
+import { useSettingsStore } from '../../../../store/useSettingsStore';
 
 // Lesson meta
-import { buildSessionMeta } from './sessionMeta';
+import { buildSessionMeta } from '../../../../session/sessionMeta';
 
 const TOTAL_QUESTIONS = 20;
 
