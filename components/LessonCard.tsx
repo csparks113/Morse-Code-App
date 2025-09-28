@@ -11,6 +11,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing } from '@/theme/lessonTheme';
 import DishWithWifi from './icons/DishWithWifi';
+import AntennaWithWifi from './icons/AntennaWithWifi';
 
 type Props = {
   kind: 'lesson' | 'review' | 'challenge';
@@ -301,9 +302,48 @@ export default function LessonCard(p: Props) {
       {/* RIGHT: Send (antenna) */}
       <CircleButton
         state={right}
-        iconName="antenna"
         onPress={p.onSend}
         accessibilityLabel="Send"
+        renderIcon={({ size, state }) => (
+          <AntennaWithWifi
+            // map CircleState -> tri-state
+            state={state.completed ? 'completed' : state.active ? 'active' : 'inactive'}
+            size={size}
+            towerScale={0.6}
+            wifiScale={1.0}
+            // overall tiny optical nudge (optional)
+            style={{ transform: [{ translateY: 5 }] }}
+            // outline tints to match card palette
+            completedTint={GOLD_OUTLINE}
+            inactiveTint={MUTED_ICON}
+            // beam colors (override defaults to use your theme)
+            rightWifi={{
+              colorActive: colors.blueNeon,
+              colorCompleted: GOLD_OUTLINE,
+              // geometry (tweak to taste)
+              originX: 0.55,
+              originY: 0.26,
+              rotationDeg: 0,
+              spanDeg: 105,
+              baseRadius: size * 0.10,
+              gap: size * 0.085,
+              strokeWidth: 2,
+              offsetY: -0.5,
+            }}
+            leftWifi={{
+              colorActive: colors.blueNeon,
+              colorCompleted: GOLD_OUTLINE,
+              originX: 0.45,
+              originY: 0.26,
+              rotationDeg: 180,
+              spanDeg: 105,
+              baseRadius: size * 0.10,
+              gap: size * 0.085,
+              strokeWidth: 2,
+              offsetY: -0.5,
+            }}
+          />
+        )}
       />
     </View>
   );

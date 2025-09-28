@@ -6,7 +6,6 @@ import Animated, {
   useSharedValue,
   withTiming,
   withRepeat,
-  withDelay,
   useAnimatedProps,
   cancelAnimation,
   Easing,
@@ -15,40 +14,21 @@ import Animated, {
 const APath = Animated.createAnimatedComponent(Path);
 
 export type WifiOverlayProps = {
-  /** Total square size of the overlay (width = height = size). */
   size?: number;
-
-  /** Anchor point for the arc center, as a fraction of size (0..1). */
-  originX?: number; // default 0.68 (over the dish’s feedhorn)
-  originY?: number; // default 0.30
-
-  /** Rotate the arc group in degrees. */
-  rotationDeg?: number; // default -35 (tilts toward upper-right)
-
-  /** Inner radius and spacing between arcs. */
+  originX?: number;
+  originY?: number;
+  rotationDeg?: number;
   baseRadius?: number;
   gap?: number;
-
-  /** Angular span for each arc. */
   spanDeg?: number;
-
-  /** Stroke details. */
   strokeWidth?: number;
   colorActive?: string;
   colorCompleted?: string;
   opacityInactive?: number;
-
-  /** State of the signal. */
   mode: 'active' | 'completed' | 'inactive';
-
-  /** Animation timing. */
-  periodMs?: number;
-  staggerMs?: number;
-
-  /** Optional style for the absolute container (zIndex, etc.). */
+  periodMs?: number;  // full 4-step cycle
+  staggerMs?: number; // unused (kept for compat)
   style?: any;
-
-  /** Optional pixel offsets to nudge the whole overlay relative to its center. */
   offsetX?: number;
   offsetY?: number;
 };
@@ -65,25 +45,40 @@ function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: nu
   return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`;
 }
 
-function useBlink(active: boolean, delay: number, periodMs: number) {
-  const v = useSharedValue(0);
+// ---- 4-step sequencer ----
+// 0: small
+// 1: small + medium
+// 2: small + medium + large
+// 3: all off
+function useSequence(mode: 'active' | 'completed' | 'inactive', periodMs: number) {
+  const phase = useSharedValue(0); // 0..4 looping
+
   React.useEffect(() => {
-    cancelAnimation(v);
-    if (active) {
-      v.value = withDelay(
-        delay,
-        withRepeat(withTiming(1, { duration: periodMs, easing: Easing.out(Easing.cubic) }), -1, false)
+    cancelAnimation(phase);
+    if (mode === 'active') {
+      phase.value = 0;
+      phase.value = withRepeat(
+        withTiming(4, { duration: periodMs, easing: Easing.linear }),
+        -1,
+        false
       );
     } else {
-      v.value = withTiming(0, { duration: 120 });
+      phase.value = 0;
     }
-    return () => cancelAnimation(v);
-  }, [active, delay, periodMs]);
-  return v;
-}
+    return () => cancelAnimation(phase);
+  }, [mode, periodMs]);
 
-function useOpacityProps(v: Animated.SharedValue<number>) {
-  return useAnimatedProps(() => ({ opacity: v.value }));
+  const makeStepsOpacity = (steps: number[]) =>
+    useAnimatedProps(() => {
+      const k = Math.floor((phase.value % 4) + 1e-6); // 0..3
+      return { opacity: steps.includes(k) ? 1 : 0 };
+    });
+
+  return {
+    opSmall: makeStepsOpacity([0, 1, 2]),
+    opMed:   makeStepsOpacity([1, 2]),
+    opLarge: makeStepsOpacity([2]),
+  };
 }
 
 const WifiOverlay: React.FC<WifiOverlayProps> = ({
@@ -99,8 +94,8 @@ const WifiOverlay: React.FC<WifiOverlayProps> = ({
   colorCompleted = '#5AE08A',
   opacityInactive = 0.25,
   mode,
-  periodMs = 1100,
-  staggerMs = 220,
+  periodMs = 1200, // full 4-step loop
+  staggerMs,       // unused in this sequence
   style,
   offsetX = 0,
   offsetY = 0,
@@ -111,20 +106,14 @@ const WifiOverlay: React.FC<WifiOverlayProps> = ({
   const r0 = baseRadius ?? s * 0.10;
   const g  = gap ?? s * 0.07;
 
-  const v1 = useBlink(mode === 'active', 0, periodMs);
-  const v2 = useBlink(mode === 'active', staggerMs, periodMs);
-  const v3 = useBlink(mode === 'active', staggerMs * 2, periodMs);
-
-  const op1 = useOpacityProps(v1);
-  const op2 = useOpacityProps(v2);
-  const op3 = useOpacityProps(v3);
+  const { opSmall, opMed, opLarge } = useSequence(mode, periodMs);
 
   const start = -spanDeg / 2;
   const end   =  spanDeg / 2;
 
-  const d1 = arcPath(cx, cy, r0,           start, end);
-  const d2 = arcPath(cx, cy, r0 + g,       start, end);
-  const d3 = arcPath(cx, cy, r0 + g * 2.0, start, end);
+  const d1 = arcPath(cx, cy, r0,           start, end);        // small
+  const d2 = arcPath(cx, cy, r0 + g,       start, end);        // medium
+  const d3 = arcPath(cx, cy, r0 + g * 2.0, start, end);        // large
 
   const staticOpacity = mode === 'inactive' ? opacityInactive : 0.95;
 
@@ -135,9 +124,9 @@ const WifiOverlay: React.FC<WifiOverlayProps> = ({
           <G origin={`${cx}, ${cy}`} rotation={rotationDeg}>
             {mode === 'active' ? (
               <>
-                <APath d={d1} stroke={colorActive} strokeWidth={strokeWidth} fill="none" animatedProps={op1} />
-                <APath d={d2} stroke={colorActive} strokeWidth={strokeWidth} fill="none" animatedProps={op2} />
-                <APath d={d3} stroke={colorActive} strokeWidth={strokeWidth} fill="none" animatedProps={op3} />
+                <APath d={d1} stroke={colorActive} strokeWidth={strokeWidth} fill="none" animatedProps={opSmall} />
+                <APath d={d2} stroke={colorActive} strokeWidth={strokeWidth} fill="none" animatedProps={opMed} />
+                <APath d={d3} stroke={colorActive} strokeWidth={strokeWidth} fill="none" animatedProps={opLarge} />
               </>
             ) : (
               <>
@@ -154,7 +143,6 @@ const WifiOverlay: React.FC<WifiOverlayProps> = ({
 };
 
 const styles = StyleSheet.create({
-  // centered absolute-fill so scaled SVG stays aligned over the dish
   container: {
     position: 'absolute',
     top: 0, right: 0, bottom: 0, left: 0,
@@ -164,4 +152,3 @@ const styles = StyleSheet.create({
 });
 
 export default WifiOverlay;
-
