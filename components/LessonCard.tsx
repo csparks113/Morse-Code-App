@@ -39,8 +39,8 @@ const MUTED_ICON = '#3E424B';
 const DEEP_BLUE = colors.blueDeep; // unlocked / available
 const NEON_BLUE = colors.blueNeon; // active / pulsing
 
-const CROWN_SIZE = 28;
-const BOOK_SIZE = 24;
+const CROWN_SIZE = 32;
+const BOOK_SIZE = 28;
 const CIRCLE_SIZE = 60;
 
 type CircleState = { active: boolean; completed: boolean; locked: boolean };
@@ -190,30 +190,29 @@ export default function LessonCard(p: Props) {
   const right: CircleState = {
     active: p.canSend && !p.sendDone && !p.locked,
     completed: p.sendDone,
-    locked: p.locked || !p.canSend,
+    // Lock (gray) when the node is globally locked OR when this Send
+    // isn't the active one AND it's not completed.
+    locked: p.locked || (!p.canSend && !p.sendDone),
   };
 
   // Card border + subtitle logic
-  const anyActive = (left.active || right.active) && !bothComplete;
-  const anyUnlockedIdle =
-    (!left.locked && !left.completed && !left.active) ||
-    (!right.locked && !right.completed && !right.active);
+const anyActive = (left.active || right.active) && !bothComplete;
 
-  const cardBorder = bothComplete
-    ? GOLD_OUTLINE
-    : anyActive
-    ? NEON_BLUE
-    : anyUnlockedIdle
-    ? DEEP_BLUE
-    : GRAY_BORDER;
+// Use the screen-provided node lock state for the card itself.
+// If the node isn't locked (e.g., Receive complete), show neon border even if right circle is “sequence-locked”.
+const nodeLocked = p.locked;
 
-  const subtitleColor = bothComplete
-    ? GOLD_OUTLINE
-    : anyActive
-    ? NEON_BLUE
-    : anyUnlockedIdle
-    ? DEEP_BLUE
-    : MUTED_ICON;
+const cardBorder = bothComplete
+  ? GOLD_OUTLINE
+  : !nodeLocked
+  ? NEON_BLUE
+  : GRAY_BORDER;
+
+const subtitleColor = bothComplete
+  ? GOLD_OUTLINE
+  : !nodeLocked
+  ? NEON_BLUE
+  : MUTED_ICON;
 
   // Badge state for review/challenge icon
   const badgeState: 'none' | 'partial' | 'complete' = bothComplete
@@ -247,7 +246,7 @@ export default function LessonCard(p: Props) {
       {/* LEFT: Receive (dish + Wi-Fi overlay) */}
       <CircleButton
         state={left}
-        onPress={p.onReceive}
+        onPress={p.isActive ? p.onReceive : () => {}}
         accessibilityLabel="Receive"
         renderIcon={({ size, state }) => (
           <DishWithWifi
@@ -257,7 +256,7 @@ export default function LessonCard(p: Props) {
             dishScale={0.5}
             wifiScale={1.02}
             // overall micro-nudge for optical centering
-            style={{ transform: [{ translateY: 1 }] }}
+            style={{ transform: [{ translateY: 2 }, { translateX: 1 }] }}
             // make completed state gold instead of black
             completedTint={GOLD_OUTLINE}
             inactiveTint={MUTED_ICON}
@@ -292,15 +291,15 @@ export default function LessonCard(p: Props) {
           </Text>
         )}
 
-        {/* Badge under the title: Review (book), Challenge (crown) */}
-        {p.kind === 'review' && <ReviewBook state={badgeState} />}
-        {p.kind === 'challenge' && <ChallengeCrown state={badgeState} />}
+      {/* Badge under the title: Review (book), Challenge (crown) */}
+        {p.kind === 'review' && <ReviewBook state={badgeState} nodeLocked={p.locked} />}
+        {p.kind === 'challenge' && <ChallengeCrown state={badgeState} nodeLocked={p.locked} />}
       </View>
 
       {/* RIGHT: Send (antenna + dual Wi-Fi) */}
       <CircleButton
         state={right}
-        onPress={p.onSend}
+        onPress={p.canSend ? p.onSend : () => {}}
         accessibilityLabel="Send"
         renderIcon={({ size, state }) => (
           <AntennaWithWifi
@@ -309,7 +308,7 @@ export default function LessonCard(p: Props) {
             // slight inset + overall optical nudge
             towerScale={0.6}
             wifiScale={1.0}
-            style={{ transform: [{ translateY: 5 }] }}
+            style={{ transform: [{ translateY: 6 }] }}
             // assets + outline tints
             completedTint={GOLD_OUTLINE}
             inactiveTint={MUTED_ICON}
@@ -345,8 +344,14 @@ export default function LessonCard(p: Props) {
   );
 }
 
-// Crown: gray (none) → NEON blue (partial) → gold (complete)
-function ChallengeCrown({ state }: { state: 'none' | 'partial' | 'complete' }) {
+// Crown: gray (locked) → NEON (unlocked but not complete) → gold (complete)
+function ChallengeCrown({
+  state,
+  nodeLocked,
+}: {
+  state: 'none' | 'partial' | 'complete';
+  nodeLocked: boolean;
+}) {
   if (state === 'complete') {
     return (
       <MaterialCommunityIcons
@@ -357,13 +362,13 @@ function ChallengeCrown({ state }: { state: 'none' | 'partial' | 'complete' }) {
       />
     );
   }
-  if (state === 'partial') {
+  if (!nodeLocked) {
     return (
       <MaterialCommunityIcons
         name="crown"
         size={CROWN_SIZE}
         color={NEON_BLUE}
-        accessibilityLabel="Challenge crown (in progress)"
+        accessibilityLabel="Challenge (available)"
       />
     );
   }
@@ -372,13 +377,19 @@ function ChallengeCrown({ state }: { state: 'none' | 'partial' | 'complete' }) {
       name="crown-outline"
       size={CROWN_SIZE}
       color={GRAY_BORDER}
-      accessibilityLabel="Challenge crown"
+      accessibilityLabel="Challenge (locked)"
     />
   );
 }
 
-// Book: gray (none) → NEON blue (partial) → gold (complete)
-function ReviewBook({ state }: { state: 'none' | 'partial' | 'complete' }) {
+// Book: gray (locked) → NEON (unlocked but not complete) → gold (complete)
+function ReviewBook({
+  state,
+  nodeLocked,
+}: {
+  state: 'none' | 'partial' | 'complete';
+  nodeLocked: boolean;
+}) {
   if (state === 'complete') {
     return (
       <MaterialCommunityIcons
@@ -389,13 +400,13 @@ function ReviewBook({ state }: { state: 'none' | 'partial' | 'complete' }) {
       />
     );
   }
-  if (state === 'partial') {
+  if (!nodeLocked) {
     return (
       <MaterialCommunityIcons
         name="book-open-variant"
         size={BOOK_SIZE}
         color={NEON_BLUE}
-        accessibilityLabel="Review (in progress)"
+        accessibilityLabel="Review (available)"
       />
     );
   }
@@ -404,7 +415,7 @@ function ReviewBook({ state }: { state: 'none' | 'partial' | 'complete' }) {
       name="book-open-variant"
       size={BOOK_SIZE}
       color={GRAY_BORDER}
-      accessibilityLabel="Review"
+      accessibilityLabel="Review (locked)"
     />
   );
 }

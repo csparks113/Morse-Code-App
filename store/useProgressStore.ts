@@ -137,6 +137,12 @@ export const useProgressStore = create<ProgressState>()(
         }
         return out;
       },
+      resetAll: async () => {
+        try {
+          await AsyncStorage.removeItem('progress');
+        } catch (e) {}
+        set({ progress: {} });
+      },
     }),
     {
       name: 'progress',

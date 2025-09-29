@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
 
   centerTextWrap: { alignItems: 'center', justifyContent: 'center', flex: 1 },
-  section: { color: colors.textDim, fontSize: 13, marginBottom: 2, textAlign: 'auto' }, // smaller section label
+  section: { color: colors.textDim, fontSize: 16, fontWeight: '500', marginBottom: 2, textAlign: 'auto' }, // smaller section label
   title: { color: colors.text, fontWeight: '800', fontSize: 30, textAlign: 'auto' }, // larger title
 
   headerBarTrack: {

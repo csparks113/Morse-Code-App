@@ -12,6 +12,7 @@ import {
 } from '@/i18n';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { theme } from '../../theme/theme';
+import { useProgressStore } from '../../store/useProgressStore';
 
 type RowProps = {
   title: string;
@@ -107,8 +108,11 @@ export default function SettingsScreen() {
     setGapTolerancePercent,
   } = useSettingsStore();
 
+  const { resetAll } = useProgressStore();
+
   const languageOptions = React.useMemo<LanguageOption[]>(() => getAvailableLanguages(), []);
   const [languageModalVisible, setLanguageModalVisible] = React.useState(false);
+  const [resetModalVisible, setResetModalVisible] = React.useState(false);
   const [selectedLanguage, setSelectedLanguage] = React.useState<SupportedLanguage>('system');
 
   React.useEffect(() => {
@@ -201,7 +205,49 @@ export default function SettingsScreen() {
             decreaseLabel={t('settings:decreaseTonePitch')}
             increaseLabel={t('settings:increaseTonePitch')}
           />
-        </ScrollView>
+        
+      {/* Danger zone */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t('common:settings')}</Text>
+        <Pressable
+          onPress={() => setResetModalVisible(true)}
+          style={({ pressed }) => [styles.row, pressed && styles.pressed, { borderColor: '#FF3B30' }]}
+          accessibilityRole="button"
+          accessibilityLabel="Reset learning progress"
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.rowTitle, { color: '#FF3B30' }]}>Reset learning progress</Text>
+            <Text style={[styles.rowSubtitle, { color: '#FF3B30' }]}>Clears all lesson/review/challenge completion</Text>
+          </View>
+        </Pressable>
+      </View>
+
+      <Modal
+        visible={resetModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setResetModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Reset progress?</Text>
+            <Text style={styles.modalText}>This will clear all learning progress. This cannot be undone.</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 16, marginTop: 16 }}>
+              <Pressable onPress={() => setResetModalVisible(false)} style={({pressed})=>[styles.modalBtn, pressed && styles.pressed]}>
+                <Text style={styles.modalBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={async () => { await resetAll(); setResetModalVisible(false);}}
+                style={({pressed})=>[styles.modalBtn, { backgroundColor: '#FF3B30' }, pressed && styles.pressed]}
+              >
+                <Text style={[styles.modalBtnText, { color: '#fff' }]}>Reset</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
+    
       </View>
 
       <Modal
@@ -268,7 +314,7 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: theme.colors.border,
     marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(3),
+    //marginBottom: theme.spacing(3),
   },
   scrollContent: {
     gap: theme.spacing(3),
@@ -343,12 +389,30 @@ const styles = StyleSheet.create({
     padding: theme.spacing(4),
     gap: theme.spacing(2),
   },
+  
   modalTitle: {
     color: theme.colors.textPrimary,
     fontWeight: '700',
     fontSize: theme.typography.subtitle,
     textAlign: 'auto',
   },
+/*     modalCard: {
+    width: '86%',
+    backgroundColor: theme.colors?.cardBg ?? '#101214',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors?.border ?? '#2A2F36',
+  },
+  modalTitle: { color: '#fff', fontWeight: '800', fontSize: 18, marginBottom: 8 },
+  modalText: { color: '#D0D4DA', fontSize: 14 },
+  modalBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#2A2F36',
+  }, */
   languageOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -380,4 +444,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'auto',
   },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  modalBtnText: { color: '#D0D4DA', fontWeight: '700' },
 });

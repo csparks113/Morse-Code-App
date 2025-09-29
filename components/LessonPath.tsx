@@ -1,12 +1,12 @@
-﻿// components/LessonPath.tsx
+// components/LessonPath.tsx
 // Renders lessons + reviews + challenges in a vertical list.
 // Reviews start after Lesson 2; challenges appear after every 2 reviews,
 // and a final challenge is appended at the end.
 //
 // DEV behavior matches the original:
 // - DEV_UNLOCK_ALL = true unlocks everything and enables Send regardless of Receive.
-// - Status colors still reflect real thresholds (so “Complete” still means scores >= thresholds).
-// - DEV_STRICT_UNLOCKING = true enforces “Challenge after its preceding Review”
+// - Status colors still reflect real thresholds (so "Complete" still means scores >= thresholds).
+// - DEV_STRICT_UNLOCKING = true enforces "Challenge after its preceding Review"
 //   and tighter availability rules.
 // -----------------------------------------------------------------------------
 
@@ -20,9 +20,9 @@ import LessonCard from './LessonCard';
 import { LessonCompletion, ChallengeCompletion } from '@/types/progress';
 import { useTranslation } from 'react-i18next';
 
-// 🔧 DEV TOGGLES
+// DEV TOGGLES
 const DEV_UNLOCK_ALL = false;          // identical semantics to your original file
-const DEV_STRICT_UNLOCKING = false;   // turn on when you’re happy
+const DEV_STRICT_UNLOCKING = false;   // turn on when you're happy
 const CHALLENGE_REQUIRES_SEND_TOO = false; // when strict: also require preceding review's base lesson SEND
 
 type Lesson = { id: string; label: string; chars: string[] };
@@ -43,8 +43,8 @@ type Node =
       kind: 'review';
       key: string;
       index: number;
-      label: string;     // "Lesson N — Review"
-      chars: string[];   // usually the lesson’s chars
+      label: string;     // "Lesson N - Review"
+      chars: string[];   // usually the lesson's chars
       id: string;        // "N-review"
       lessonNumber: number; // source lesson number
     }
@@ -70,16 +70,17 @@ export default function LessonPath({ groupId, lessons }: Props) {
   const router = useRouter();
 
   // Helper: return numeric progress for a given *lesson id* ("1","2",...)
-  const getLessonProgress = React.useCallback(
-    (lessonId: string) => {
-      const g = progress[groupId] ?? {};
-      const p = g[lessonId];
+  const groupProgress = React.useMemo(() => progress[groupId] ?? {}, [groupId, progress]);
+
+  const getProgress = React.useCallback(
+    (id: string) => {
+      const entry = groupProgress[id];
       return {
-        receiveScore: p?.receiveScore ?? (p?.receive ? 100 : 0),
-        sendScore: p?.sendScore ?? (p?.send ? 100 : 0),
+        receiveScore: entry?.receiveScore ?? (entry?.receive ? 100 : 0),
+        sendScore: entry?.sendScore ?? (entry?.send ? 100 : 0),
       };
     },
-    [groupId, progress],
+    [groupProgress],
   );
 
   const formatChars = React.useCallback(
@@ -124,13 +125,13 @@ export default function LessonPath({ groupId, lessons }: Props) {
       lastLessonNum = l.lessonNumber;
       cumulativeChars = Array.from(new Set([...cumulativeChars, ...l.chars]));
 
-      // REVIEW — start after Lesson 2
+      // REVIEW - start after Lesson 2
       if (l.lessonNumber >= 2) {
         out.push({
           kind: 'review',
           key: `review-${l.id}`,
           index: out.length,
-          label: `Lesson ${l.lessonNumber} — Review`,
+          label: `Lesson ${l.lessonNumber} - Review`,
           chars: l.chars.slice(),
           id: `${l.lessonNumber}-review`,
           lessonNumber: l.lessonNumber,
@@ -185,7 +186,7 @@ export default function LessonPath({ groupId, lessons }: Props) {
   );
 
   // Compute each node's status:
-  // - Uses the underlying lesson’s progress for review/challenge, too.
+  // - Uses dedicated progress entries for lessons, reviews, and challenges.
   // - When DEV_STRICT_UNLOCKING=true, enforce:
   //   * Review unlocks when its base lesson's RECEIVE passed
   //   * Challenge unlocks only if immediately preceded by a Review whose base lesson meets criteria
@@ -197,56 +198,49 @@ export default function LessonPath({ groupId, lessons }: Props) {
     const sendOK = (score: number) => score >= thresholds.send;
 
     derivedNodes.forEach((n, idx) => {
-      // Map node to *base lesson id* to read progress
-      const baseLessonId =
+      const progressKey =
         n.kind === 'lesson'
           ? String(n.lessonNumber)
           : n.kind === 'review'
-          ? String(n.lessonNumber)
-          : String(n.sourceLessonNumber); // challenge ties to latest lesson
+          ? `${n.lessonNumber}-review`
+          : n.id;
 
-      const p = getLessonProgress(baseLessonId);
+      const baseLessonId =
+        n.kind === 'challenge'
+          ? String(n.sourceLessonNumber)
+          : String(n.lessonNumber);
 
-      // Passed thresholds?
-      const hasReceive = recvOK(p.receiveScore);
-      const hasSend = sendOK(p.sendScore);
+      const nodeProgress = getProgress(progressKey);
+      const baseProgress = getProgress(baseLessonId);
 
-      // Is node "available" (unlocked)?
+      const hasReceive = recvOK(nodeProgress.receiveScore);
+      const hasSend = sendOK(nodeProgress.sendScore);
+
       let available: boolean;
 
       if (!DEV_STRICT_UNLOCKING) {
-        // Original, more permissive availability:
         available = (() => {
           if (n.kind === 'lesson') {
-            // First lesson always available; otherwise require previous lesson receive
-            const pos = derivedNodes.findIndex((x) => x.key === n.key);
-            // Find previous *lesson* node before this one
             let prevLessonId: string | null = null;
-            for (let i = pos - 1; i >= 0; i--) {
+            for (let i = idx - 1; i >= 0; i--) {
               if (derivedNodes[i].kind === 'lesson') {
                 prevLessonId = String((derivedNodes[i] as any).lessonNumber);
                 break;
               }
             }
             if (!prevLessonId) return true;
-            const prevProg = getLessonProgress(prevLessonId);
+            const prevProg = getProgress(prevLessonId);
             return recvOK(prevProg.receiveScore);
           }
 
           if (n.kind === 'review') {
-            // Review becomes available once its source lesson is learned (receive passed)
-            return hasReceive;
+            return recvOK(baseProgress.receiveScore);
           }
 
-          // challenge: available after latest lesson's receive
-          const lastProg = getLessonProgress(String(n.sourceLessonNumber));
-          return recvOK(lastProg.receiveScore);
+          return recvOK(baseProgress.receiveScore);
         })();
       } else {
-        // Strict availability:
         if (n.kind === 'lesson') {
-          // First lesson unlocked; others require previous LESSON receive
-          // Find previous *lesson* node
           let prevLessonNum: number | null = null;
           for (let j = idx - 1; j >= 0; j--) {
             if (derivedNodes[j].kind === 'lesson') {
@@ -257,21 +251,18 @@ export default function LessonPath({ groupId, lessons }: Props) {
           if (prevLessonNum == null) {
             available = true;
           } else {
-            const prev = getLessonProgress(String(prevLessonNum));
+            const prev = getProgress(String(prevLessonNum));
             available = recvOK(prev.receiveScore);
           }
         } else if (n.kind === 'review') {
-          // Review unlocks when its source LESSON receive is passed
-          available = hasReceive;
+          available = recvOK(baseProgress.receiveScore);
         } else {
-          // Challenge unlocks ONLY if the immediately preceding node is a Review,
-          // whose base lesson meets criteria (receive + optional send).
-          const prev = derivedNodes[idx - 1];
-          if (!prev || prev.kind !== 'review') {
+          const prevNode = derivedNodes[idx - 1];
+          if (!prevNode || prevNode.kind !== 'review') {
             available = false;
           } else {
-            const reviewBase = (prev as any).lessonNumber as number;
-            const rp = getLessonProgress(String(reviewBase));
+            const reviewBase = (prevNode as any).lessonNumber as number;
+            const rp = getProgress(String(reviewBase));
             const ok = CHALLENGE_REQUIRES_SEND_TOO
               ? recvOK(rp.receiveScore) && sendOK(rp.sendScore)
               : recvOK(rp.receiveScore);
@@ -280,10 +271,8 @@ export default function LessonPath({ groupId, lessons }: Props) {
         }
       }
 
-      // 🔧 DEV OVERRIDE: force everything to be "available"
       if (DEV_UNLOCK_ALL) available = true;
 
-      // Determine status (visuals)
       let status: LessonCompletion | ChallengeCompletion;
       if (hasReceive && hasSend) {
         status = 'bothComplete';
@@ -302,7 +291,42 @@ export default function LessonPath({ groupId, lessons }: Props) {
     });
 
     return out;
-  }, [derivedNodes, getLessonProgress]);
+  }, [derivedNodes, getProgress]);
+  const nodeStates = React.useMemo(() => {
+    const recvOK = (score: number) => score >= thresholds.receive;
+    const sendOK = (score: number) => score >= thresholds.send;
+
+    return derivedNodes.map((node) => {
+      const progressKey =
+        node.kind === 'lesson'
+          ? String(node.lessonNumber)
+          : node.kind === 'review'
+          ? `${node.lessonNumber}-review`
+          : node.id;
+      const progress = getProgress(progressKey);
+      return {
+        progressKey,
+        receiveScore: progress.receiveScore,
+        sendScore: progress.sendScore,
+        receiveDone: recvOK(progress.receiveScore),
+        sendDone: sendOK(progress.sendScore),
+      };
+    });
+  }, [derivedNodes, getProgress]);
+
+  const sendActiveFlags = React.useMemo(() => {
+    if (DEV_UNLOCK_ALL) {
+      return derivedNodes.map(() => true);
+    }
+    let allPrevSendComplete = true;
+    return nodeStates.map((state) => {
+      const canSend = allPrevSendComplete && state.receiveDone && !state.sendDone;
+      if (!state.sendDone) {
+        allPrevSendComplete = false;
+      }
+      return canSend;
+    });
+  }, [derivedNodes, nodeStates]);
 
   return (
     <ScrollView
@@ -316,27 +340,14 @@ export default function LessonPath({ groupId, lessons }: Props) {
           const isReview = n.kind === 'review';
           const isChallenge = n.kind === 'challenge';
 
-          // Progress is always read from the underlying lesson
-          const baseLessonId =
-            isLesson ? String(n.lessonNumber)
-            : isReview ? String(n.lessonNumber)
-            : String((n as any).sourceLessonNumber);
+          const nodeState = nodeStates[i];
+          const receiveDone = nodeState?.receiveDone ?? false;
+          const sendDone = nodeState?.sendDone ?? false;
+          const locked = status === 'locked';
 
-          const progressState = getLessonProgress(baseLessonId);
-
-          // Flags
-          const receiveDone =
-            status === 'receiveComplete' || status === 'bothComplete';
-          const sendDone = status === 'bothComplete';
-
-          // ✅ Can user attempt "Send"? matches original:
-          // DEV: always true; otherwise require Receive threshold on the base lesson.
           const canSend = DEV_UNLOCK_ALL
             ? true
-            : progressState.receiveScore >= thresholds.receive;
-
-          // Locked?
-          const locked = status === 'locked';
+            : Boolean(sendActiveFlags[i]) && receiveDone && !locked;
 
           // Title + subtitle
           const baseLessonNumber = isChallenge ? (n as any).sourceLessonNumber : (n as any).lessonNumber;
@@ -344,7 +355,7 @@ export default function LessonPath({ groupId, lessons }: Props) {
           const title = isChallenge
             ? t('common:challenge')
             : isReview
-            ? t('common:lesson', { num: baseLessonNumber }) + ' — ' + t('common:review')
+            ? t('common:lesson', { num: baseLessonNumber }) + ' - ' + t('common:review')
             : t('common:lesson', { num: baseLessonNumber });
 
           const subtitle = (isLesson || isReview) ? formatChars((n as any).chars) : undefined;
@@ -393,14 +404,5 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 });
-
-
-
-
-
-
-
-
-
 
 

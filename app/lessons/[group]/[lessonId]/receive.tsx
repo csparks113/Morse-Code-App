@@ -1,4 +1,4 @@
-﻿// app/lessons/[group]/[lessonId]/receive.tsx
+// app/lessons/[group]/[lessonId]/receive.tsx
 
 /**
  * RECEIVE SESSION SCREEN (Pinned layout)
@@ -10,7 +10,7 @@
  * Updates:
  * - Reviews use cumulative pool + keyboard (like challenges).
  * - Challenge hearts: decrement on wrong; early end at 0.
- * - Review scores save to base lesson id ("2" instead of "2-review").
+ * - Reviews persist progress under their own ids ("2-review", etc.).
  */
 
 import React from 'react';
@@ -52,15 +52,13 @@ import { useSettingsStore } from '../../../../store/useSettingsStore';
 // Lesson meta
 import { buildSessionMeta } from '../../../../session/sessionMeta';
 
-const TOTAL_QUESTIONS = 20;
+const TOTAL_QUESTIONS = 5;
 
 type Summary = { correct: number; percent: number };
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 
-// Map "<n>-review" to "<n>" so review scores aggregate to the base lesson
+// Normalize to a string key for progress storage
 function getStoreIdForProgress(rawId: string) {
-  const m = String(rawId).match(/^(\d+)-review$/);
-  if (m) return m[1];
   return String(rawId);
 }
 
@@ -107,9 +105,9 @@ export default function ReceiveSessionScreen() {
   const [revealUsed, setRevealUsed] = React.useState(false);
   const [isPlaying, setIsPlaying] = React.useState(false);
 
-  // ❤️ Hearts for CHALLENGE mode
+  // Hearts for CHALLENGE mode
   const [hearts, setHearts] = React.useState(3);
-  // (Receive doesn’t need a separate earlySummary object — we can set `summary` directly)
+  // (Receive does not need a separate earlySummary object - we can set `summary` directly)
 
   const flash = React.useRef(new Animated.Value(0)).current;
 
@@ -376,21 +374,23 @@ export default function ReceiveSessionScreen() {
   if (summary) {
     return (
       <SafeAreaView style={styles.safe}>
-        <SessionHeader
-          labelTop={meta.headerTop}
-          labelBottom={t('session:receiveMode')}
-          mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
-          hearts={meta.isChallenge ? hearts : undefined}
-        />
+        <View style={styles.summaryContainer}>
+          <SessionHeader
+            labelTop={meta.headerTop}
+            labelBottom={t('session:receiveMode')}
+            mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
+            hearts={meta.isChallenge ? hearts : undefined}
+          />
 
-        <SessionSummary
-          percent={summary.percent}
-          correct={summary.correct}
-          total={TOTAL_QUESTIONS}
-          onContinue={() => {
-            if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-          }}
-        />
+          <SessionSummary
+            percent={summary.percent}
+            correct={summary.correct}
+            total={TOTAL_QUESTIONS}
+            onContinue={() => {
+              if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+            }}
+          />
+        </View>
       </SafeAreaView>
     );
   }
@@ -564,5 +564,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
+
+  summaryContainer: {
+    flex: 1,
+    paddingHorizontal: spacing(3),
+    paddingTop: spacing(2),
+    paddingBottom: spacing(2),
+  },
+
+
+
 });
+
+
+
+
+
+
+
 

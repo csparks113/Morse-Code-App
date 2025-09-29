@@ -48,14 +48,12 @@ import { useSessionFlow } from "../../../../hooks/useSessionFlow";
 // Meta
 import { buildSessionMeta } from '../../../../session/sessionMeta';
 
-const TOTAL_QUESTIONS = 20;
+const TOTAL_QUESTIONS = 5;
 
 type FeedbackState = "idle" | "correct" | "wrong";
 type PressWindow = { startMs: number; endMs: number };
 
 function getStoreIdForProgress(rawId: string) {
-  const m = String(rawId).match(/^(\d+)-review$/);
-  if (m) return m[1];
   return String(rawId);
 }
 
@@ -557,3 +555,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+
+
