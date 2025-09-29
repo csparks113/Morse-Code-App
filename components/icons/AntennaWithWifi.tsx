@@ -53,60 +53,58 @@ const AntennaWithWifi: React.FC<Props> = ({
   completedTint = '#F5C84C',
   inactiveTint = '#3E424B',
 }) => {
-  const showWifi = state !== 'inactive';
-  const wifiMode: 'active' | 'completed' = state === 'active' ? 'active' : 'completed';
+  // use tri-state directly for the overlays
+  const wifiMode: 'active' | 'completed' | 'inactive' = state;
+
+  // choose antenna artwork
   const antennaSource = state === 'active' ? srcActive : srcOutline;
   const outlineTint = state === 'completed' ? completedTint : inactiveTint;
 
   return (
     <View style={[styles.box, { width: size, height: size }, style]}>
-      {showWifi && (
-        <>
-          {/* Right-side waves (pointing outward) */}
-          <WifiOverlay
-            mode={wifiMode}
-            size={size * wifiScale}
-            originX={rightWifi?.originX ?? 0.72}
-            originY={rightWifi?.originY ?? 0.18}
-            rotationDeg={rightWifi?.rotationDeg ?? 0}
-            spanDeg={rightWifi?.spanDeg ?? 105}
-            baseRadius={rightWifi?.baseRadius ?? size * 0.10}
-            gap={rightWifi?.gap ?? size * 0.085}
-            strokeWidth={rightWifi?.strokeWidth ?? 2}
-            colorActive={rightWifi?.colorActive ?? '#00E5FF'}
-            colorCompleted={rightWifi?.colorCompleted ?? completedTint}
-            opacityInactive={rightWifi?.opacityInactive}
-            periodMs={rightWifi?.periodMs}
-            staggerMs={rightWifi?.staggerMs}
-            offsetX={rightWifi?.offsetX ?? 0}
-            offsetY={rightWifi?.offsetY ?? -0.5}
-            style={(rightWifi?.style) as any}
-          />
+      {/* Right-side waves */}
+      <WifiOverlay
+        mode={wifiMode}
+        size={size * wifiScale}
+        originX={rightWifi?.originX ?? 0.72}
+        originY={rightWifi?.originY ?? 0.18}
+        rotationDeg={rightWifi?.rotationDeg ?? 0}
+        spanDeg={rightWifi?.spanDeg ?? 105}
+        baseRadius={rightWifi?.baseRadius ?? size * 0.10}
+        gap={rightWifi?.gap ?? size * 0.085}
+        strokeWidth={rightWifi?.strokeWidth ?? 2}
+        colorActive={rightWifi?.colorActive ?? '#00E5FF'}
+        colorCompleted={rightWifi?.colorCompleted ?? completedTint}
+        colorInactive={rightWifi?.colorInactive ?? inactiveTint}   // ← gray for inactive
+        opacityInactive={rightWifi?.opacityInactive ?? 0.30}
+        periodMs={rightWifi?.periodMs}
+        style={rightWifi?.style as any}
+        offsetX={rightWifi?.offsetX ?? 0}
+        offsetY={rightWifi?.offsetY ?? -0.5}
+      />
 
-          {/* Left-side waves (mirror) */}
-          <WifiOverlay
-            mode={wifiMode}
-            size={size * wifiScale}
-            originX={leftWifi?.originX ?? 0.28}
-            originY={leftWifi?.originY ?? 0.18}
-            rotationDeg={leftWifi?.rotationDeg ?? 180}
-            spanDeg={leftWifi?.spanDeg ?? 105}
-            baseRadius={leftWifi?.baseRadius ?? size * 0.10}
-            gap={leftWifi?.gap ?? size * 0.085}
-            strokeWidth={leftWifi?.strokeWidth ?? 2}
-            colorActive={leftWifi?.colorActive ?? '#00E5FF'}
-            colorCompleted={leftWifi?.colorCompleted ?? completedTint}
-            opacityInactive={leftWifi?.opacityInactive}
-            periodMs={leftWifi?.periodMs}
-            staggerMs={leftWifi?.staggerMs}
-            offsetX={leftWifi?.offsetX ?? 0}
-            offsetY={leftWifi?.offsetY ?? -0.5}
-            style={leftWifi?.style}
-          />
-        </>
-      )}
+      {/* Left-side waves (mirror) */}
+      <WifiOverlay
+        mode={wifiMode}
+        size={size * wifiScale}
+        originX={leftWifi?.originX ?? 0.28}
+        originY={leftWifi?.originY ?? 0.18}
+        rotationDeg={leftWifi?.rotationDeg ?? 180}
+        spanDeg={leftWifi?.spanDeg ?? 105}
+        baseRadius={leftWifi?.baseRadius ?? size * 0.10}
+        gap={leftWifi?.gap ?? size * 0.085}
+        strokeWidth={leftWifi?.strokeWidth ?? 2}
+        colorActive={leftWifi?.colorActive ?? '#00E5FF'}
+        colorCompleted={leftWifi?.colorCompleted ?? completedTint}
+        colorInactive={leftWifi?.colorInactive ?? inactiveTint}    // ← gray for inactive
+        opacityInactive={leftWifi?.opacityInactive ?? 0.30}
+        periodMs={leftWifi?.periodMs}
+        style={leftWifi?.style as any}
+        offsetX={leftWifi?.offsetX ?? 0}
+        offsetY={leftWifi?.offsetY ?? -0.5}
+      />
 
-      {/* Antenna image (colored for active, tintable outline for others) */}
+      {/* Antenna image (colored for active, tintable outline otherwise) */}
       <Image
         source={antennaSource}
         resizeMode="contain"

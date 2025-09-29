@@ -21,7 +21,7 @@ import { LessonCompletion, ChallengeCompletion } from '@/types/progress';
 import { useTranslation } from 'react-i18next';
 
 // 🔧 DEV TOGGLES
-const DEV_UNLOCK_ALL = true;          // identical semantics to your original file
+const DEV_UNLOCK_ALL = false;          // identical semantics to your original file
 const DEV_STRICT_UNLOCKING = false;   // turn on when you’re happy
 const CHALLENGE_REQUIRES_SEND_TOO = false; // when strict: also require preceding review's base lesson SEND
 

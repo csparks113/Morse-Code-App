@@ -45,31 +45,21 @@ const CIRCLE_SIZE = 60;
 
 type CircleState = { active: boolean; completed: boolean; locked: boolean };
 
-/** Pulse helper for active outline buttons */
-function usePulse(enabled: boolean) {
-  const scale = React.useRef(new Animated.Value(1)).current;
+/** Option A — soft breath (opacity-only halo) */
+function useBreath(enabled: boolean, period = 1800, min = 0.15, max = 0.38) {
+  const v = React.useRef(new Animated.Value(min)).current;
   React.useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) { v.setValue(min); return; }
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(scale, {
-          toValue: 1.08,
-          duration: 950,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1.0,
-          duration: 950,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]),
+        Animated.timing(v, { toValue: max, duration: period / 2, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(v, { toValue: min, duration: period / 2, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])
     );
     loop.start();
     return () => loop.stop();
-  }, [enabled, scale]);
-  return scale;
+  }, [enabled, period, min, max]);
+  return v; // opacity
 }
 
 /**
@@ -96,7 +86,8 @@ function CircleButton({
   const isActiveOutline = state.active && !state.completed && !state.locked;
   const isUnlockedIdle = !state.locked && !state.completed && !state.active;
 
-  const pulse = usePulse(isActiveOutline);
+  // subtle breathing halo instead of scale pulse
+  const breath = useBreath(isActiveOutline);
 
   // Resolve style
   let backgroundColor = GRAY_FILL;
@@ -141,8 +132,8 @@ function CircleButton({
             styles.glowRing,
             {
               borderColor: NEON_BLUE,
-              transform: [{ scale: pulse }],
-              opacity: 0.55,
+              opacity: breath,      // ← opacity-only breath
+              // no transform/scale to keep motion minimal
             },
           ]}
         />
@@ -175,6 +166,13 @@ function CircleButton({
 
 /** Map CircleState -> Dish visual state */
 function toReceiveState(s: CircleState): 'active' | 'inactive' | 'completed' {
+  if (s.completed) return 'completed';
+  if (s.active) return 'active';
+  return 'inactive';
+}
+
+/** Map CircleState -> Antenna visual state */
+function toSendState(s: CircleState): 'active' | 'inactive' | 'completed' {
   if (s.completed) return 'completed';
   if (s.active) return 'active';
   return 'inactive';
@@ -265,7 +263,7 @@ export default function LessonCard(p: Props) {
             inactiveTint={MUTED_ICON}
             wifi={{
               // wifi position (DO NOT CHANGE)
-              originX: .87,
+              originX: 0.87,
               originY: 0.18,
               rotationDeg: 150,
               spanDeg: 105,
@@ -279,7 +277,7 @@ export default function LessonCard(p: Props) {
               offsetY: -0.5,
             }}
             // dish position (DO NOT CHANGE)
-            imageStyle={{ transform: [{ translateX: 0-5 }, { translateY: 2 }] }}
+            imageStyle={{ transform: [{ translateX: -5 }, { translateY: 2 }] }}
           />
         )}
       />
@@ -299,28 +297,26 @@ export default function LessonCard(p: Props) {
         {p.kind === 'challenge' && <ChallengeCrown state={badgeState} />}
       </View>
 
-      {/* RIGHT: Send (antenna) */}
+      {/* RIGHT: Send (antenna + dual Wi-Fi) */}
       <CircleButton
         state={right}
         onPress={p.onSend}
         accessibilityLabel="Send"
         renderIcon={({ size, state }) => (
           <AntennaWithWifi
-            // map CircleState -> tri-state
-            state={state.completed ? 'completed' : state.active ? 'active' : 'inactive'}
+            state={toSendState(state)}
             size={size}
+            // slight inset + overall optical nudge
             towerScale={0.6}
             wifiScale={1.0}
-            // overall tiny optical nudge (optional)
             style={{ transform: [{ translateY: 5 }] }}
-            // outline tints to match card palette
+            // assets + outline tints
             completedTint={GOLD_OUTLINE}
             inactiveTint={MUTED_ICON}
-            // beam colors (override defaults to use your theme)
+            // beams: active animated, completed static, inactive hidden
             rightWifi={{
               colorActive: colors.blueNeon,
               colorCompleted: GOLD_OUTLINE,
-              // geometry (tweak to taste)
               originX: 0.55,
               originY: 0.26,
               rotationDeg: 0,
@@ -443,7 +439,7 @@ const styles = StyleSheet.create({
     borderRadius: CIRCLE_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     overflow: 'visible',
   },
   glowRing: {
