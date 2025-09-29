@@ -7,6 +7,7 @@ import {
   ViewStyle,
   Animated,
   Easing,
+  Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing } from '@/theme/lessonTheme';
@@ -20,8 +21,8 @@ type Props = {
   locked: boolean;
   receiveDone: boolean;
   sendDone: boolean;
-  isActive: boolean; // receive available
-  canSend: boolean;  // send available
+  isActive: boolean; // receive available indicator from path
+  canSend: boolean;  // send available indicator from path
   onReceive: () => void;
   onSend: () => void;
   style?: ViewStyle;
@@ -35,9 +36,8 @@ const GRAY_BORDER = '#2A2F36';
 const GRAY_FILL = '#15171C';
 const MUTED_ICON = '#3E424B';
 
-// Two-tone blues from theme:
-const DEEP_BLUE = colors.blueDeep; // unlocked / available
-const NEON_BLUE = colors.blueNeon; // active / pulsing
+// Neon only (deep blue removed)
+const NEON_BLUE = colors.blueNeon;
 
 const CROWN_SIZE = 32;
 const BOOK_SIZE = 28;
@@ -45,7 +45,7 @@ const CIRCLE_SIZE = 60;
 
 type CircleState = { active: boolean; completed: boolean; locked: boolean };
 
-/** Option A — soft breath (opacity-only halo) */
+/** Soft breathing halo (opacity-only) */
 function useBreath(enabled: boolean, period = 1800, min = 0.15, max = 0.38) {
   const v = React.useRef(new Animated.Value(min)).current;
   React.useEffect(() => {
@@ -59,13 +59,9 @@ function useBreath(enabled: boolean, period = 1800, min = 0.15, max = 0.38) {
     loop.start();
     return () => loop.stop();
   }, [enabled, period, min, max]);
-  return v; // opacity
+  return v;
 }
 
-/**
- * Generic circular icon button.
- * - If `renderIcon` is provided, it renders instead of the default Material icon.
- */
 function CircleButton({
   state,
   iconName,
@@ -77,19 +73,13 @@ function CircleButton({
   iconName?: keyof typeof MaterialCommunityIcons.glyphMap;
   onPress: () => void;
   accessibilityLabel: string;
-  renderIcon?: (args: {
-    size: number;
-    color: string;
-    state: CircleState;
-  }) => React.ReactNode;
+  renderIcon?: (args: { size: number; color: string; state: CircleState }) => React.ReactNode;
 }) {
   const isActiveOutline = state.active && !state.completed && !state.locked;
   const isUnlockedIdle = !state.locked && !state.completed && !state.active;
 
-  // subtle breathing halo instead of scale pulse
   const breath = useBreath(isActiveOutline);
 
-  // Resolve style
   let backgroundColor = GRAY_FILL;
   let borderColor = GRAY_BORDER;
   let iconColor: string = GRAY_BORDER;
@@ -108,8 +98,8 @@ function CircleButton({
     iconColor = NEON_BLUE;
   } else if (isUnlockedIdle) {
     backgroundColor = 'transparent';
-    borderColor = DEEP_BLUE;
-    iconColor = DEEP_BLUE;
+    borderColor = NEON_BLUE + '66';
+    iconColor = NEON_BLUE + '99';
   }
 
   const innerSize = CIRCLE_SIZE - 8;
@@ -117,7 +107,7 @@ function CircleButton({
   return (
     <Pressable
       disabled={state.locked}
-      onPress={onPress}
+      onPress={state.locked ? () => {} : onPress}
       style={({ pressed }) => [
         styles.circleBase,
         { backgroundColor, borderColor },
@@ -128,25 +118,12 @@ function CircleButton({
       {isActiveOutline && (
         <Animated.View
           pointerEvents="none"
-          style={[
-            styles.glowRing,
-            {
-              borderColor: NEON_BLUE,
-              opacity: breath,      // ← opacity-only breath
-              // no transform/scale to keep motion minimal
-            },
-          ]}
+          style={[styles.glowRing, { borderColor: NEON_BLUE, opacity: breath }]}
         />
       )}
 
-      {/* Icon slot */}
       <View
-        style={{
-          width: innerSize,
-          height: innerSize,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+        style={{ width: innerSize, height: innerSize, alignItems: 'center', justifyContent: 'center' }}
         pointerEvents="none"
       >
         {renderIcon ? (
@@ -154,9 +131,9 @@ function CircleButton({
         ) : iconName ? (
           <MaterialCommunityIcons
             name={iconName}
-            size={Math.round(innerSize * 0.56)}   // scales with circle
+            size={Math.round(innerSize * 0.56)}
             color={iconColor}
-            style={{ transform: [{ translateY: 1 }] }} // tiny optical center
+            style={{ transform: [{ translateY: 1 }] }}
           />
         ) : null}
       </View>
@@ -164,14 +141,12 @@ function CircleButton({
   );
 }
 
-/** Map CircleState -> Dish visual state */
 function toReceiveState(s: CircleState): 'active' | 'inactive' | 'completed' {
   if (s.completed) return 'completed';
   if (s.active) return 'active';
   return 'inactive';
 }
 
-/** Map CircleState -> Antenna visual state */
 function toSendState(s: CircleState): 'active' | 'inactive' | 'completed' {
   if (s.completed) return 'completed';
   if (s.active) return 'active';
@@ -181,54 +156,42 @@ function toSendState(s: CircleState): 'active' | 'inactive' | 'completed' {
 export default function LessonCard(p: Props) {
   const bothComplete = p.receiveDone && p.sendDone;
 
-  // Per-side states
+  // --- Per-side states
+  // RECEIVE (left):
+  //  - active when node is unlocked, not completed, and either this is the active node
+  //    OR it's a review/challenge node (we allow starting them when unlocked)
   const left: CircleState = {
-    active: p.isActive && !p.receiveDone && !p.locked,
+    active: !p.locked && !p.receiveDone && (p.isActive || p.kind === 'review' || p.kind === 'challenge'),
     completed: p.receiveDone,
     locked: p.locked,
   };
+
+  // SEND (right):
+  //  - active only when path says sending is allowed (p.canSend) or receive already done.
+  //  - stays locked if the node itself is locked.
   const right: CircleState = {
-    active: p.canSend && !p.sendDone && !p.locked,
+    active: (p.receiveDone || p.canSend) && !p.sendDone && !p.locked,
     completed: p.sendDone,
-    // Lock (gray) when the node is globally locked OR when this Send
-    // isn't the active one AND it's not completed.
-    locked: p.locked || (!p.canSend && !p.sendDone),
+    locked: p.locked || (!(p.receiveDone || p.canSend) && !p.sendDone),
   };
 
-  // Card border + subtitle logic
-const anyActive = (left.active || right.active) && !bothComplete;
+  // Card frame
+  const anyActive = (left.active || right.active) && !bothComplete;
+  const nodeLocked = p.locked;
 
-// Use the screen-provided node lock state for the card itself.
-// If the node isn't locked (e.g., Receive complete), show neon border even if right circle is “sequence-locked”.
-const nodeLocked = p.locked;
+  const cardBorder = bothComplete ? GOLD_OUTLINE : !nodeLocked ? NEON_BLUE : GRAY_BORDER;
+  const cardBackground = bothComplete
+    ? 'rgba(255, 215, 0, 0.08)'
+    : !nodeLocked
+    ? 'rgba(0, 229, 255, 0.08)'
+    : CARD_BG;
 
-const cardBorder = bothComplete
-  ? GOLD_OUTLINE
-  : !nodeLocked
-  ? NEON_BLUE
-  : GRAY_BORDER;
+  const subtitleColor = bothComplete ? GOLD_OUTLINE : !nodeLocked ? NEON_BLUE : MUTED_ICON;
 
-const subtitleColor = bothComplete
-  ? GOLD_OUTLINE
-  : !nodeLocked
-  ? NEON_BLUE
-  : MUTED_ICON;
+  const badgeState: 'none' | 'partial' | 'complete' = bothComplete ? 'complete' : anyActive ? 'partial' : 'none';
 
-  // Badge state for review/challenge icon
-  const badgeState: 'none' | 'partial' | 'complete' = bothComplete
-    ? 'complete'
-    : anyActive
-    ? 'partial'
-    : 'none';
-
-  // Accessibility label
   const label = p.subtitle ? `${p.title} ${p.subtitle}` : p.title;
-
-  // Visible title rules:
-  const visibleTitle =
-    p.kind === 'review' ? 'Review' : p.kind === 'challenge' ? 'Challenge' : p.title;
-
-  // Subtitle only for lesson
+  const visibleTitle = p.kind === 'review' ? 'Review' : p.kind === 'challenge' ? 'Challenge' : p.title;
   const visibleSubtitle = p.kind === 'lesson' ? p.subtitle : undefined;
 
   const activeChallengeGlow = p.kind === 'challenge' && p.isActive;
@@ -237,31 +200,27 @@ const subtitleColor = bothComplete
     <View
       style={[
         styles.card,
-        { borderColor: cardBorder },
-        activeChallengeGlow && styles.activeChallengeGlow, // ★ faint neon glow on active Challenge
+        { borderColor: cardBorder, backgroundColor: cardBackground },
+        activeChallengeGlow && styles.activeChallengeGlow,
         p.style,
       ]}
       accessibilityLabel={label}
     >
-      {/* LEFT: Receive (dish + Wi-Fi overlay) */}
+      {/* LEFT: Receive */}
       <CircleButton
         state={left}
-        onPress={p.isActive ? p.onReceive : () => {}}
+        onPress={p.onReceive}
         accessibilityLabel="Receive"
         renderIcon={({ size, state }) => (
           <DishWithWifi
             state={toReceiveState(state)}
             size={size}
-            // independent scaling controls
             dishScale={0.5}
             wifiScale={1.02}
-            // overall micro-nudge for optical centering
             style={{ transform: [{ translateY: 2 }, { translateX: 1 }] }}
-            // make completed state gold instead of black
             completedTint={GOLD_OUTLINE}
-            inactiveTint={MUTED_ICON}
+            inactiveTint={MUTED_ICON + 'AA'}
             wifi={{
-              // wifi position (DO NOT CHANGE)
               originX: 0.87,
               originY: 0.18,
               rotationDeg: 150,
@@ -269,34 +228,25 @@ const subtitleColor = bothComplete
               baseRadius: size * 0.10,
               gap: size * 0.085,
               strokeWidth: 2,
-              colorActive: '#00E5FF',
+              colorActive: NEON_BLUE,
               colorCompleted: GOLD_OUTLINE,
-              // micro-adjust waves independently
               offsetX: 0,
               offsetY: -0.5,
             }}
-            // dish position (DO NOT CHANGE)
             imageStyle={{ transform: [{ translateX: -5 }, { translateY: 2 }] }}
           />
         )}
       />
 
-      {/* CENTER: Title + subtitle + badges */}
+      {/* CENTER */}
       <View style={styles.center}>
         <Text style={styles.title}>{visibleTitle}</Text>
-
-        {!!visibleSubtitle && (
-          <Text style={[styles.subtitle, { color: subtitleColor }]}>
-            {visibleSubtitle}
-          </Text>
-        )}
-
-      {/* Badge under the title: Review (book), Challenge (crown) */}
+        {!!visibleSubtitle && <Text style={[styles.subtitle, { color: subtitleColor }]}>{visibleSubtitle}</Text>}
         {p.kind === 'review' && <ReviewBook state={badgeState} nodeLocked={p.locked} />}
         {p.kind === 'challenge' && <ChallengeCrown state={badgeState} nodeLocked={p.locked} />}
       </View>
 
-      {/* RIGHT: Send (antenna + dual Wi-Fi) */}
+      {/* RIGHT: Send */}
       <CircleButton
         state={right}
         onPress={p.canSend ? p.onSend : () => {}}
@@ -305,16 +255,13 @@ const subtitleColor = bothComplete
           <AntennaWithWifi
             state={toSendState(state)}
             size={size}
-            // slight inset + overall optical nudge
             towerScale={0.6}
             wifiScale={1.0}
             style={{ transform: [{ translateY: 6 }] }}
-            // assets + outline tints
             completedTint={GOLD_OUTLINE}
-            inactiveTint={MUTED_ICON}
-            // beams: active animated, completed static, inactive hidden
+            inactiveTint={MUTED_ICON + 'AA'}
             rightWifi={{
-              colorActive: colors.blueNeon,
+              colorActive: NEON_BLUE,
               colorCompleted: GOLD_OUTLINE,
               originX: 0.55,
               originY: 0.26,
@@ -326,7 +273,7 @@ const subtitleColor = bothComplete
               offsetY: -0.5,
             }}
             leftWifi={{
-              colorActive: colors.blueNeon,
+              colorActive: NEON_BLUE,
               colorCompleted: GOLD_OUTLINE,
               originX: 0.45,
               originY: 0.26,
@@ -376,7 +323,7 @@ function ChallengeCrown({
     <MaterialCommunityIcons
       name="crown-outline"
       size={CROWN_SIZE}
-      color={GRAY_BORDER}
+      color={GRAY_BORDER + 'AA'}
       accessibilityLabel="Challenge (locked)"
     />
   );
@@ -414,7 +361,7 @@ function ReviewBook({
     <MaterialCommunityIcons
       name="book-open-variant"
       size={BOOK_SIZE}
-      color={GRAY_BORDER}
+      color={GRAY_BORDER + 'AA'}
       accessibilityLabel="Review (locked)"
     />
   );
@@ -432,17 +379,20 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 24,
     marginVertical: 8,
-    marginHorizontal: 32
+    marginHorizontal: 32,
   },
 
-  /** ★ faint neon glow on active Challenge */
-  activeChallengeGlow: {
-    shadowColor: NEON_BLUE,
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
-  },
+  /** faint neon glow on active Challenge */
+  activeChallengeGlow: Platform.select({
+    ios: {
+      shadowColor: NEON_BLUE,
+      shadowOpacity: 0.35,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 0 },
+      elevation: 8,
+    },
+    android: {},
+  }) as any,
 
   circleBase: {
     width: CIRCLE_SIZE,
@@ -463,7 +413,6 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', flex: 1, gap: 4 },
   title: { color: '#FFFFFF', fontWeight: '800', fontSize: 18 },
   subtitle: { fontWeight: '800', fontSize: 18 },
-  // Crown mask/gradient
   crownMask: {
     width: CROWN_SIZE,
     height: CROWN_SIZE,
@@ -472,8 +421,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   crownGradient: { flex: 1 },
-
-  // Book mask/gradient
   bookMask: {
     width: BOOK_SIZE,
     height: BOOK_SIZE,
@@ -483,4 +430,3 @@ const styles = StyleSheet.create({
   },
   bookGradient: { flex: 1 },
 });
-
