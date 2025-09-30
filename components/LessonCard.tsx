@@ -22,7 +22,7 @@ type Props = {
   receiveDone: boolean;
   sendDone: boolean;
   isActive: boolean; // receive available indicator from path
-  canSend: boolean;  // send available indicator from path
+  canSend: boolean;  // send available indicator from path (used for "active" styling only)
   onReceive: () => void;
   onSend: () => void;
   style?: ViewStyle;
@@ -36,7 +36,7 @@ const GRAY_BORDER = '#2A2F36';
 const GRAY_FILL = '#15171C';
 const MUTED_ICON = '#3E424B';
 
-// Neon only (deep blue removed)
+// Neon only (no deep blue anywhere)
 const NEON_BLUE = colors.blueNeon;
 
 const CROWN_SIZE = 32;
@@ -156,19 +156,16 @@ function toSendState(s: CircleState): 'active' | 'inactive' | 'completed' {
 export default function LessonCard(p: Props) {
   const bothComplete = p.receiveDone && p.sendDone;
 
-  // --- Per-side states
-  // RECEIVE (left):
-  //  - active when node is unlocked, not completed, and either this is the active node
-  //    OR it's a review/challenge node (we allow starting them when unlocked)
+  // RECEIVE (left) — unlocked reviews/challenges can start immediately; lessons use isActive
   const left: CircleState = {
     active: !p.locked && !p.receiveDone && (p.isActive || p.kind === 'review' || p.kind === 'challenge'),
     completed: p.receiveDone,
     locked: p.locked,
   };
 
-  // SEND (right):
-  //  - active only when path says sending is allowed (p.canSend) or receive already done.
-  //  - stays locked if the node itself is locked.
+  // SEND (right)
+  // - Active when this node is the first eligible to send (p.canSend) or its receive is already done
+  // - Never lock completed sends; they should be tappable to replay
   const right: CircleState = {
     active: (p.receiveDone || p.canSend) && !p.sendDone && !p.locked,
     completed: p.sendDone,
@@ -249,7 +246,7 @@ export default function LessonCard(p: Props) {
       {/* RIGHT: Send */}
       <CircleButton
         state={right}
-        onPress={p.canSend ? p.onSend : () => {}}
+        onPress={p.onSend}  // <-- always allow tapping unless truly locked
         accessibilityLabel="Send"
         renderIcon={({ size, state }) => (
           <AntennaWithWifi
@@ -320,12 +317,12 @@ function ChallengeCrown({
     );
   }
   return (
-    <MaterialCommunityIcons
-      name="crown-outline"
-      size={CROWN_SIZE}
-      color={GRAY_BORDER + 'AA'}
-      accessibilityLabel="Challenge (locked)"
-    />
+      <MaterialCommunityIcons
+        name="crown-outline"
+        size={CROWN_SIZE}
+        color={GRAY_BORDER + 'AA'}
+        accessibilityLabel="Challenge (locked)"
+      />
   );
 }
 
