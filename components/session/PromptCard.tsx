@@ -1,7 +1,7 @@
-﻿// components/session/PromptCard.tsx
+// components/session/PromptCard.tsx
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import ActionButton from '@/components/session/ActionButton';
+import ActionButton, { ActionButtonState } from '@/components/session/ActionButton';
 import { colors, spacing } from '@/theme/lessonTheme';
 import { useTranslation } from 'react-i18next';
 
@@ -13,8 +13,7 @@ type PromptCardAction = {
   icon: IconName;
   accessibilityLabel: string;
   onPress: () => void;
-  disabled?: boolean;
-  active?: boolean;
+  state?: ActionButtonState;
 };
 
 type Props = {
@@ -61,25 +60,24 @@ export default function PromptCard({
 
   const resolvedRevealAction = React.useMemo<PromptCardAction>(() => {
     if (revealAction) return revealAction;
-    const disabled = !interactable || !onRevealToggle;
+    const state: ActionButtonState = (!interactable || !onRevealToggle || showReveal) ? 'disabled' : 'active';
     return {
-      icon: showReveal ? 'eye-off-outline' : 'eye-outline',
+      icon: 'eye-outline',
       accessibilityLabel: t('session:reveal'),
       onPress: onRevealToggle ?? (() => {}),
-      active: showReveal,
-      disabled,
+      state,
     };
   }, [interactable, onRevealToggle, revealAction, showReveal]);
 
   const resolvedReplayAction = React.useMemo<PromptCardAction>(() => {
     if (replayAction) return replayAction;
     const disabled = !interactable || !onReplay;
+    const state: ActionButtonState = disabled ? 'disabled' : 'active';
     return {
       icon: 'play',
       accessibilityLabel: t('session:replay'),
       onPress: onReplay ?? (() => {}),
-      active: false,
-      disabled,
+      state,
     };
   }, [interactable, onReplay, replayAction]);
 
@@ -119,15 +117,13 @@ export default function PromptCard({
           icon={resolvedRevealAction.icon}
           accessibilityLabel={resolvedRevealAction.accessibilityLabel}
           onPress={resolvedRevealAction.onPress}
-          active={!!resolvedRevealAction.active}
-          disabled={!!resolvedRevealAction.disabled}
+          state={resolvedRevealAction.state}
         />
         <ActionButton
           icon={resolvedReplayAction.icon}
           accessibilityLabel={resolvedReplayAction.accessibilityLabel}
           onPress={resolvedReplayAction.onPress}
-          active={!!resolvedReplayAction.active}
-          disabled={!!resolvedReplayAction.disabled}
+          state={resolvedReplayAction.state}
         />
       </View>
     </View>
@@ -215,3 +211,4 @@ revealHidden: { opacity: 0, pointerEvents: 'none' },
     gap: spacing(3),
   },
 });
+

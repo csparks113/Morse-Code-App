@@ -116,7 +116,7 @@ export function MorseTimeline({
       return textToMorseElements(source.text, dashUnits);
     }
     if (source.mode === "presses") {
-      const g = source.granularity ?? granularity ?? 4;
+      const g = source.granularity ?? granularity ?? 16;
       return pressesToElementsWithGaps(source.presses, unitMs, g);
     }
     return source.elements;

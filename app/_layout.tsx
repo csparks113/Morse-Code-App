@@ -1,5 +1,5 @@
 import React from 'react';
-import {ActivityIndicator, View} from "react-native";
+import { ActivityIndicator, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { ThemeProvider, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { I18nextProvider } from 'react-i18next';
 
 import i18n, { initI18n } from '../i18n';
 import { theme } from '../theme/theme';
+import { configureAudio } from '../utils/audio';
 
 const navTheme = {
   ...DarkTheme,
@@ -25,12 +26,18 @@ export default function RootLayout() {
   const [ready, setReady] = React.useState(false);
 
   React.useEffect(() => {
+    configureAudio();
+  }, []);
+
+  React.useEffect(() => {
     let mounted = true;
-    initI18n().finally(() => {
-      if (mounted) {
-        setReady(true);
-      }
-    });
+
+    initI18n()
+      .catch(() => setReady(true))
+      .finally(() => {
+        if (mounted) setReady(true);
+      });
+
     return () => {
       mounted = false;
     };
@@ -39,7 +46,7 @@ export default function RootLayout() {
   if (!ready) {
     return (
       <SafeAreaProvider>
-        <StatusBar style='light' backgroundColor={theme.colors.background} />
+        <StatusBar style="light" backgroundColor={theme.colors.background} />
         <View
           style={{
             flex: 1,
@@ -58,7 +65,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <I18nextProvider i18n={i18n}>
         <ThemeProvider value={navTheme}>
-          <StatusBar style='light' backgroundColor={theme.colors.background} />
+          <StatusBar style="light" backgroundColor={theme.colors.background} />
           <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
             <Stack
               screenOptions={{
@@ -73,5 +80,3 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
-
-

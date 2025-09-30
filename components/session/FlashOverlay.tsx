@@ -30,11 +30,13 @@ function FlashOverlay({
       pointerEvents="none"
       style={[
         StyleSheet.absoluteFillObject,
+        { backgroundColor: color, opacity: animatedOpacity, zIndex: 10, elevation: 10 },
         style,
-        { backgroundColor: color, opacity: animatedOpacity },
       ]}
     />
   );
 }
 
 export default FlashOverlay;
+
+

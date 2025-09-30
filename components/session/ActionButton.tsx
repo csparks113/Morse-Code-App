@@ -1,21 +1,9 @@
 /**
  * ACTION BUTTON
  * -------------
- * OVERVIEW
- * A compact rounded square button used for small actions like
- * "Reveal" or "Play" in the session screens. Shows a single icon.
- *
- * PROPS
- * - icon: MaterialCommunityIcons name (string literal)
- * - onPress: click handler
- * - accessibilityLabel: label for screen readers
- * - disabled?: disables interactions + dims the button
- * - active?: highlights the button (e.g., reveal toggled on)
- * - style?: allow caller to override/extend layout styles
- *
- * ACCESSIBILITY
- * - accessibilityRole="button"
- * - accessibilityState reflects { disabled, selected: active }
+ * Compact icon button used under the prompt card. Supports two visual states:
+ * - active: neon highlight (available action)
+ * - disabled: dimmed (unavailable or temporarily locked)
  */
 
 import React from 'react';
@@ -25,12 +13,17 @@ import { colors } from '@/theme/lessonTheme';
 
 const SIZE = 58;
 
+export type ActionButtonState = 'active' | 'disabled';
+
 type Props = {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   onPress: () => void;
   accessibilityLabel: string;
-  disabled?: boolean;
+  state?: ActionButtonState;
+  /** @deprecated use `state` */
   active?: boolean;
+  /** @deprecated use `state` */
+  disabled?: boolean;
   style?: ViewStyle;
 };
 
@@ -38,32 +31,40 @@ export default function ActionButton({
   icon,
   onPress,
   accessibilityLabel,
-  disabled,
+  state,
   active,
+  disabled,
   style,
 }: Props) {
+  const resolvedState: ActionButtonState = React.useMemo(() => {
+    if (state) return state;
+    if (disabled) return 'disabled';
+    if (active) return 'active';
+    return 'active';
+  }, [state, active, disabled]);
+
+  const isDisabled = resolvedState === 'disabled';
+
+  const iconColor = React.useMemo(() => {
+    return resolvedState === 'active' ? colors.blueNeon : '#7C8897';
+  }, [resolvedState]);
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled, selected: active }}
-      disabled={disabled}
+      accessibilityState={{ disabled: isDisabled, selected: resolvedState === 'active' }}
+      disabled={isDisabled}
       onPress={onPress}
-      // `pressed` lets us slightly fade the button while pressing
       style={({ pressed }) => [
         styles.base,
-        active && styles.active,
-        disabled && styles.disabled,
-        pressed && !disabled && { opacity: 0.92 },
+        resolvedState === 'active' && styles.active,
+        resolvedState === 'disabled' && styles.disabled,
+        pressed && !isDisabled && styles.touchFeedback,
         style,
       ]}
     >
-      {/* The icon color switches when `active` */}
-      <MaterialCommunityIcons
-        name={icon}
-        size={28}
-        color={active ? colors.blueNeon : colors.text}
-      />
+      <MaterialCommunityIcons name={icon} size={28} color={iconColor} />
     </Pressable>
   );
 }
@@ -88,6 +89,11 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   disabled: {
-    opacity: 0.5,
+    borderColor: '#2F3846',
+    backgroundColor: '#151C25',
+    opacity: 0.55,
+  },
+  touchFeedback: {
+    opacity: 0.9,
   },
 });

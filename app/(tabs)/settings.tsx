@@ -454,3 +454,4 @@ const styles = StyleSheet.create({
 
   modalBtnText: { color: '#D0D4DA', fontWeight: '700' },
 });
+

@@ -70,6 +70,7 @@ function MorseCompare({
   // Look up the size preset and translate align prop to flexbox value
   const config = SIZE_CONFIG[size];
   const alignItems = align === "left" ? "flex-start" : "center";
+  const justifyContent = mode === "compare" ? "flex-start" : "center";
 
   // -------------------------------
   // COMPARE MODE
@@ -81,7 +82,7 @@ function MorseCompare({
     // No user input -> render single canonical timeline in the top color
     if (!presses.length) {
       return (
-        <View style={[styles.container, { alignItems }, style]}>
+        <View style={[styles.container, { alignItems, justifyContent }, style]}>
           <RevealBar
             mode="timeline"        // draw just the target glyph as a timeline
             char={char}
@@ -91,6 +92,7 @@ function MorseCompare({
             unitPx={config.unitPx} // scale dots/dashes to pixels
             color={topColor}
             align={align}
+            showGaps={false}
           />
         </View>
       );
@@ -98,7 +100,7 @@ function MorseCompare({
 
     // We do have user input -> render full target vs user comparison
     return (
-      <View style={[styles.container, { alignItems }, style]}>
+      <View style={[styles.container, { alignItems, justifyContent }, style]}>
         <RevealBar
           mode="compare"           // overlay target (top) vs user presses (bottom)
           char={char}
@@ -122,10 +124,10 @@ function MorseCompare({
   // While the user is still answering, render *only* their press timeline.
   // This avoids giving away the target pattern while still giving rhythm feedback.
   return (
-    <View style={[styles.container, { alignItems }, style]}>
+    <View style={[styles.container, { alignItems, justifyContent }, style]}>
       <MorseTimeline
         // Source "presses" means: draw bars exactly where the user pressed
-        source={{ mode: "presses", presses, wpm, granularity: 4 }}
+        source={{ mode: "presses", presses, wpm, granularity: 16 }}
         unitPx={config.unitPx}         // same pixel scale as compare view
         height={config.timelineHeight} // compact bar height
         color={bottomColor}            // use user color in guessing mode
@@ -144,7 +146,6 @@ function MorseCompare({
 const styles = StyleSheet.create({
   container: {
     alignSelf: "stretch",  // take full width of parent card
-    justifyContent: "center",
   },
 });
 

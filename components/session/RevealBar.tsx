@@ -183,7 +183,7 @@ export default function RevealBar(props: Props) {
   const inputElements = React.useMemo<MorseElement[]>(() => {
     if (mode === 'compare') {
       const unitMs = unitMsFromWpm(tlWpm);
-      return pressesToElementsWithGaps(cmpPresses, unitMs, 4);
+      return pressesToElementsWithGaps(cmpPresses, unitMs, 16);
     }
     return [];
   }, [mode, cmpPresses, tlWpm]);
@@ -285,7 +285,7 @@ export default function RevealBar(props: Props) {
 }
 
 const styles = StyleSheet.create({
-  slot: { alignSelf: 'stretch', justifyContent: 'center' },
+  slot: { alignSelf: 'stretch', justifyContent: 'flex-start' },
 
   legendRow: { flexDirection: 'row', alignItems: 'center' },
 
@@ -293,4 +293,3 @@ const styles = StyleSheet.create({
 
   legendText: { color: '#FFFFFFB3', fontWeight: '600' },
 });
-

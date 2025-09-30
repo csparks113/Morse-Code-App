@@ -21,8 +21,20 @@ export const INTER_CHAR_GAP_UNITS = 3;
 export const WORD_GAP_UNITS = 7;
 
 // Quantize units to a grid (e.g., 4 => 1/4 units)
-export const quantizeUnits = (units: number, granularity: number) =>
-  Math.max(0, Math.round(units * granularity)) / granularity;
+export const quantizeUnits = (units: number, granularity: number) => {
+  if (!Number.isFinite(units) || units <= 0) return 0;
+  if (!Number.isFinite(granularity) || granularity <= 0) return units;
+  const minUnit = 1 / granularity;
+  const rounded = Math.round(units * granularity);
+  if (rounded === 0) {
+    return Math.min(units, minUnit);
+  }
+  const quantized = rounded / granularity;
+  if (quantized > units + minUnit) {
+    return units;
+  }
+  return Math.max(quantized, minUnit);
+};
 
 /** Build canonical timed sequence (with gaps) from a text/char. */
 export function textToMorseElements(
@@ -70,27 +82,34 @@ export function textToMorseElements(
  * - Adds a gap before each press (except the first) equal to (start_i - end_{i-1})
  * - Each press becomes a "dash" bar whose width = duration / unitMs
  * - Gaps are represented as {kind: "gap"} with units, to consume width (render them transparent)
- * - Quantized to `granularity` (default 4 => 1/4 units)
+ * - Quantized to `granularity` (default 16 => 1/16 units)
  */
 export function pressesToElementsWithGaps(
   presses: PressWindow[],
   unitMs: number,
-  granularity: number = 4
+  granularity: number = 16
 ): MorseElement[] {
   const el: MorseElement[] = [];
   if (!presses || presses.length === 0 || unitMs <= 0) return el;
 
   const sorted = [...presses].sort((a, b) => a.startMs - b.startMs);
+  const minUnit = granularity > 0 ? 1 / granularity : 0;
 
-  for (let i = 0; i < sorted.length; i++) {
+  for (let i = 0; i < sorted.length; i += 1) {
     const p = sorted[i];
     const durMs = Math.max(0, p.endMs - p.startMs);
-    const durUnits = quantizeUnits(durMs / unitMs, granularity);
+    let durUnits = quantizeUnits(durMs / unitMs, granularity);
+    if (granularity > 0 && durUnits > 0) {
+      durUnits = Math.max(durUnits, minUnit);
+    }
 
     if (i > 0) {
       const prev = sorted[i - 1];
       const gapMs = Math.max(0, p.startMs - prev.endMs);
-      const gapUnits = quantizeUnits(gapMs / unitMs, granularity);
+      let gapUnits = quantizeUnits(gapMs / unitMs, granularity);
+      if (granularity > 0 && gapUnits > 0) {
+        gapUnits = Math.max(gapUnits, minUnit);
+      }
       if (gapUnits > 0) {
         el.push({ kind: "gap", units: gapUnits });
       }

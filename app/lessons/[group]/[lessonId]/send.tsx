@@ -1,4 +1,4 @@
-// app/lessons/[group]/[lessonId]/send.tsx
+﻿// app/lessons/[group]/[lessonId]/send.tsx
 /**
  * SEND SESSION SCREEN (Pinned layout)
  * -----------------------------------
@@ -8,22 +8,23 @@
  * - Bottom: OutputTogglesRow above Keyer button
  *
  * Jitter/first-frame fixes applied:
- * - Use SafeAreaView with a matching background color
- * - Manually apply safe-area insets via useSafeAreaInsets() so fixed
- *   header/footer don’t “jump” when insets arrive on second pass
+ * - SafeAreaView with a matching background color
+ * - Manual safe-area insets via useSafeAreaInsets()
  */
 
 import React from "react";
-import { Dimensions, StyleSheet, Text, View } from "react-native";
+import { Animated, Dimensions, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
+import * as Haptics from "expo-haptics";
 
 // Shared UI
 import SessionHeader from "../../../../components/session/SessionHeader";
 import ProgressBar from "../../../../components/session/ProgressBar";
 import SessionSummary from "../../../../components/session/SessionSummary";
 import PromptCard from "../../../../components/session/PromptCard";
+import type { ActionButtonState } from "../../../../components/session/ActionButton";
 import OutputTogglesRow from "../../../../components/session/OutputTogglesRow";
 import KeyerButton from "../../../../components/session/KeyerButton";
 import FlashOverlay from "../../../../components/session/FlashOverlay";
@@ -33,11 +34,8 @@ import MorseCompare from "../../../../components/session/MorseCompare";
 import { colors, spacing } from "../../../../theme/lessonTheme";
 import { theme } from "../../../../theme/theme";
 import { toMorse } from "../../../../utils/morse";
-import {
-  classifyGapDuration,
-  classifySignalDuration,
-  getMorseUnitMs,
-} from "../../../../utils/morseTiming";
+import { playMorseCode, stopPlayback } from "../../../../utils/audio";
+import { classifyGapDuration, classifySignalDuration, getMorseUnitMs, MORSE_UNITS } from "../../../../utils/morseTiming";
 
 // State/hooks
 import { useProgressStore } from "../../../../store/useProgressStore";
@@ -46,68 +44,52 @@ import { useKeyerOutputs } from "../../../../hooks/useKeyerOutputs";
 import { useSessionFlow } from "../../../../hooks/useSessionFlow";
 
 // Meta
-import { buildSessionMeta } from '../../../../session/sessionMeta';
+import { buildSessionMeta } from "../../../../session/sessionMeta";
 
 const TOTAL_QUESTIONS = 5;
 
 type FeedbackState = "idle" | "correct" | "wrong";
 type PressWindow = { startMs: number; endMs: number };
 
+const nowMs = () =>
+  typeof performance !== "undefined" && typeof performance.now === "function"
+    ? performance.now()
+    : Date.now();
+
 function getStoreIdForProgress(rawId: string) {
   return String(rawId);
 }
 
 export default function SendSessionScreen() {
-  const insets = useSafeAreaInsets(); // ← manual insets to avoid first-frame jump
+  const insets = useSafeAreaInsets();
 
-  // -----------------------------
-  // 1) ROUTE & META
-  // -----------------------------
   const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
   const { t } = useTranslation(["session", "common"]);
-  const meta = React.useMemo(
-    () => buildSessionMeta(group || "alphabet", lessonId),
-    [group, lessonId],
-  );
-  const isReview = React.useMemo(
-    () => /^\d+-review$/.test(String(lessonId)),
-    [lessonId],
-  );
-
+  const meta = React.useMemo(() => buildSessionMeta(group || "alphabet", lessonId), [group, lessonId]);
+  const isReview = React.useMemo(() => /^\d+-review$/.test(String(lessonId)), [lessonId]);
   const setScore = useProgressStore((s) => s.setScore);
+  const audioEnabled = useSettingsStore((s) => s.audioEnabled);
+  const hapticsEnabled = useSettingsStore((s) => s.hapticsEnabled);
+  const lightEnabled = useSettingsStore((s) => s.lightEnabled);
+  const torchEnabled = useSettingsStore((s) => s.torchEnabled);
+  const setAudioEnabled = useSettingsStore((s) => s.setAudioEnabled);
+  const setHapticsEnabled = useSettingsStore((s) => s.setHapticsEnabled);
+  const setLightEnabled = useSettingsStore((s) => s.setLightEnabled);
+  const setTorchEnabled = useSettingsStore((s) => s.setTorchEnabled);
+  const toneHzSetting = useSettingsStore((s) => s.toneHz as unknown as string | number);
+  const signalTolerancePercent = useSettingsStore((s) => s.signalTolerancePercent ?? 30);
+  const gapTolerancePercent = useSettingsStore((s) => s.gapTolerancePercent ?? 50);
 
-  // -----------------------------
-  // 2) SETTINGS (OUTPUTS)
-  // -----------------------------
-  const settings = useSettingsStore();
-  const {
-    audioEnabled,
-    lightEnabled,
-    torchEnabled,
-    hapticsEnabled,
-    setAudioEnabled,
-    setLightEnabled,
-    setTorchEnabled,
-    setHapticsEnabled,
-    toneHz,
-  } = settings;
 
-  const signalTolerancePercent =
-    typeof settings.signalTolerancePercent === "number" ? settings.signalTolerancePercent : 30;
-  const gapTolerancePercent =
-    typeof settings.gapTolerancePercent === "number" ? settings.gapTolerancePercent : 50;
 
-  const signalTolerance = signalTolerancePercent / 100;
-  const gapTolerance = gapTolerancePercent / 100;
+  const signalTolerance = Math.min(0.45, signalTolerancePercent / 100);
+  const gapTolerance = Math.min(0.7, gapTolerancePercent / 100);
 
   const toneHzValue = React.useMemo(() => {
-    const parsed = Number(toneHz);
+    const parsed = Number(toneHzSetting);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 600;
-  }, [toneHz]);
+  }, [toneHzSetting]);
 
-  // -----------------------------
-  // 3) SESSION ORCHESTRATION
-  // -----------------------------
   const {
     started,
     summary,
@@ -126,9 +108,6 @@ export default function SendSessionScreen() {
     },
   });
 
-  // -----------------------------
-  // 4) OUTPUT SIDE EFFECTS (keyer)
-  // -----------------------------
   const { onDown, onUp, flashOpacity, prepare, teardown } = useKeyerOutputs({
     audioEnabled,
     hapticsEnabled,
@@ -137,47 +116,85 @@ export default function SendSessionScreen() {
     toneHz: toneHzValue,
   });
 
-  React.useEffect(() => {
-    prepare().catch(() => {});
-  }, [prepare]);
-  React.useEffect(() => {
-    return () => {
-      teardown().catch(() => {});
-    };
-  }, [teardown]);
-
-  // -----------------------------
-  // 5) LOCAL VIEW STATE
-  // -----------------------------
   const [feedback, setFeedback] = React.useState<FeedbackState>("idle");
   const [showReveal, setShowReveal] = React.useState(false);
+  const [revealUsed, setRevealUsed] = React.useState(false);
   const [, setInput] = React.useState("");
   const [presses, setPresses] = React.useState<PressWindow[]>([]);
-
-  // Challenge hearts + early summary
   const [hearts, setHearts] = React.useState(3);
   const [earlySummary, setEarlySummary] = React.useState<null | { percent: number; correct: number }>(null);
+  const [isReplaying, setIsReplaying] = React.useState(false);
 
-  // Input & timers
   const inputRef = React.useRef("");
-  const updateInput = React.useCallback((next: string) => {
-    inputRef.current = next;
-    setInput(next);
-  }, []);
   const currentMorseRef = React.useRef("");
   const pressStartRef = React.useRef<number | null>(null);
   const lastReleaseRef = React.useRef<number | null>(null);
   const ignorePressRef = React.useRef(false);
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const idleTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playbackTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canInteractRef = React.useRef(false);
+
+  const updateInput = React.useCallback((next: string) => {
+    inputRef.current = next;
+    setInput(next);
+  }, []);
+
+  const clearIdleTimeout = React.useCallback(() => {
+    if (idleTimeoutRef.current) {
+      clearTimeout(idleTimeoutRef.current);
+      idleTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearPlaybackTimeout = React.useCallback(() => {
+    if (playbackTimeoutRef.current) {
+      clearTimeout(playbackTimeoutRef.current);
+      playbackTimeoutRef.current = null;
+    }
+  }, []);
 
   React.useEffect(() => {
+    prepare().catch(() => {});
     return () => {
       if (advanceTimerRef.current) {
         clearTimeout(advanceTimerRef.current);
         advanceTimerRef.current = null;
       }
+      clearIdleTimeout();
+      clearPlaybackTimeout();
+      teardown().catch(() => {});
+      stopPlayback();
     };
-  }, []);
+  }, [prepare, teardown, clearIdleTimeout, clearPlaybackTimeout]);
+
+  const flashSymbol = React.useCallback(
+    (durationMs: number) => {
+      if (!lightEnabled) return;
+      flashOpacity.stopAnimation?.(() => {});
+      flashOpacity.setValue(1);
+      clearPlaybackTimeout();
+      const fadeDelay = Math.max(0, durationMs);
+      playbackTimeoutRef.current = setTimeout(() => {
+        Animated.timing(flashOpacity, {
+          toValue: 0,
+          duration: Math.min(120, Math.max(45, durationMs * 0.6)),
+          useNativeDriver: true,
+        }).start();
+        playbackTimeoutRef.current = null;
+      }, fadeDelay);
+    },
+    [lightEnabled, flashOpacity, clearPlaybackTimeout],
+  );
+
+  const hapticSymbol = React.useCallback(
+    (symbol: "." | "-") => {
+      if (!hapticsEnabled) return;
+      const style = symbol === "-" ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light;
+      Haptics.impactAsync(style).catch(() => {});
+    },
+    [hapticsEnabled],
+  );
 
   // -----------------------------
   // 6) LAYOUT METRICS
@@ -187,18 +204,12 @@ export default function SendSessionScreen() {
   const promptSlotHeight = layout === "regular" ? 116 : layout === "small" ? 96 : 84;
   const keyerMinHeight = layout === "regular" ? 128 : layout === "small" ? 104 : 92;
 
-  // -----------------------------
-  // 7) MORSE & SPEED
-  // -----------------------------
   const currentMorse = currentTarget ? toMorse(currentTarget) ?? "" : "";
   currentMorseRef.current = currentMorse;
 
   const unitMs = getMorseUnitMs();
   const wpm = unitMs > 0 ? 1200 / unitMs : 12;
 
-  // -----------------------------
-  // 8) SESSION CONTROLS
-  // -----------------------------
   const startSession = React.useCallback(() => {
     if (!meta.pool.length) return;
     if (advanceTimerRef.current) {
@@ -206,31 +217,35 @@ export default function SendSessionScreen() {
       advanceTimerRef.current = null;
     }
 
+    clearIdleTimeout();
+    clearPlaybackTimeout();
+    stopPlayback();
+    setIsReplaying(false);
+
     start();
     updateInput("");
     setPresses([]);
     setShowReveal(false);
+    setRevealUsed(false);
     setFeedback("idle");
 
-    // Reset timing refs
     pressStartRef.current = null;
     lastReleaseRef.current = null;
     ignorePressRef.current = false;
 
-    // Reset hearts in challenge
     if (meta.isChallenge) setHearts(3);
-
-    // Clear any prior early summary
     setEarlySummary(null);
-  }, [meta.pool, meta.isChallenge, start, updateInput]);
+  }, [meta.pool, meta.isChallenge, start, updateInput, clearIdleTimeout, clearPlaybackTimeout]);
 
-  // Graceful finish
   const finishQuestion = React.useCallback(
     (isCorrect: boolean) => {
       if (advanceTimerRef.current) {
         clearTimeout(advanceTimerRef.current);
         advanceTimerRef.current = null;
       }
+      clearIdleTimeout();
+      clearPlaybackTimeout();
+      setIsReplaying(false);
 
       const willExhaustHearts = meta.isChallenge && !isCorrect && hearts <= 1;
 
@@ -241,21 +256,19 @@ export default function SendSessionScreen() {
         setHearts((h) => Math.max(0, h - 1));
       }
 
-      // reset refs
       ignorePressRef.current = false;
       pressStartRef.current = null;
       lastReleaseRef.current = null;
 
       if (willExhaustHearts) {
-        const delay = 650;
         setTimeout(() => {
-          const correct = results.filter(Boolean).length; // last was wrong
-          const percent = Math.round((correct / TOTAL_QUESTIONS) * 100);
-          setEarlySummary({ correct, percent });
+          const correctCount = results.filter(Boolean).length;
+          const percent = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
+          setEarlySummary({ correct: correctCount, percent });
           if (group && lessonId) {
             setScore(group, getStoreIdForProgress(String(lessonId)), "send", percent);
           }
-        }, delay);
+        }, 650);
         return;
       }
 
@@ -264,25 +277,39 @@ export default function SendSessionScreen() {
         updateInput("");
         setPresses([]);
         setShowReveal(false);
+        setRevealUsed(false);
         setFeedback("idle");
         advanceTimerRef.current = null;
       }, 650);
     },
-    [meta.isChallenge, hearts, results, group, lessonId, setScore, setResult, updateInput],
+    [meta.isChallenge, hearts, results, group, lessonId, setScore, setResult, updateInput, clearIdleTimeout, clearPlaybackTimeout],
   );
 
-  // -----------------------------
-  // 9) KEYER HANDLERS
-  // -----------------------------
+  const scheduleIdleTimeout = React.useCallback(() => {
+    clearIdleTimeout();
+    if (!canInteractRef.current) return;
+    const timeoutMs = Math.max(600, unitMs * MORSE_UNITS.word * 1.2);
+    idleTimeoutRef.current = setTimeout(() => {
+      if (!canInteractRef.current) return;
+      finishQuestion(false);
+    }, timeoutMs);
+  }, [clearIdleTimeout, unitMs, finishQuestion]);
+
   const canInteractBase =
     started && !summary && !earlySummary && !!currentTarget && feedback === "idle";
 
+  React.useEffect(() => {
+    canInteractRef.current = canInteractBase;
+  }, [canInteractBase]);
+
   const onPressIn = React.useCallback(() => {
-    if (!canInteractBase) return;
-    const now = Date.now();
+    if (!canInteractBase || isReplaying) return;
+    clearIdleTimeout();
+
+    const timestamp = nowMs();
 
     if (inputRef.current.length > 0 && lastReleaseRef.current !== null) {
-      const gapDuration = now - lastReleaseRef.current;
+      const gapDuration = timestamp - lastReleaseRef.current;
       const gapType = classifyGapDuration(gapDuration, unitMs, gapTolerance);
       if (gapType !== "intra") {
         ignorePressRef.current = true;
@@ -293,9 +320,9 @@ export default function SendSessionScreen() {
     }
 
     ignorePressRef.current = false;
-    pressStartRef.current = now;
+    pressStartRef.current = timestamp;
     onDown();
-  }, [canInteractBase, unitMs, gapTolerance, finishQuestion, onDown]);
+  }, [canInteractBase, isReplaying, unitMs, gapTolerance, finishQuestion, onDown, clearIdleTimeout]);
 
   const appendSymbol = React.useCallback(
     (symbol: "." | "-") => {
@@ -310,15 +337,18 @@ export default function SendSessionScreen() {
       }
       if (target === next) {
         finishQuestion(true);
+        return;
       }
+
+      scheduleIdleTimeout();
     },
-    [currentTarget, finishQuestion, updateInput],
+    [currentTarget, finishQuestion, updateInput, scheduleIdleTimeout],
   );
 
   const onPressOut = React.useCallback(() => {
     onUp();
 
-    if (!canInteractBase) {
+    if (!canInteractBase || isReplaying) {
       ignorePressRef.current = false;
       pressStartRef.current = null;
       return;
@@ -334,7 +364,7 @@ export default function SendSessionScreen() {
     pressStartRef.current = null;
     if (!startAt) return;
 
-    const releaseAt = Date.now();
+    const releaseAt = nowMs();
     const duration = releaseAt - startAt;
 
     setPresses((prev) => [...prev, { startMs: startAt, endMs: releaseAt }]);
@@ -348,30 +378,97 @@ export default function SendSessionScreen() {
 
     lastReleaseRef.current = releaseAt;
     appendSymbol(symbol);
-  }, [canInteractBase, unitMs, signalTolerance, finishQuestion, appendSymbol, onUp]);
+  }, [canInteractBase, isReplaying, unitMs, signalTolerance, finishQuestion, appendSymbol, onUp]);
 
-  // -----------------------------
-  // 10) RENDER
-  // -----------------------------
   const handleCloseCleanup = React.useCallback(() => {
     if (advanceTimerRef.current) {
       clearTimeout(advanceTimerRef.current);
       advanceTimerRef.current = null;
     }
-  }, []);
+    clearIdleTimeout();
+    clearPlaybackTimeout();
+    stopPlayback();
+  }, [clearIdleTimeout, clearPlaybackTimeout]);
+
+  const playCurrentTarget = React.useCallback(async () => {
+    if (isReplaying) return;
+    const morse = currentMorseRef.current;
+    if (!morse) return;
+
+    setIsReplaying(true);
+    clearIdleTimeout();
+    try {
+      await playMorseCode(morse, unitMs, {
+        onSymbolStart: (symbol, durationMs) => {
+          hapticSymbol(symbol);
+          flashSymbol(durationMs);
+        },
+      });
+    } catch (error) {
+      console.warn("send replay failed", error);
+    } finally {
+      clearPlaybackTimeout();
+      flashOpacity.stopAnimation?.(() => {});
+      flashOpacity.setValue(0);
+      setIsReplaying(false);
+    }
+  }, [isReplaying, unitMs, hapticSymbol, flashSymbol, clearIdleTimeout, clearPlaybackTimeout, flashOpacity]);
+
+  const handleRevealToggle = React.useCallback(() => {
+    if (meta.isChallenge || !started || !currentTarget || summary || earlySummary) return;
+    if (showReveal || feedback !== "idle" || isReplaying) return;
+    setShowReveal(true);
+    setRevealUsed(true);
+    clearIdleTimeout();
+  }, [meta.isChallenge, started, currentTarget, summary, earlySummary, showReveal, feedback, isReplaying, clearIdleTimeout]);
+
+  const handleReplayPress = React.useCallback(() => {
+    if (isReplaying) return;
+    playCurrentTarget().catch(() => {});
+  }, [isReplaying, playCurrentTarget]);
+
+  const revealState: ActionButtonState = (() => {
+    if (meta.isChallenge) return "disabled";
+    if (!started || !currentTarget || summary || earlySummary || isReplaying) return "disabled";
+    if (showReveal || revealUsed || feedback !== "idle") return "disabled";
+    return "active";
+  })();
+
+  const replayState: ActionButtonState = (() => {
+    if (!started || !currentTarget || summary || earlySummary) return "disabled";
+    if (isReplaying) return "disabled";
+    return "active";
+  })();
+
+  const revealAction = React.useMemo(
+    () => ({
+      icon: "eye-outline" as const,
+      accessibilityLabel: t("session:reveal"),
+      onPress: handleRevealToggle,
+      state: revealState,
+    }),
+    [handleRevealToggle, revealState, t],
+  );
+
+  const replayAction = React.useMemo(
+    () => ({
+      icon: "play" as const,
+      accessibilityLabel: t("session:replay"),
+      onPress: handleReplayPress,
+      state: replayState,
+    }),
+    [handleReplayPress, replayState, t],
+  );
+
+  const compareMode = showReveal || feedback === "correct" ? "compare" : "guessing";
+  const bottomBarColor = feedback === "wrong" ? "#FF6B6B" : colors.gold;
+
+  const finalSummary = earlySummary || summary || null;
 
   if (!meta.pool.length) {
     return (
       <SafeAreaView style={styles.safe} edges={[]}>
-        <View
-          style={[
-            styles.container,
-            {
-              paddingTop: insets.top,
-              paddingBottom: insets.bottom,
-            },
-          ]}
-        >
+        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>{t("session:contentUnavailable")}</Text>
           </View>
@@ -380,27 +477,10 @@ export default function SendSessionScreen() {
     );
   }
 
-  const revealEnabled = !meta.isChallenge;
-  const replayEnabled = !meta.isChallenge; // (kept for future parity)
-  void replayEnabled;
-
-  const compareMode = showReveal || feedback === "correct" ? "compare" : "guessing";
-  const bottomBarColor = feedback === "wrong" ? "#FF6B6B" : colors.gold;
-
-  const finalSummary = earlySummary || summary || null;
-
   if (finalSummary) {
     return (
       <SafeAreaView style={styles.safe} edges={[]}>
-        <View
-          style={[
-            styles.container,
-            {
-              paddingTop: insets.top,
-              paddingBottom: insets.bottom,
-            },
-          ]}
-        >
+        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <SessionHeader
             labelTop={meta.headerTop}
             labelBottom={t("session:sendMode")}
@@ -418,24 +498,21 @@ export default function SendSessionScreen() {
     );
   }
 
-  const canInteract = canInteractBase;
+  const canInteract = canInteractBase && !isReplaying;
 
   return (
     <SafeAreaView style={styles.safe} edges={[]}>
-      {/* Flash overlay covers the full screen area; background matches to avoid flash */}
       <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={0.28} />
 
       <View
         style={[
           styles.container,
           {
-            // Manually apply top/bottom insets so header/footer don’t jump
             paddingTop: insets.top + spacing(2),
             paddingBottom: insets.bottom + spacing(2),
           },
         ]}
       >
-        {/* TOP: header + progress */}
         <View style={styles.topGroup}>
           <SessionHeader
             labelTop={meta.headerTop}
@@ -446,7 +523,6 @@ export default function SendSessionScreen() {
           <ProgressBar value={results.length} total={TOTAL_QUESTIONS} streak={streak} />
         </View>
 
-        {/* CENTER */}
         <View style={styles.centerGroup}>
           <PromptCard
             compact
@@ -459,11 +535,8 @@ export default function SendSessionScreen() {
             showReveal={showReveal}
             canInteract={canInteract}
             onStart={startSession}
-            onRevealToggle={() => {
-              if (!revealEnabled) return;
-              setShowReveal((prev) => !prev);
-            }}
-            onReplay={() => {}}
+            revealAction={revealAction}
+            replayAction={replayAction}
             mainSlotMinHeight={promptSlotHeight}
             belowReveal={
               <MorseCompare
@@ -480,7 +553,6 @@ export default function SendSessionScreen() {
           />
         </View>
 
-        {/* BOTTOM */}
         <View style={styles.bottomGroup}>
           <View style={styles.togglesWrap}>
             <OutputTogglesRow
@@ -509,39 +581,28 @@ export default function SendSessionScreen() {
   );
 }
 
-// -----------------------------
-// STYLES
-// -----------------------------
 const styles = StyleSheet.create({
-  // Matching background to hide first-frame flash
   safe: { flex: 1, backgroundColor: theme.colors.background },
-
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background, // match SafeAreaView bg
+    backgroundColor: theme.colors.background,
     paddingHorizontal: spacing(3),
     justifyContent: "space-between",
   },
-
   topGroup: { marginBottom: spacing(0.5) },
-
   centerGroup: { flex: 1, alignItems: "center", justifyContent: "center" },
-
   bottomGroup: { marginTop: spacing(0.5), alignItems: "stretch" },
-
   togglesWrap: {
     alignSelf: "stretch",
     minHeight: 64,
     justifyContent: "center",
   },
-
   inputZone: {
     alignSelf: "stretch",
     alignItems: "center",
     justifyContent: "center",
     minHeight: 140,
   },
-
   emptyState: {
     flex: 1,
     alignItems: "center",
@@ -555,5 +616,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+
+
+
+
+
+
 
 

@@ -1,3 +1,4 @@
+import { shallow } from 'zustand/shallow';
 // app/lessons/[group]/[lessonId]/receive.tsx
 
 /**
@@ -33,6 +34,7 @@ import SessionHeader from '../../../../components/session/SessionHeader';
 import ProgressBar from '../../../../components/session/ProgressBar';
 import SessionSummary from '../../../../components/session/SessionSummary';
 import PromptCard from '../../../../components/session/PromptCard';
+import type { ActionButtonState } from '../../../../components/session/ActionButton';
 import OutputTogglesRow from '../../../../components/session/OutputTogglesRow';
 import FlashOverlay from '../../../../components/session/FlashOverlay';
 import LessonChoices from '../../../../components/session/LessonChoices';
@@ -327,24 +329,30 @@ export default function ReceiveSessionScreen() {
   const canInteract =
     started && !summary && !!currentTarget && feedback === 'idle' && (!meta.isChallenge || hearts > 0);
 
-  const revealVisible = showReveal || feedback !== 'idle';
-  const revealDisabled = meta.isChallenge || !canInteract || revealUsed;
-  const revealActive = !meta.isChallenge && started && !summary && !revealUsed;
-  const revealIcon = revealVisible ? 'eye-off-outline' : 'eye-outline';
+  const revealState: ActionButtonState = (() => {
+    if (meta.isChallenge) return 'disabled';
+    if (!started || !currentTarget || summary) return 'disabled';
+    if (revealUsed || showReveal || feedback !== 'idle') return 'disabled';
+    return 'active';
+  })();
 
-  const replayDisabled = !canInteract || isPlaying;
-  const replayActive = !replayDisabled;
+  const replayState: ActionButtonState = (() => {
+    if (!started || !currentTarget || summary || (meta.isChallenge && hearts <= 0)) return 'disabled';
+    if (isPlaying) return 'disabled';
+    if (!canInteract) return 'disabled';
+    return 'active';
+  })();
 
   const handleRevealPress = React.useCallback(() => {
-    if (revealDisabled) return;
+    if (revealState !== 'active') return;
     setShowReveal(true);
     setRevealUsed(true);
-  }, [revealDisabled]);
+  }, [revealState, setRevealUsed, setShowReveal]);
 
   const handleReplayPress = React.useCallback(() => {
-    if (replayDisabled) return;
+    if (replayState !== 'active') return;
     playTarget();
-  }, [replayDisabled, playTarget]);
+  }, [replayState, playTarget]);
 
   // Large prompt char: '?' while guessing, else show the answer at result frame
   const visibleChar = !started
@@ -430,18 +438,16 @@ export default function ReceiveSessionScreen() {
             showReveal={showReveal}
             onStart={startSession}
             revealAction={{
-              icon: revealIcon,
+              icon: 'eye-outline',
               accessibilityLabel: t('session:reveal'),
               onPress: handleRevealPress,
-              active: revealActive,
-              disabled: revealDisabled,
+              state: revealState,
             }}
             replayAction={{
               icon: 'play',
               accessibilityLabel: t('session:replay'),
               onPress: handleReplayPress,
-              active: replayActive,
-              disabled: replayDisabled,
+              state: replayState,
             }}
             mainSlotMinHeight={promptSlotHeight}
             belowReveal={
@@ -575,11 +581,3 @@ const styles = StyleSheet.create({
 
 
 });
-
-
-
-
-
-
-
-
