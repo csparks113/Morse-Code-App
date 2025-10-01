@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { View, Text, StyleSheet, Switch, Pressable, ScrollView, Modal } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -14,13 +14,6 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { theme } from '../../theme/theme';
 import { useProgressStore } from '../../store/useProgressStore';
 
-type RowProps = {
-  title: string;
-  sub?: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-};
-
 type StepperRowProps = {
   title: string;
   description: string;
@@ -30,23 +23,6 @@ type StepperRowProps = {
   decreaseLabel: string;
   increaseLabel: string;
 };
-
-function Row({ title, sub, value, onChange }: RowProps) {
-  return (
-    <View style={styles.row}>
-      <View style={styles.rowContent}>
-        <Text style={styles.rowTitle}>{title}</Text>
-        {!!sub && <Text style={styles.rowSub}>{sub}</Text>}
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ true: theme.colors.textSecondary, false: theme.colors.border }}
-        thumbColor={value ? theme.colors.accent : '#888'}
-      />
-    </View>
-  );
-}
 
 function StepperRow({
   title,
@@ -279,7 +255,7 @@ export default function SettingsScreen() {
                   >
                     {optionLabel}
                   </Text>
-                  {isSelected && <Text style={styles.languageOptionCheck}>✓</Text>}
+                  {isSelected && <Text style={styles.languageOptionCheck}>âœ“</Text>}
                 </Pressable>
               );
             })}

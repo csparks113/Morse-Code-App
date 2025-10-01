@@ -1,4 +1,4 @@
-﻿// store/useProgressStore.ts
+// store/useProgressStore.ts
 // -------------------------
 // Minimal persistent state for tracking lesson progress.
 // We keep both boolean flags (backward compatible with earlier code)
@@ -140,7 +140,7 @@ export const useProgressStore = create<ProgressState>()(
       resetAll: async () => {
         try {
           await AsyncStorage.removeItem('progress');
-        } catch (e) {}
+        } catch { }
         set({ progress: {} });
       },
     }),

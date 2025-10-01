@@ -3,7 +3,7 @@
  * ---------------
  * OVERVIEW
  * Full-screen "Session Complete" summary with a circular ring that fills based
- * on the user’s score. Displays:
+ * on the userâ€™s score. Displays:
  *  - Big percent (color switches to gold at >= 80%)
  *  - "X / 20 correct"
  *  - Continue button
@@ -28,7 +28,7 @@ import Svg, {
   LinearGradient as SvgLinearGradient,
   Stop,
 } from 'react-native-svg';
-import { router } from 'expo-router';              // ⬅️ use static router for dismissAll()
+import { router } from 'expo-router';              // â¬…ï¸ use static router for dismissAll()
 import { colors, spacing } from '@/theme/lessonTheme';
 import { useTranslation } from 'react-i18next';
 
@@ -36,7 +36,7 @@ type Props = {
   percent: number;
   correct: number;
   total: number;
-  onContinue?: () => void;                         // ⬅️ optional: cleanup only
+  onContinue?: () => void;                         // â¬…ï¸ optional: cleanup only
 };
 
 // Drawing constants for the ring

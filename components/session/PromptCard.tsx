@@ -53,7 +53,6 @@ export default function PromptCard({
   revealAction,
   replayAction,
 }: Props) {
-  const revealVisible = (showReveal || feedback !== 'idle');
   const { t } = useTranslation(['session', 'common']);
   const titleText = title ?? t('session:tapToKey');
   const interactable = canInteract ?? true;
@@ -67,7 +66,7 @@ export default function PromptCard({
       onPress: onRevealToggle ?? (() => {}),
       state,
     };
-  }, [interactable, onRevealToggle, revealAction, showReveal]);
+  }, [interactable, onRevealToggle, revealAction, showReveal, t]);
 
   const resolvedReplayAction = React.useMemo<PromptCardAction>(() => {
     if (replayAction) return replayAction;
@@ -79,7 +78,7 @@ export default function PromptCard({
       onPress: onReplay ?? (() => {}),
       state,
     };
-  }, [interactable, onReplay, replayAction]);
+  }, [interactable, onReplay, replayAction, t]);
 
   return (
     <View style={[styles.card,]}>

@@ -1,4 +1,3 @@
-import { shallow } from 'zustand/shallow';
 // app/lessons/[group]/[lessonId]/receive.tsx
 
 /**

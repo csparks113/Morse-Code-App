@@ -1,4 +1,4 @@
-﻿// NeonHeaderCard
+// NeonHeaderCard
 // --------------
 // Centered header with a neon outline and inline progress bar.
 // Left button opens the groups modal; right button opens the overview.

@@ -1,4 +1,4 @@
-﻿import { Platform } from 'react-native';
+import { Platform } from 'react-native';
 
 export type TorchState = 'on' | 'off';
 
@@ -11,11 +11,10 @@ type TorchModuleType = {
 let TorchModule: TorchModuleType | undefined;
 
 try {
-  // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   TorchModule = require('expo-torch');
 } catch (error) {
   if (__DEV__) {
-    // eslint-disable-next-line no-console
     console.warn('[torch] native module unavailable; torch output disabled', error);
   }
   TorchModule = undefined;

@@ -1,4 +1,4 @@
-﻿import { getGroupById, getLesson } from '@/data/lessons';
+import { getGroupById, getLesson } from '@/data/lessons';
 import i18n from '@/i18n';
 
 export type SessionMeta = {

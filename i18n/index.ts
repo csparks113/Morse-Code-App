@@ -1,4 +1,4 @@
-﻿import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -105,13 +105,13 @@ export async function setLanguage(language: SupportedLanguage): Promise<void> {
   if (language === 'system') {
     await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, 'system');
     const systemLanguage = normalizeLanguageTag(resolveSystemLanguage());
-    await i18n.changeLanguage(systemLanguage);
+    await changeLanguageGlobal(systemLanguage);
     return;
   }
 
   const normalized = normalizeLanguageTag(language);
   await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-  await i18n.changeLanguage(normalized);
+  await changeLanguageGlobal(normalized);
 }
 
 export async function getStoredLanguage(): Promise<SupportedLanguage> {

@@ -1,4 +1,4 @@
-﻿// data/lessons.ts
+// data/lessons.ts
 // ----------------
 // This file defines lesson GROUPS and per-lesson content. Each lesson has:
 // - id: string (stable identifier)

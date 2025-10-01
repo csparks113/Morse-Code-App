@@ -4,9 +4,12 @@
 // - Native (iOS/Android): expo-av with preloaded tones, replayAsync(), pre-warm, and ping-pong players
 
 import { Platform } from 'react-native';
+import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
+import * as FileSystem from 'expo-file-system/legacy';
 
 // Shared settings
 import { useSettingsStore } from '../store/useSettingsStore';
+import { toMorse } from './morse';
 
 export function getMorseUnitMs(): number {
   const { wpm } = (useSettingsStore.getState() as any) || { wpm: 20 };
@@ -27,7 +30,6 @@ export type PlayOpts = {
 let webCtx: AudioContext | null = null as any;
 let webGain: GainNode | null = null as any;
 let webOsc: OscillatorNode | null = null as any;
-let webPlaying = false;
 let webCancel = 0;
 
 function ensureWeb(hz: number) {
@@ -73,15 +75,11 @@ async function playMorseCodeWeb(code: string, unitMsArg?: number, opts: PlayOpts
     // instant start via gain envelope
     webGain!.gain.cancelScheduledValues(webCtx!.currentTime);
     webGain!.gain.setValueAtTime(0, webCtx!.currentTime);
-    webGain!.gain.linearRampToValueAtTime(1, webCtx!.currentTime + 0.005);
-    webPlaying = true;
-    await sleep(dur);
+    webGain!.gain.linearRampToValueAtTime(1, webCtx!.currentTime + 0.005);    await sleep(dur);
     if (token !== webCancel) {
       // stop
       webGain!.gain.cancelScheduledValues(webCtx!.currentTime);
-      webGain!.gain.linearRampToValueAtTime(0, webCtx!.currentTime + 0.003);
-      webPlaying = false;
-      opts.onSymbolEnd?.(sym, dur);
+      webGain!.gain.linearRampToValueAtTime(0, webCtx!.currentTime + 0.003);      opts.onSymbolEnd?.(sym, dur);
       if (i < code.length - 1) {
         const gap = unitMs;
         opts.onGap?.(gap);
@@ -100,11 +98,7 @@ function stopPlaybackWeb() {
 }
 
 // ---------------------------------------------------------------------------
-// NATIVE PATH: expo-av
-// ---------------------------------------------------------------------------
-import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system/legacy';
-
+// NATIVE PATH: expo-av\r\n// ---------------------------------------------------------------------------\r\n
 let nativeToken = 0;
 let dotA: Audio.Sound | null = null;
 let dotB: Audio.Sound | null = null;
@@ -120,8 +114,8 @@ export async function configureAudio() {
       playsInSilentModeIOS: true,
       staysActiveInBackground: false,
       shouldDuckAndroid: false,
-      interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
-      interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
+      interruptionModeAndroid: InterruptionModeAndroid.DO_NOT_MIX,
+      interruptionModeIOS: InterruptionModeIOS.DO_NOT_MIX,
       playThroughEarpieceAndroid: false,
     });
   } catch {}
@@ -280,8 +274,6 @@ export async function playTextAsMorse(text: string, opts: PlayOpts = {}) {
       await sleep(unitMs * 7);
       continue;
     }
-    // assume toMorse exists elsewhere in your utils; import locally to avoid circular deps
-    const { toMorse } = await import('./morse');
     const code = toMorse(ch);
     if (!code) continue;
     await playMorseCode(code, unitMs, opts);

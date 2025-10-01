@@ -1,4 +1,4 @@
-﻿// Lessons Tab (Home)
+// Lessons Tab (Home)
 // ------------------
 // Composes the lessons screen out of the neon header and the card list.
 // Routing and data shape are unchanged; we only read from the existing lesson

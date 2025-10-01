@@ -15,7 +15,7 @@ export type MorseGap = 'intra' | 'inter' | 'word';
  * - word        = 7 units (gap between words)
  *
  * NOTE: A real-world duration in milliseconds is units * unitMs,
- * where unitMs depends on WPM (e.g., at 12 WPM, unitMs ≈ 100 ms).
+ * where unitMs depends on WPM (e.g., at 12 WPM, unitMs â‰ˆ 100 ms).
  */
 export const MORSE_UNITS = {
   dot: 1,
@@ -90,7 +90,7 @@ export function classifyGapDuration(
   unitMs: number,
   tolerance: number,
 ): MorseGap | null {
-  const targets: Array<{ type: MorseGap; duration: number }> = [
+  const targets: { type: MorseGap; duration: number }[] = [
     { type: 'intra', duration: unitMs * MORSE_UNITS.dot },
     { type: 'inter', duration: unitMs * MORSE_UNITS.interChar },
     { type: 'word',  duration: unitMs * MORSE_UNITS.word },

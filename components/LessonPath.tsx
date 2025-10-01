@@ -182,7 +182,7 @@ export default function LessonPath({ groupId, lessons }: Props) {
   const scrollRef = React.useRef<ScrollView | null>(null);
   const scrollContainerH = React.useRef(0);
   const contentH = React.useRef(0);
-  const itemLayouts = React.useRef<Array<{ y: number; h: number }>>([]);
+  const itemLayouts = React.useRef<{ y: number; h: number }[]>([]);
 
   const computeAndScroll = React.useCallback((index: number) => {
     const entry = itemLayouts.current[index];

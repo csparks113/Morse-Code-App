@@ -1,7 +1,7 @@
-﻿// components/session/OutputTogglesRow.tsx
+// components/session/OutputTogglesRow.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { colors, spacing } from '@/theme/lessonTheme';
+import { spacing } from '@/theme/lessonTheme';
 import OutputToggle from '@/components/session/OutputToggle';
 
 type Props = {

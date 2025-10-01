@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Animated, Platform, Vibration } from "react-native";
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system/legacy";

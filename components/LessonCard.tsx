@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, spacing } from '@/theme/lessonTheme';
+import { colors } from '@/theme/lessonTheme';
 import DishWithWifi from './icons/DishWithWifi';
 import AntennaWithWifi from './icons/AntennaWithWifi';
 
@@ -58,7 +58,7 @@ function useBreath(enabled: boolean, period = 1800, min = 0.15, max = 0.38) {
     );
     loop.start();
     return () => loop.stop();
-  }, [enabled, period, min, max]);
+  }, [enabled, period, min, max, v]);
   return v;
 }
 

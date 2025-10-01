@@ -1,6 +1,6 @@
-﻿// components/session/SessionHeader.tsx
+// components/session/SessionHeader.tsx
 /**
- * SESSION HEADER — Compact single line
+ * SESSION HEADER â€” Compact single line
  * ------------------------------------
  * Displays: "<primary> | <MODE>"
  *   - primary: "Lesson 1" or "Challenge" (subtitle like "E & T" is removed)
@@ -30,7 +30,7 @@ export type SessionHeaderProps = {
 function extractPrimary(labelTop: string): string {
   const m = labelTop.match(/^(Lesson\s*\d+)|^Challenge|^Review/i);
   if (m) return m[0].replace(/\s+/g, ' ').trim();
-  const first = labelTop.split(/[-–—|]/)[0];
+  const first = labelTop.split(/[-â€“â€”|]/)[0];
   return first.trim() || labelTop.trim();
 }
 
@@ -83,11 +83,6 @@ const bottomLabel = labelBottom;
     prevHeartsRef.current = hearts;
   }, [hearts, mode, scaleAnim, shakeAnim]);
 
-  const shakeTranslateX = shakeAnim.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: [-6, 0, 6],
-  });
-
   return (
     <View style={styles.wrap}>
       {/* Left: Close */}
@@ -128,7 +123,7 @@ const bottomLabel = labelBottom;
     <View style={[styles.heartsRow, { flexDirection: 'row-reverse' }]}>
       {Array.from({ length: Math.max(0, Math.min(3, hearts)) }).map((_, i) => (
         <Text key={i} style={[styles.heart, styles.heartFull]}>
-          ❤
+          â¤
         </Text>
       ))}
     </View>
