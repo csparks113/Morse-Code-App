@@ -193,7 +193,7 @@ export default function SettingsScreen() {
         >
           <View style={{ flex: 1 }}>
             <Text style={[styles.rowTitle, { color: '#FF3B30' }]}>Reset learning progress</Text>
-            <Text style={[styles.rowSubtitle, { color: '#FF3B30' }]}>Clears all lesson/review/challenge completion</Text>
+            <Text style={[styles.rowSub, { color: '#FF3B30' }]}>Clears all lesson/review/challenge completion</Text>
           </View>
         </Pressable>
       </View>
@@ -255,7 +255,11 @@ export default function SettingsScreen() {
                   >
                     {optionLabel}
                   </Text>
-                  {isSelected && <Text style={styles.languageOptionCheck}>âœ“</Text>}
+                  {isSelected && (
+                    <Text style={styles.languageOptionCheck}>
+                      {String.fromCharCode(0x2713)}
+                    </Text>
+                  )}
                 </Pressable>
               );
             })}
@@ -290,7 +294,6 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: theme.colors.border,
     marginTop: theme.spacing(2),
-    //marginBottom: theme.spacing(3),
   },
   scrollContent: {
     gap: theme.spacing(3),
@@ -353,6 +356,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'auto',
   },
+  section: {
+    gap: theme.spacing(2),
+    paddingTop: theme.spacing(3),
+  },
+  sectionTitle: {
+    color: theme.colors.textSecondary,
+    fontWeight: '700',
+    fontSize: theme.typography.tiny,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    textAlign: 'auto',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -365,30 +380,17 @@ const styles = StyleSheet.create({
     padding: theme.spacing(4),
     gap: theme.spacing(2),
   },
-  
   modalTitle: {
     color: theme.colors.textPrimary,
     fontWeight: '700',
     fontSize: theme.typography.subtitle,
     textAlign: 'auto',
   },
-/*     modalCard: {
-    width: '86%',
-    backgroundColor: theme.colors?.cardBg ?? '#101214',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors?.border ?? '#2A2F36',
+  modalText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.small,
+    textAlign: 'auto',
   },
-  modalTitle: { color: '#fff', fontWeight: '800', fontSize: 18, marginBottom: 8 },
-  modalText: { color: '#D0D4DA', fontSize: 14 },
-  modalBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#2A2F36',
-  }, */
   languageOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -420,14 +422,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'auto',
   },
-
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  modalBtnText: { color: '#D0D4DA', fontWeight: '700' },
+  modalBtn: {
+    paddingHorizontal: theme.spacing(3),
+    paddingVertical: theme.spacing(1.5),
+    borderRadius: theme.radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+  },
+  modalBtnText: {
+    color: theme.colors.textSecondary,
+    fontWeight: '700',
+    textAlign: 'auto',
+  },
 });
-

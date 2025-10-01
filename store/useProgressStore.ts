@@ -42,6 +42,7 @@ type ProgressState = {
     challengeReceive: number;
     challengeBoth: number;
   };
+  resetAll: () => Promise<void>;
 };
 
 export const useProgressStore = create<ProgressState>()(

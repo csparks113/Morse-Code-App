@@ -9,7 +9,9 @@ import Animated, {
   cancelAnimation,
   useAnimatedProps,
   Easing,
+  withDelay,
 } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 
 const APath = Animated.createAnimatedComponent(Path);
 
@@ -45,6 +47,9 @@ export type WifiOverlayProps = {
   /** Animation timing (whole cycle length). */
   periodMs?: number;
 
+  /** Optional delay before starting the repeating animation. */
+  staggerMs?: number;
+
   /** Optional style for the absolute container (zIndex, etc.). */
   style?: any;
 
@@ -74,28 +79,28 @@ function arcPath(
 }
 
 /** One looping progress value 0→1; use to compute three opacities. */
-function useLoopProgress(enabled: boolean, periodMs: number) {
+function useLoopProgress(enabled: boolean, periodMs: number, staggerMs = 0) {
   const p = useSharedValue(0);
   React.useEffect(() => {
     cancelAnimation(p);
     if (enabled) {
-      p.value = 0;
-      p.value = withRepeat(
+      const animation = withRepeat(
         withTiming(1, { duration: periodMs, easing: Easing.linear }),
         -1,
-        false
+        false,
       );
+      p.value = 0;
+      p.value = staggerMs > 0 ? withDelay(staggerMs, animation) : animation;
     } else {
       p.value = 0;
     }
     return () => cancelAnimation(p);
-  }, [enabled, periodMs, p]);
+  }, [enabled, periodMs, staggerMs, p]);
   return p;
 }
-
 /** Build animated opacity props from a function of progress. */
 function useOpacityFromProgress(
-  progress: Animated.SharedValue<number>,
+  progress: SharedValue<number>,
   compute: (t: number) => number
 ) {
   return useAnimatedProps(() => {
@@ -131,6 +136,7 @@ const WifiOverlay: React.FC<WifiOverlayProps> = ({
   opacityInactive = 0.28,
   mode,
   periodMs = 1200,
+  staggerMs = 0,
   style,
   offsetX = 0,
   offsetY = 0,
@@ -150,7 +156,7 @@ const WifiOverlay: React.FC<WifiOverlayProps> = ({
 
   // Animation spec: S→M→L (fade-ins), then ALL fade out together.
   // Stages: [0, .25) small in; [.25, .5) medium in; [.5, .75) large in; [.75, 1) all out
-  const p = useLoopProgress(mode === 'active', periodMs);
+  const p = useLoopProgress(mode === 'active', periodMs, staggerMs);
 
   const opSmall = useOpacityFromProgress(p, (t) => {
     'worklet';

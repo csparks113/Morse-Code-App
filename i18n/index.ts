@@ -73,6 +73,12 @@ export function getAvailableLanguages(): LanguageOption[] {
   ];
 }
 
+async function changeLanguageGlobal(language: string): Promise<void> {
+  if (!i18n.isInitialized) {
+    await initI18n();
+  }
+  await i18n.changeLanguage(language);
+}
 export async function initI18n(): Promise<void> {
   if (initPromise) {
     return initPromise;

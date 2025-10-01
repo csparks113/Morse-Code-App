@@ -123,7 +123,7 @@ const bottomLabel = labelBottom;
     <View style={[styles.heartsRow, { flexDirection: 'row-reverse' }]}>
       {Array.from({ length: Math.max(0, Math.min(3, hearts)) }).map((_, i) => (
         <Text key={i} style={[styles.heart, styles.heartFull]}>
-          â¤
+          {String.fromCharCode(0x2665)}
         </Text>
       ))}
     </View>
@@ -178,6 +178,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  right: {
+    minWidth: 60,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+
   spacer: { width: 44, height: 44 },
 
   heartsWrap: {
@@ -197,4 +203,3 @@ const styles = StyleSheet.create({
     gap: 4,
   },
 });
-

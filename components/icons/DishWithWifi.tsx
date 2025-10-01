@@ -90,10 +90,13 @@ const DishWithWifi: React.FC<Props> = ({
         strokeWidth={wifi?.strokeWidth}
         colorActive={wifi?.colorActive}
         colorCompleted={wifi?.colorCompleted}
+        colorInactive={wifi?.colorInactive}
         opacityInactive={wifi?.opacityInactive}
         periodMs={wifi?.periodMs}
         staggerMs={wifi?.staggerMs}
-        style={(wifi as any).style}
+        offsetX={wifi?.offsetX}
+        offsetY={wifi?.offsetY}
+        style={wifi?.style}
       />
 
       {/* Dish image (independently scaled) */}
@@ -120,5 +123,3 @@ const styles = StyleSheet.create({
 });
 
 export default DishWithWifi;
-
-

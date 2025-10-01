@@ -114,8 +114,8 @@ export async function configureAudio() {
       playsInSilentModeIOS: true,
       staysActiveInBackground: false,
       shouldDuckAndroid: false,
-      interruptionModeAndroid: InterruptionModeAndroid.DO_NOT_MIX,
-      interruptionModeIOS: InterruptionModeIOS.DO_NOT_MIX,
+      interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+      interruptionModeIOS: InterruptionModeIOS.DoNotMix,
       playThroughEarpieceAndroid: false,
     });
   } catch {}
@@ -292,3 +292,4 @@ export function stopPlayback() {
 
 // Utils
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+

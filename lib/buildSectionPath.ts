@@ -1,4 +1,13 @@
-import type { PathNode } from '@/types/session';
+type PathNode = {
+  id: string;
+  kind: 'lesson' | 'review' | 'challenge';
+  sectionId: string;
+  index: number;
+  title: string;
+  state: 'locked' | 'available' | 'completed';
+  lessonNumber?: number;
+  chars?: string[];
+};
 
 export function buildSectionPath(
   sectionId: string,
@@ -7,44 +16,45 @@ export function buildSectionPath(
   const nodes: PathNode[] = [];
   let reviewCount = 0;
 
-  for (const L of lessons) {
+  for (const lesson of lessons) {
     nodes.push({
-      id: `${sectionId}-L${L.lessonNumber}`,
+      id: `${sectionId}-L${lesson.lessonNumber}`,
       kind: 'lesson',
       sectionId,
       index: nodes.length,
-      title: `Lesson ${L.lessonNumber} — ${L.chars.join(' & ')}`,
-      lessonNumber: L.lessonNumber,
-      chars: L.chars,
+      title: `Lesson ${lesson.lessonNumber} - ${lesson.chars.join(' & ')}`,
+      lessonNumber: lesson.lessonNumber,
+      chars: lesson.chars,
       state: 'locked',
     });
 
-    if (L.lessonNumber >= 2) {
-    nodes.push({
-        id: `${sectionId}-L${L.lessonNumber}-review`,
+    if (lesson.lessonNumber >= 2) {
+      nodes.push({
+        id: `${sectionId}-L${lesson.lessonNumber}-review`,
         kind: 'review',
         sectionId,
         index: nodes.length,
-        title: `Lesson ${L.lessonNumber} — Review`,
-        lessonNumber: L.lessonNumber,
+        title: `Lesson ${lesson.lessonNumber} - Review`,
+        lessonNumber: lesson.lessonNumber,
         state: 'locked',
-    });
-    reviewCount++;
+      });
+      reviewCount += 1;
 
-    if (reviewCount % 2 === 0) {
+      if (reviewCount % 2 === 0) {
         nodes.push({
-        id: `${sectionId}-challenge-${reviewCount / 2}`,
-        kind: 'challenge',
-        sectionId,
-        index: nodes.length,
-        title: 'Challenge',
-        state: 'locked',
+          id: `${sectionId}-challenge-${reviewCount / 2}`,
+          kind: 'challenge',
+          sectionId,
+          index: nodes.length,
+          title: 'Challenge',
+          state: 'locked',
         });
-    }
+      }
     }
   }
 
-  if (!nodes.some(n => n.kind === 'challenge' && n.index === nodes.length - 1)) {
+  const lastNode = nodes[nodes.length - 1];
+  if (!lastNode || lastNode.kind !== 'challenge') {
     nodes.push({
       id: `${sectionId}-final-challenge`,
       kind: 'challenge',
@@ -54,5 +64,6 @@ export function buildSectionPath(
       state: 'locked',
     });
   }
+
   return nodes;
 }

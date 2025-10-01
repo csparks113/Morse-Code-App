@@ -165,7 +165,6 @@ export function useSessionFlow({
           const summaryValue: SessionSummary = { correct: correctCount, percent };
           setSummary(summaryValue);
           setStarted(false);
-          onFinished?.(summaryValue);
         }
         return next;
       });
@@ -175,9 +174,16 @@ export function useSessionFlow({
         setStreak((prev) => (isCorrect ? prev + 1 : 0));
       }
     },
-    [onFinished, totalQuestions],
+    [totalQuestions],
   );
 
+  const lastSummaryRef = React.useRef<SessionSummary | null>(null);
+  React.useEffect(() => {
+    if (!summary || !onFinished) return;
+    if (lastSummaryRef.current === summary) return;
+    lastSummaryRef.current = summary;
+    onFinished(summary);
+  }, [summary, onFinished]);
   // Public API
   return {
     started,
