@@ -1,26 +1,52 @@
-// theme/lessonTheme.ts
+﻿// theme/lessonTheme.ts
 // Neon dark theme tokens for the Lessons path UI
 
+import { palette, spacing as spacingTokens, lessonRadii, withAlpha } from './tokens';
+
 export const colors = {
-  bg: '#0D0D0D',
-  text: '#EAEAEA',
-  textDim: '#9BA0A6',
-  card: '#121212',
+  bg: palette.background,
+  text: palette.textPrimary,
+  textDim: palette.textMuted,
+  card: palette.surfaceRaised,
 
   // Path + neon accents
   // Use blueNeon for "active" and blueDeep for "available"
-  blueDeep: '#0A84FF', // AVAILABLE / unlocked but idle
-  blueNeon: '#00E6FF', // ACTIVE / pulsing
+  blueDeep: palette.accentDeepBlue,
+  blueNeon: palette.accentNeon,
   // Back-compat alias (previously "AVAILABLE"):
-  blue: '#0A84FF',
+  blue: palette.accentDeepBlue,
 
-  neonTeal: '#00FFE0', // keep for teal accents elsewhere if needed
-  green: '#50C878', // RECEIVE_DONE
-  gold: '#FFD700', // MASTERED / crown / star
+  neonTeal: palette.accentTeal,
+  green: palette.accentGreen,
+  gold: palette.accentGold,
 
   // These use the new neon blue as the base
-  line: 'rgba(0,230,255,0.35)', // dotted path
-  border: 'rgba(0,230,255,0.55)', // neon outline for cards/nodes
+  line: withAlpha(palette.accentNeon, 0.35), // dotted path
+  border: withAlpha(palette.accentNeon, 0.55), // neon outline for cards/nodes
+} as const;
+
+export const gradients = {
+  progressGold: [withAlpha(palette.accentGold, 0.65), palette.accentGold],
+  summaryGold: [withAlpha(palette.accentGold, 0.75), palette.accentGold],
+  summaryBlue: [withAlpha(palette.accentNeon, 0.7), palette.accentDeepBlue],
+  headerProgress: ['#FFD700', '#FFC837', '#FFB347'],
+} as const;
+
+export const surfaces = {
+  card: palette.surfaceRaised,
+  muted: palette.surfaceMuted,
+  sunken: palette.surfaceSunken,
+  keyer: palette.surfaceKeyer,
+  pressed: palette.surfacePressed,
+  disabled: palette.surfaceDisabled,
+  slate: palette.surfaceSlate,
+} as const;
+
+export const borders = {
+  base: palette.borderStrong,
+  subtle: palette.borderSubtle,
+  muted: palette.borderMuted,
+  key: palette.borderKey,
 } as const;
 
 export const glow = {
@@ -38,8 +64,8 @@ export const glow = {
   },
 } as const;
 
-export const radii = { xl: 20, full: 999 } as const;
-export const spacing = (n: number) => n * 8;
+export const radii = lessonRadii;
+export const spacing = spacingTokens.lesson;
 export const thresholds = { receive: 80, send: 80 } as const;
 
 // Coin visuals palette for lesson/challenge nodes and small summary coins.
@@ -50,9 +76,22 @@ export const coinPalette = {
   blue: colors.blue,
   green: colors.green,
   gold: colors.gold,
-  purple: '#8B5CF6',
-  silver: '#BFC7D1',
-  grayCoin: '#2A2E35',
-  grayMuted: '#666A70',
+  goldFill: palette.accentGoldFill,
+  purple: palette.accentPurple,
+  silver: palette.accentSilver,
+  grayCoin: palette.accentGrayCoin,
+  grayMuted: palette.accentGrayMuted,
   white: '#FFFFFF',
 } as const;
+
+export const icons = {
+  muted: palette.mutedIcon,
+  disabled: palette.iconDisabled,
+} as const;
+
+export const status = {
+  error: palette.accentError,
+  warning: palette.accentWarning,
+  success: palette.accentSuccess,
+} as const;
+

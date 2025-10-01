@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, StyleProp, Text, ViewStyle } from "react-native";
 
-import { colors, spacing } from "@/theme/lessonTheme";
+import { colors, spacing, surfaces } from "@/theme/lessonTheme";
 
 type KeyerButtonProps = {
   onPressIn?: () => void;
@@ -46,13 +46,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 2,
     borderColor: colors.border,
-    backgroundColor: "#0F151D",
+    backgroundColor: surfaces.sunken,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: spacing(3),
   },
   pressed: {
-    backgroundColor: "#15202A",
+    backgroundColor: surfaces.pressed,
   },
   disabled: {
     opacity: 0.5,

@@ -1,8 +1,10 @@
-// components/session/RevealBar.tsx
+﻿// components/session/RevealBar.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-import { colors } from '@/theme/lessonTheme';
+import { colors, spacing } from '@/theme/lessonTheme';
+import { withAlpha } from '@/theme/tokens';
+import { typography, fontWeight } from '@/theme/tokens';
 import { MorseGlyphRow, MorseTimeline } from '@/components/MorseViz';
 import {
   textToMorseElements,
@@ -170,7 +172,7 @@ export default function RevealBar(props: RevealBarProps) {
             unitPx={unitPx}
             height={barHeight}
             color={color}
-            inactiveColor={showGaps ? 'rgba(255,255,255,0.2)' : 'transparent'}
+            inactiveColor={showGaps ? withAlpha(colors.text, 0.2) : 'transparent'}
             showGaps={showGaps}
             rounded
             granularity={1}
@@ -182,7 +184,7 @@ export default function RevealBar(props: RevealBarProps) {
     );
   }
 
-  const rowGapPx = compareProps?.rowGapPx ?? 6;
+  const rowGapPx = compareProps?.rowGapPx ?? spacing(0.75);
   const topColor = compareProps?.topColor ?? colors.blueNeon;
   const bottomColor = compareProps?.bottomColor ?? colors.gold;
   const showLegend = compareProps?.showLegend ?? false;
@@ -190,10 +192,10 @@ export default function RevealBar(props: RevealBarProps) {
   return (
     <View style={baseSlotStyle}>
       {showLegend && (
-        <View style={[styles.legendRow, { marginBottom: 4 }]}>
+        <View style={[styles.legendRow, { marginBottom: spacing(0.5) }]}>
           <View style={[styles.legendDot, { backgroundColor: topColor }]} />
           <Text style={styles.legendText}>Target</Text>
-          <View style={{ width: 12 }} />
+          <View style={{ width: spacing(1.5) }} />
           <View style={[styles.legendDot, { backgroundColor: bottomColor }]} />
           <Text style={styles.legendText}>You</Text>
         </View>
@@ -205,7 +207,7 @@ export default function RevealBar(props: RevealBarProps) {
           unitPx={unitPx}
           height={barHeight}
           color={topColor}
-          inactiveColor='transparent'
+          inactiveColor="transparent"
           showGaps={false}
           rounded
           granularity={1}
@@ -222,7 +224,7 @@ export default function RevealBar(props: RevealBarProps) {
           unitPx={unitPx}
           height={barHeight}
           color={bottomColor}
-          inactiveColor='transparent'
+          inactiveColor="transparent"
           showGaps={false}
           rounded
           granularity={4}
@@ -237,6 +239,7 @@ export default function RevealBar(props: RevealBarProps) {
 const styles = StyleSheet.create({
   slot: { alignSelf: 'stretch', justifyContent: 'flex-start' },
   legendRow: { flexDirection: 'row', alignItems: 'center' },
-  legendDot: { width: 10, height: 10, borderRadius: 5, marginRight: 6 },
-  legendText: { color: colors.text, fontWeight: '600' },
+  legendDot: { width: 10, height: 10, borderRadius: 5, marginRight: spacing(0.75) },
+  legendText: { color: colors.text, fontWeight: fontWeight.medium, fontSize: typography.label },
 });
+

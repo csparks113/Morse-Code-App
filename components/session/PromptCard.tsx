@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import ActionButton, { ActionButtonState } from '@/components/session/ActionButton';
-import { colors, spacing } from '@/theme/lessonTheme';
+import { colors, spacing, borders, status } from '@/theme/lessonTheme';
 import { useTranslation } from 'react-i18next';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
@@ -137,7 +137,7 @@ revealHidden: { opacity: 0, pointerEvents: 'none' },
     alignSelf: 'center',
     backgroundColor: colors.card,
     borderWidth: 1.5,
-    borderColor: '#2A2F36',
+    borderColor: borders.base,
     borderRadius: 18,
     paddingHorizontal: spacing(2),
     alignItems: 'center',
@@ -175,7 +175,7 @@ revealHidden: { opacity: 0, pointerEvents: 'none' },
 
   charCorrect: { color: colors.gold },
 
-  charWrong: { color: '#FF6B6B' },
+  charWrong: { color: status.error },
 
   // --- Start Button --------------------------------------------------------------
   startBtn: {

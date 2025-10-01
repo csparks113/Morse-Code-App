@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OUTPUT TOGGLE
  * -------------
  * OVERVIEW
@@ -20,7 +20,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from '@/theme/lessonTheme';
+import { colors, borders, surfaces } from '@/theme/lessonTheme';
+import { withAlpha } from '@/theme/tokens';
 
 const SIZE = 48;
 
@@ -59,7 +60,7 @@ export default function OutputToggle({
       <MaterialCommunityIcons
         name={icon}
         size={22}
-        color={active ? colors.blueNeon : 'rgba(154, 160, 166, 0.9)'}
+        color={active ? colors.blueNeon : withAlpha(colors.textDim, 0.9)}
       />
     </Pressable>
   );
@@ -71,14 +72,14 @@ const styles = StyleSheet.create({
     height: SIZE,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#2A2F36',
+    borderColor: borders.base,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#11161C',
+    backgroundColor: surfaces.slate,
   },
   active: {
     borderColor: colors.blueNeon,
-    backgroundColor: 'rgba(0, 230, 255, 0.15)',
+    backgroundColor: withAlpha(colors.blueNeon, 0.15),
     shadowColor: colors.blueNeon,
     shadowOpacity: 0.55,
     shadowRadius: 9,
@@ -89,3 +90,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
+
+
+
+
+

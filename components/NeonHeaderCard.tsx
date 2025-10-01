@@ -1,4 +1,4 @@
-// NeonHeaderCard
+﻿// NeonHeaderCard
 // --------------
 // Centered header with a neon outline and inline progress bar.
 // Left button opens the groups modal; right button opens the overview.
@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
-import { colors, glow, radii, spacing, thresholds } from '../theme/lessonTheme';
+import { colors, glow, radii, spacing, thresholds, gradients } from '../theme/lessonTheme';
+import { withAlpha } from '@/theme/tokens';
 import { LESSON_GROUPS } from '../data/lessons';
 import { useProgressStore } from '../store/useProgressStore';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
 
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: withAlpha(colors.bg, 0.7),
     justifyContent: 'center',
     padding: spacing(4),
   },
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 10,
-    backgroundColor: 'rgba(10,132,255,0.25)',
+    backgroundColor: withAlpha(colors.blueDeep, 0.25),
     borderRadius: 999,
     overflow: 'hidden',
   },
@@ -279,3 +280,9 @@ const styles = StyleSheet.create({
   },
   closeBtnText: { color: colors.bg, fontWeight: '800', textAlign: 'auto' },
 });
+
+
+
+
+
+

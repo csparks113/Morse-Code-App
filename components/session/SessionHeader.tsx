@@ -1,6 +1,6 @@
-// components/session/SessionHeader.tsx
+﻿// components/session/SessionHeader.tsx
 /**
- * SESSION HEADER â€” Compact single line
+ * SESSION HEADER Ã¢â‚¬â€ Compact single line
  * ------------------------------------
  * Displays: "<primary> | <MODE>"
  *   - primary: "Lesson 1" or "Challenge" (subtitle like "E & T" is removed)
@@ -15,7 +15,8 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { colors, glow, radii, spacing } from '@/theme/lessonTheme';
+import { colors, glow, radii, spacing, status } from '@/theme/lessonTheme';
+import { withAlpha } from '@/theme/tokens';
 import { useTranslation } from 'react-i18next';
 
 export type SessionHeaderProps = {
@@ -30,7 +31,7 @@ export type SessionHeaderProps = {
 function extractPrimary(labelTop: string): string {
   const m = labelTop.match(/^(Lesson\s*\d+)|^Challenge|^Review/i);
   if (m) return m[0].replace(/\s+/g, ' ').trim();
-  const first = labelTop.split(/[-â€“â€”|]/)[0];
+  const first = labelTop.split(/[-Ã¢â‚¬â€œÃ¢â‚¬â€|]/)[0];
   return first.trim() || labelTop.trim();
 }
 
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 230, 255, 0.12)',
+    backgroundColor: withAlpha(colors.blueNeon, 0.12),
   },
   pressed: { opacity: 0.9 },
 
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   heart: { fontSize: 16 },
-  heartFull: { color: '#FF5A5F' },
+  heartFull: { color: status.error },
   heartEmpty: { color: '#444' },
 
   heartsRow: {
@@ -203,3 +204,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
 });
+
+
+
+
+
+

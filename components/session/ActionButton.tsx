@@ -9,7 +9,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from '@/theme/lessonTheme';
+import { colors, surfaces, borders, icons } from '@/theme/lessonTheme';
 
 const SIZE = 58;
 
@@ -46,7 +46,7 @@ export default function ActionButton({
   const isDisabled = resolvedState === 'disabled';
 
   const iconColor = React.useMemo(() => {
-    return resolvedState === 'active' ? colors.blueNeon : '#7C8897';
+    return resolvedState === 'active' ? colors.blueNeon : icons.disabled;
   }, [resolvedState]);
 
   return (
@@ -75,8 +75,8 @@ const styles = StyleSheet.create({
     height: SIZE,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#2A313C',
-    backgroundColor: '#10161F',
+    borderColor: borders.subtle,
+    backgroundColor: surfaces.keyer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -89,8 +89,8 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   disabled: {
-    borderColor: '#2F3846',
-    backgroundColor: '#151C25',
+    borderColor: borders.muted,
+    backgroundColor: surfaces.disabled,
     opacity: 0.55,
   },
   touchFeedback: {

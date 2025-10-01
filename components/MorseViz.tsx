@@ -1,4 +1,4 @@
-// components/MorseViz.tsx
+﻿// components/MorseViz.tsx
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import {
@@ -8,6 +8,8 @@ import {
   pressesToElementsWithGaps,
   DEFAULT_DASH_UNITS,
 } from "@/utils/morseUtils";
+import { colors } from "@/theme/lessonTheme";
+import { withAlpha } from "@/theme/tokens";
 
 type CommonColorProps = {
   color?: string;
@@ -29,7 +31,7 @@ export function MorseGlyph({
   size = 12,
   dashRatio = 3,
   radius = 6,
-  color = "#FFFFFF",
+  color = colors.text,
   backgroundColor = "transparent",
   style,
 }: MorseGlyphProps) {
@@ -59,7 +61,7 @@ export function MorseGlyphRow({
   size = 12,
   dashRatio = 3,
   gapPx = 6,
-  color = "#FFFFFF",
+  color = colors.text,
   backgroundColor = "transparent",
   style,
 }: MorseGlyphRowProps) {
@@ -100,8 +102,8 @@ export function MorseTimeline({
   height = 12,
   unitPx = 10,
   dashUnits = DEFAULT_DASH_UNITS,
-  color = "#00D1FF",
-  inactiveColor = "rgba(255,255,255,0.15)",
+  color = colors.blueNeon,
+  inactiveColor = withAlpha(colors.text, 0.15),
   backgroundColor = "transparent",
   rounded = true,
   showGaps = true,
@@ -136,9 +138,7 @@ export function MorseTimeline({
         {elements.map((el, idx) => {
           const isGap = el.kind === "gap";
           const rawWidth = Math.max(0, el.units * unitPx);
-          // Ensure very short pulses render as perfect dots (circles)
-          const width =
-            !isGap && rawWidth < height ? height : Math.max(1, rawWidth);
+          const width = !isGap && rawWidth < height ? height : Math.max(1, rawWidth);
 
           const segmentStyle = {
             width,
@@ -162,3 +162,6 @@ const styles = StyleSheet.create({
 });
 
 export default { MorseGlyph, MorseGlyphRow, MorseTimeline };
+
+
+

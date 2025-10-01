@@ -1,4 +1,4 @@
-// app/lessons/[group]/[lessonId]/receive.tsx
+﻿// app/lessons/[group]/[lessonId]/receive.tsx
 
 /**
  * RECEIVE SESSION SCREEN (Pinned layout)
@@ -17,13 +17,12 @@ import React from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Animated,
   Dimensions,
   Platform,
   Vibration,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
@@ -39,10 +38,10 @@ import FlashOverlay from '../../../../components/session/FlashOverlay';
 import LessonChoices from '../../../../components/session/LessonChoices';
 import MorseCompare from '../../../../components/session/MorseCompare';
 import ChallengeKeyboard from '../../../../components/session/ChallengeKeyboard';
+import { sessionStyleSheet, sessionContainerPadding } from '../../../../theme/sessionStyles';
 
 // Theme + utils
 import { colors, spacing } from '../../../../theme/lessonTheme';
-import { theme } from '../../../../theme/theme';
 import { toMorse } from '../../../../utils/morse';
 import { playMorseCode, getMorseUnitMs } from '../../../../utils/audio';
 
@@ -64,6 +63,7 @@ function getStoreIdForProgress(rawId: string) {
 }
 
 export default function ReceiveSessionScreen() {
+  const insets = useSafeAreaInsets();
   const { group, lessonId } = useLocalSearchParams<{
     group: string;
     lessonId: string;
@@ -369,19 +369,20 @@ export default function ReceiveSessionScreen() {
   // Empty state
   if (!meta.pool.length) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>{t('session:contentUnavailable')}</Text>
+      <SafeAreaView style={sessionStyleSheet.safe}>
+        <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, spacing(2), spacing(2))]}> 
+          <View style={sessionStyleSheet.emptyState}>
+            <Text style={sessionStyleSheet.emptyText}>{t('session:contentUnavailable')}</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
   }
-
   // Summary
   if (summary) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.summaryContainer}>
+      <SafeAreaView style={sessionStyleSheet.safe}>
+        <View style={sessionStyleSheet.summaryContainer}>
           <SessionHeader
             labelTop={meta.headerTop}
             labelBottom={t('session:receiveMode')}
@@ -403,13 +404,13 @@ export default function ReceiveSessionScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={sessionStyleSheet.safe}>
       {/* Flash overlay for playback */}
       <FlashOverlay opacity={flash} color={colors.text} maxOpacity={0.28} />
 
-      <View style={styles.container}>
+      <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, spacing(2), spacing(2))]}>
         {/* --- TOP (fixed): header + progress --- */}
-        <View style={styles.topGroup}>
+        <View style={sessionStyleSheet.topGroup}>
           <SessionHeader
             labelTop={meta.headerTop}
             labelBottom={t('session:receiveMode')}
@@ -425,7 +426,7 @@ export default function ReceiveSessionScreen() {
         </View>
 
         {/* --- CENTER (flex, centered): PromptCard only --- */}
-        <View style={styles.centerGroup}>
+        <View style={sessionStyleSheet.centerGroup}>
           <PromptCard
             compact
             revealSize="sm"
@@ -467,8 +468,8 @@ export default function ReceiveSessionScreen() {
         </View>
 
         {/* --- BOTTOM (fixed): toggles above input --- */}
-        <View style={styles.bottomGroup}>
-          <View style={styles.togglesWrap}>
+        <View style={sessionStyleSheet.bottomGroup}>
+          <View style={sessionStyleSheet.togglesWrap}>
             <OutputTogglesRow
               hapticsEnabled={hapticsEnabled}
               lightEnabled={lightEnabled}
@@ -481,7 +482,7 @@ export default function ReceiveSessionScreen() {
             />
           </View>
 
-          <View style={[styles.inputZone]}>
+          <View style={[sessionStyleSheet.inputZone]}>
             {meta.isChallenge || isReview ? (
               <ChallengeKeyboard
                 learnedSet={learnedSet}
@@ -493,7 +494,7 @@ export default function ReceiveSessionScreen() {
                 choices={meta.pool}
                 disabled={!canInteract}
                 onChoose={submitAnswer}
-                style={styles.lessonChoices}
+                style={sessionStyleSheet.lessonChoices}
               />
             )}
           </View>
@@ -503,80 +504,23 @@ export default function ReceiveSessionScreen() {
   );
 }
 
-/**
- * Styles
- */
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: theme.colors.background },
-
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing(3),
-    paddingTop: spacing(2),
-    paddingBottom: spacing(2),
-    justifyContent: 'space-between'
-  },
-
-  // --- layout bands ---------------------------------------------------------
-  topGroup: {
-    marginBottom: spacing(.5),
-  },
-
-  centerGroup: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  bottomGroup: {
-    marginTop: spacing(.50,),
-    alignItems: 'stretch', 
-  },
-
-  // --- toggles right above input -------------------------------------------
-  togglesWrap: {
-    alignSelf: 'stretch',
-    minHeight: 64,        
-    justifyContent: 'center',
-  },
-
-  // --- input container -----------------------------------------------------
-  inputZone: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 140
-  },
-
-  // --- lesson choices row ---------------------------------------------------
-  lessonChoices: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing(2),
-  },
-
-  // --- empty state ----------------------------------------------------------
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing(4),
-    padding: spacing(4),
-  },
-
-  emptyText: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-
-  summaryContainer: {
-    flex: 1,
-    paddingHorizontal: spacing(3),
-    paddingTop: spacing(2),
-    paddingBottom: spacing(2),
-  },
 
 
 
-});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

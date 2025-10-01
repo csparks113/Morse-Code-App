@@ -1,7 +1,8 @@
-// components/session/ChallengeKeyboard.tsx
+﻿// components/session/ChallengeKeyboard.tsx
 import React from 'react';
 import { View, Pressable, Text, StyleSheet } from 'react-native';
-import { colors, spacing } from '@/theme/lessonTheme';
+import { colors, spacing, surfaces, borders } from '@/theme/lessonTheme';
+import { withAlpha } from '@/theme/tokens';
 
 export type ChallengeKeyboardProps = {
   rows?: string[][];
@@ -68,13 +69,13 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: '#1F2933',
-    backgroundColor: '#0F151D',
+    borderColor: borders.key,
+    backgroundColor: surfaces.sunken,
     alignItems: 'center',
     justifyContent: 'center',
   },
   keyLearned: { borderColor: colors.blueNeon },
-  keyPressed: { backgroundColor: '#15202A' },
+  keyPressed: { backgroundColor: surfaces.pressed },
   keyDisabled: { opacity: 0.35 },
   keyText: {
     fontSize: 16,
@@ -82,6 +83,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   keyTextActive: { color: colors.text },
-  keyTextDisabled: { color: 'rgba(154, 160, 166, 0.65)' },
+  keyTextDisabled: { color: withAlpha(colors.textDim, 0.65) },
 });
+
+
+
+
 

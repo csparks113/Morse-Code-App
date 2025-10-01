@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from '@/theme/lessonTheme';
+import { colors, surfaces, borders, coinPalette, icons } from '@/theme/lessonTheme';
+import { withAlpha } from '@/theme/tokens';
 import DishWithWifi from './icons/DishWithWifi';
 import AntennaWithWifi from './icons/AntennaWithWifi';
 
@@ -30,11 +31,11 @@ type Props = {
 
 /** Palette */
 const GOLD_OUTLINE = colors.gold;
-const GOLD_FILL = '#B8860B';
-const CARD_BG = '#101214';
-const GRAY_BORDER = '#2A2F36';
-const GRAY_FILL = '#15171C';
-const MUTED_ICON = '#3E424B';
+const GOLD_FILL = coinPalette.goldFill;
+const CARD_BG = surfaces.card;
+const GRAY_BORDER = borders.base;
+const GRAY_FILL = surfaces.muted;
+const MUTED_ICON = icons.muted;
 
 // Neon only (no deep blue anywhere)
 const NEON_BLUE = colors.blueNeon;
@@ -80,8 +81,8 @@ function CircleButton({
 
   const breath = useBreath(isActiveOutline);
 
-  let backgroundColor = GRAY_FILL;
-  let borderColor = GRAY_BORDER;
+  let backgroundColor: string = GRAY_FILL;
+  let borderColor: string = GRAY_BORDER;
   let iconColor: string = GRAY_BORDER;
 
   if (state.locked) {
@@ -98,8 +99,8 @@ function CircleButton({
     iconColor = NEON_BLUE;
   } else if (isUnlockedIdle) {
     backgroundColor = 'transparent';
-    borderColor = NEON_BLUE + '66';
-    iconColor = NEON_BLUE + '99';
+    borderColor = withAlpha(NEON_BLUE, 0.4);
+    iconColor = withAlpha(NEON_BLUE, 0.6);
   }
 
   const innerSize = CIRCLE_SIZE - 8;
@@ -156,7 +157,7 @@ function toSendState(s: CircleState): 'active' | 'inactive' | 'completed' {
 export default function LessonCard(p: Props) {
   const bothComplete = p.receiveDone && p.sendDone;
 
-  // RECEIVE (left) — unlocked reviews/challenges can start immediately; lessons use isActive
+  // RECEIVE (left) â€” unlocked reviews/challenges can start immediately; lessons use isActive
   const left: CircleState = {
     active: !p.locked && !p.receiveDone && (p.isActive || p.kind === 'review' || p.kind === 'challenge'),
     completed: p.receiveDone,
@@ -178,9 +179,9 @@ export default function LessonCard(p: Props) {
 
   const cardBorder = bothComplete ? GOLD_OUTLINE : !nodeLocked ? NEON_BLUE : GRAY_BORDER;
   const cardBackground = bothComplete
-    ? 'rgba(255, 215, 0, 0.08)'
+    ? withAlpha(colors.gold, 0.08)
     : !nodeLocked
-    ? 'rgba(0, 229, 255, 0.08)'
+    ? withAlpha(NEON_BLUE, 0.08)
     : CARD_BG;
 
   const subtitleColor = bothComplete ? GOLD_OUTLINE : !nodeLocked ? NEON_BLUE : MUTED_ICON;
@@ -288,7 +289,7 @@ export default function LessonCard(p: Props) {
   );
 }
 
-// Crown: gray (locked) → NEON (unlocked but not complete) → gold (complete)
+// Crown: gray (locked) â†’ NEON (unlocked but not complete) â†’ gold (complete)
 function ChallengeCrown({
   state,
   nodeLocked,
@@ -320,13 +321,13 @@ function ChallengeCrown({
       <MaterialCommunityIcons
         name="crown-outline"
         size={CROWN_SIZE}
-        color={GRAY_BORDER + 'AA'}
+        color={withAlpha(GRAY_BORDER, 0.67)}
         accessibilityLabel="Challenge (locked)"
       />
   );
 }
 
-// Book: gray (locked) → NEON (unlocked but not complete) → gold (complete)
+// Book: gray (locked) â†’ NEON (unlocked but not complete) â†’ gold (complete)
 function ReviewBook({
   state,
   nodeLocked,
@@ -358,7 +359,7 @@ function ReviewBook({
     <MaterialCommunityIcons
       name="book-open-variant"
       size={BOOK_SIZE}
-      color={GRAY_BORDER + 'AA'}
+      color={withAlpha(GRAY_BORDER, 0.67)}
       accessibilityLabel="Review (locked)"
     />
   );
@@ -408,7 +409,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   center: { alignItems: 'center', justifyContent: 'center', flex: 1, gap: 4 },
-  title: { color: '#FFFFFF', fontWeight: '800', fontSize: 18 },
+  title: { color: colors.text, fontWeight: '800', fontSize: 18 },
   subtitle: { fontWeight: '800', fontSize: 18 },
   crownMask: {
     width: CROWN_SIZE,
@@ -427,3 +428,5 @@ const styles = StyleSheet.create({
   },
   bookGradient: { flex: 1 },
 });
+
+

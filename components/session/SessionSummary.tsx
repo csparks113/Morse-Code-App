@@ -1,23 +1,8 @@
-/**
+﻿/**
  * SESSION SUMMARY
  * ---------------
- * OVERVIEW
  * Full-screen "Session Complete" summary with a circular ring that fills based
- * on the userâ€™s score. Displays:
- *  - Big percent (color switches to gold at >= 80%)
- *  - "X / 20 correct"
- *  - Continue button
- *
- * PROPS
- * - percent: number (0..100)
- * - correct: number (e.g., 17)
- * - total: number (e.g., 20)
- * - onContinue: handler to dismiss and go back to Lessons (or next step)
- *
- * IMPLEMENTATION
- * - We render two SVG circles: a background track and a foreground arc.
- * - The arc uses strokeDasharray/offset to draw a portion of the circle.
- * - A small center overlay shows the large percent text and the sublabel.
+ * on the user's score.
  */
 
 import React from 'react';
@@ -28,15 +13,16 @@ import Svg, {
   LinearGradient as SvgLinearGradient,
   Stop,
 } from 'react-native-svg';
-import { router } from 'expo-router';              // â¬…ï¸ use static router for dismissAll()
-import { colors, spacing } from '@/theme/lessonTheme';
+import { router } from 'expo-router';
+import { colors, spacing, borders, gradients } from '@/theme/lessonTheme';
+import { typography, fontWeight } from '@/theme/tokens';
 import { useTranslation } from 'react-i18next';
 
 type Props = {
   percent: number;
   correct: number;
   total: number;
-  onContinue?: () => void;                         // â¬…ï¸ optional: cleanup only
+  onContinue?: () => void;
 };
 
 // Drawing constants for the ring
@@ -56,11 +42,11 @@ export default function SessionSummary({
   const strokeId = safePercent >= 80 ? 'ringGold' : 'ringBlue';
   const dash = CIRC * (1 - safePercent / 100);
   const accent = safePercent >= 80 ? colors.gold : colors.blueNeon;
+  const [summaryGoldStart, summaryGoldEnd] = gradients.summaryGold;
+  const [summaryBlueStart, summaryBlueEnd] = gradients.summaryBlue;
 
   const handleContinue = React.useCallback(() => {
-    // 1) Run optional cleanup (stop timers, etc.)
     onContinue?.();
-    // 2) Clear history and land on Home
     router.dismissAll();
     router.replace('/');
   }, [onContinue]);
@@ -72,13 +58,13 @@ export default function SessionSummary({
       <View style={styles.ringWrap}>
         <Svg width={SIZE} height={SIZE}>
           <Defs>
-            <SvgLinearGradient id="ringGold" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0%" stopColor="#FFE066" />
-              <Stop offset="100%" stopColor={colors.gold} />
+                        <SvgLinearGradient id="ringGold" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0%" stopColor={summaryGoldStart} />
+              <Stop offset="100%" stopColor={summaryGoldEnd} />
             </SvgLinearGradient>
-            <SvgLinearGradient id="ringBlue" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0%" stopColor="#00C2FF" />
-              <Stop offset="100%" stopColor={colors.blueDeep} />
+                        <SvgLinearGradient id="ringBlue" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0%" stopColor={summaryBlueStart} />
+              <Stop offset="100%" stopColor={summaryBlueEnd} />
             </SvgLinearGradient>
           </Defs>
 
@@ -87,7 +73,7 @@ export default function SessionSummary({
             cx={SIZE / 2}
             cy={SIZE / 2}
             r={RADIUS}
-            stroke="#1C252F"
+            stroke={borders.base}
             strokeWidth={STROKE}
             fill="transparent"
           />
@@ -116,12 +102,11 @@ export default function SessionSummary({
         </View>
       </View>
 
-      {/* Continue button -> cleanup (optional) + dismissAll + replace('/') */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('common:continue')}
         onPress={handleContinue}
-        style={({ pressed }) => [styles.continue, pressed && { opacity: 0.92 }]}
+        style={({ pressed }) => [styles.continue, pressed && styles.continuePressed]}
       >
         <Text style={styles.continueText}>{t('common:continue')}</Text>
       </Pressable>
@@ -139,8 +124,8 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: typography.subtitle,
+    fontWeight: fontWeight.extraBold,
   },
   ringWrap: { alignItems: 'center', justifyContent: 'center' },
   center: {
@@ -149,14 +134,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   percent: {
-    fontSize: 48,
-    fontWeight: '900',
+    fontSize: typography.hero,
+    fontWeight: fontWeight.black,
     letterSpacing: 1,
   },
   sub: {
     color: colors.textDim,
     marginTop: spacing(1),
-    fontWeight: '600',
+    fontWeight: fontWeight.medium,
   },
   continue: {
     backgroundColor: colors.blueNeon,
@@ -164,9 +149,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(3),
     paddingHorizontal: spacing(8),
   },
+  continuePressed: { opacity: 0.92 },
   continueText: {
     color: colors.bg,
-    fontWeight: '800',
-    fontSize: 18,
+    fontWeight: fontWeight.extraBold,
+    fontSize: typography.subtitle,
   },
 });
+
+
+

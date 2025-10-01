@@ -13,7 +13,7 @@
  */
 
 import React from "react";
-import { Animated, Dimensions, StyleSheet, Text, View } from "react-native";
+import { Animated, Dimensions, Text, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -29,10 +29,9 @@ import OutputTogglesRow from "../../../../components/session/OutputTogglesRow";
 import KeyerButton from "../../../../components/session/KeyerButton";
 import FlashOverlay from "../../../../components/session/FlashOverlay";
 import MorseCompare from "../../../../components/session/MorseCompare";
+import { sessionStyleSheet, sessionContainerPadding } from "../../../../theme/sessionStyles";
 
-// Theme + helpers
-import { colors, spacing } from "../../../../theme/lessonTheme";
-import { theme } from "../../../../theme/theme";
+import { colors, spacing, status } from "../../../../theme/lessonTheme";
 import { toMorse } from "../../../../utils/morse";
 import { playMorseCode, stopPlayback } from "../../../../utils/audio";
 import { classifyGapDuration, classifySignalDuration, getMorseUnitMs, MORSE_UNITS } from "../../../../utils/morseTiming";
@@ -461,16 +460,16 @@ export default function SendSessionScreen() {
   );
 
   const compareMode = showReveal || feedback === "correct" ? "compare" : "guessing";
-  const bottomBarColor = feedback === "wrong" ? "#FF6B6B" : colors.gold;
+  const bottomBarColor = feedback === "wrong" ? status.error : colors.gold;
 
   const finalSummary = earlySummary || summary || null;
 
   if (!meta.pool.length) {
     return (
-      <SafeAreaView style={styles.safe} edges={[]}>
-        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>{t("session:contentUnavailable")}</Text>
+      <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
+        <View style={[sessionStyleSheet.container, sessionContainerPadding(insets)]}>
+          <View style={sessionStyleSheet.emptyState}>
+            <Text style={sessionStyleSheet.emptyText}>{t("session:contentUnavailable")}</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -479,8 +478,8 @@ export default function SendSessionScreen() {
 
   if (finalSummary) {
     return (
-      <SafeAreaView style={styles.safe} edges={[]}>
-        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
+        <View style={[sessionStyleSheet.container, sessionContainerPadding(insets)]}>
           <SessionHeader
             labelTop={meta.headerTop}
             labelBottom={t("session:sendMode")}
@@ -501,19 +500,19 @@ export default function SendSessionScreen() {
   const canInteract = canInteractBase && !isReplaying;
 
   return (
-    <SafeAreaView style={styles.safe} edges={[]}>
+    <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
       <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={0.28} />
 
       <View
         style={[
-          styles.container,
+          sessionStyleSheet.container,
           {
             paddingTop: insets.top + spacing(2),
             paddingBottom: insets.bottom + spacing(2),
           },
         ]}
       >
-        <View style={styles.topGroup}>
+        <View style={sessionStyleSheet.topGroup}>
           <SessionHeader
             labelTop={meta.headerTop}
             labelBottom={t("session:sendMode")}
@@ -523,7 +522,7 @@ export default function SendSessionScreen() {
           <ProgressBar value={results.length} total={TOTAL_QUESTIONS} streak={streak} />
         </View>
 
-        <View style={styles.centerGroup}>
+        <View style={sessionStyleSheet.centerGroup}>
           <PromptCard
             compact
             revealSize="sm"
@@ -553,8 +552,8 @@ export default function SendSessionScreen() {
           />
         </View>
 
-        <View style={styles.bottomGroup}>
-          <View style={styles.togglesWrap}>
+        <View style={sessionStyleSheet.bottomGroup}>
+          <View style={sessionStyleSheet.togglesWrap}>
             <OutputTogglesRow
               hapticsEnabled={hapticsEnabled}
               lightEnabled={lightEnabled}
@@ -567,7 +566,7 @@ export default function SendSessionScreen() {
             />
           </View>
 
-          <View style={styles.inputZone}>
+          <View style={sessionStyleSheet.inputZone}>
             <KeyerButton
               onPressIn={onPressIn}
               onPressOut={onPressOut}
@@ -581,41 +580,15 @@ export default function SendSessionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: theme.colors.background },
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: spacing(3),
-    justifyContent: "space-between",
-  },
-  topGroup: { marginBottom: spacing(0.5) },
-  centerGroup: { flex: 1, alignItems: "center", justifyContent: "center" },
-  bottomGroup: { marginTop: spacing(0.5), alignItems: "stretch" },
-  togglesWrap: {
-    alignSelf: "stretch",
-    minHeight: 64,
-    justifyContent: "center",
-  },
-  inputZone: {
-    alignSelf: "stretch",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 140,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing(4),
-    padding: spacing(4),
-  },
-  emptyText: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "700",
-  },
-});
+
+
+
+
+
+
+
+
+
 
 
 

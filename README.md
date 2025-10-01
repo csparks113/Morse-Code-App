@@ -1,4 +1,4 @@
-# Morse Code Master
+﻿# Morse Code Master
 
 A premium dark-themed Expo React Native app for learning, practicing, and mastering Morse code.
 
@@ -29,7 +29,7 @@ npx expo start
 
 ## Getting Started
 
-- Prerequisites: Node 18+, npm 9+, Android Studio (Android), Xcode (iOS), and Expo Go on your device if you’re testing on hardware.
+- Prerequisites: Node 18+, npm 9+, Android Studio (Android), Xcode (iOS), and Expo Go on your device if youâ€™re testing on hardware.
 - Install deps: `npm install`
 - Start dev server: `npx expo start` (or `npx expo start -c` to clear cache)
 - Open:
@@ -51,7 +51,7 @@ npx expo start
 - SDK 54 warnings:
   - `expo-av` is deprecated; audio playback works but will be migrated to `expo-audio`.
   - `expo-file-system` legacy API is used intentionally for tone file writes to avoid runtime errors; migration to the new File/Directory API is planned.
-- Routing issues: keep non‑screen modules out of `app/` so Expo Router doesn’t treat them as routes.
+- Routing issues: keep nonâ€‘screen modules out of `app/` so Expo Router doesnâ€™t treat them as routes.
 - If you see strange bundler errors: stop the server, run `npx expo start -c`, and try again.
 
 ## Project Documentation
@@ -110,3 +110,4 @@ utils/
 assets/
   images/, fonts/ (tones are generated at runtime)
 ```
+

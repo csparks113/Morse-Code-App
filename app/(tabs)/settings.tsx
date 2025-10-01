@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import {
 } from '@/i18n';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { theme } from '../../theme/theme';
+import { withAlpha } from '@/theme/tokens';
 import { useProgressStore } from '../../store/useProgressStore';
 
 type StepperRowProps = {
@@ -370,7 +371,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: withAlpha(theme.colors.background, 0.6),
     justifyContent: 'center',
     padding: theme.spacing(4),
   },
@@ -424,7 +425,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: withAlpha(theme.colors.background, 0.6),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -441,3 +442,5 @@ const styles = StyleSheet.create({
     textAlign: 'auto',
   },
 });
+
+

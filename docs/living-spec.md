@@ -1,4 +1,4 @@
-# Morse Code Master — Living Spec
+﻿# Morse Code Master — Living Spec
 
 This document captures how the app is organized and behaves so changes are intentional and traceable.
 
@@ -44,11 +44,11 @@ This document captures how the app is organized and behaves so changes are inten
 
 ## Components (Flattened)
 
-- `components/` contains lesson UI: `Coin`, `LessonNode`, `ChallengeNode`, `LessonPath`, `LessonPromptCard`, `NeonHeaderCard`, `ProgressBar`.
+- components/ key modules: LessonCard, LessonPath, PromptCard, SessionHeader, SessionSummary, NeonHeaderCard.
 - Themes:
   - `constants/theme.ts`: app shell theme (tabs, settings, etc.).
-  - `theme/lessonTheme.ts`: neon tokens for lesson visuals.
-  - `constants/coinTheme.ts`: palette for coin visuals.
+  - 	heme/tokens.ts: source of shared palette/spacing/typography.
+  - 	heme/lessonTheme.ts: neon tokens for lesson visuals.
 
 ## Accessibility
 

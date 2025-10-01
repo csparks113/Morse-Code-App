@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PROGRESS BAR WITH STATS
  * -----------------------
  * Displays current question progress and streak info alongside the neon track.
@@ -8,7 +8,8 @@ import React from 'react';
 import { View, StyleSheet, Text, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '@/theme/lessonTheme';
+import { colors, spacing, status, gradients } from '@/theme/lessonTheme';
+import { typography, fontWeight, withAlpha } from '@/theme/tokens';
 
 type Props = {
   value: number;
@@ -23,7 +24,7 @@ export default function ProgressBar({ value, total, streak = 0 }: Props) {
   const percentWidth = `${fraction * 100}%`;
   const safeStreak = Math.max(0, streak);
   const hasStreak = safeStreak > 0;
-  const streakColor = hasStreak ? '#FF9F1C' : 'rgba(154, 160, 166, 0.7)';
+  const streakColor = hasStreak ? status.warning : colors.textDim;
 
   return (
     <View style={styles.container}>
@@ -33,9 +34,9 @@ export default function ProgressBar({ value, total, streak = 0 }: Props) {
 
       <View style={styles.track}>
         {fraction > 0 && (
-          <View style={[styles.fillWrapper, { width: percentWidth } as ViewStyle]}> 
+          <View style={[styles.fillWrapper, { width: percentWidth } as ViewStyle]}>
             <LinearGradient
-              colors={['#FFEE94', colors.gold]}
+              colors={gradients.progressGold}
               start={{ x: 0, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
               style={StyleSheet.absoluteFill}
@@ -63,21 +64,21 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing(.25),        //Progress Bar Length (horizontal margins)
+    gap: spacing(0.25),
     marginBottom: spacing(0),
   },
   countLabel: {
     width: 60,
     color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: typography.body,
+    fontWeight: fontWeight.bold,
     textAlign: 'center',
   },
   track: {
     flex: 1,
     height: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: withAlpha(colors.gold, 0.2),
     overflow: 'hidden',
   },
   fillWrapper: {
@@ -91,7 +92,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   streakText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: typography.body,
+    fontWeight: fontWeight.bold,
   },
 });
+

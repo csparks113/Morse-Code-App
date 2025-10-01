@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Animated, StyleSheet, StyleProp, ViewStyle } from "react-native";
 
 import { theme } from "@/theme/theme";
@@ -38,5 +38,7 @@ function FlashOverlay({
 }
 
 export default FlashOverlay;
+
+
 
 
