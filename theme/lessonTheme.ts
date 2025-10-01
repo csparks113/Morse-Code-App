@@ -1,7 +1,7 @@
-﻿// theme/lessonTheme.ts
+// theme/lessonTheme.ts
 // Neon dark theme tokens for the Lessons path UI
 
-import { palette, spacing as spacingTokens, lessonRadii, withAlpha } from './tokens';
+import { palette, spacing as spacingTokens, lessonRadii, withAlpha, fontWeight } from './tokens';
 
 export const colors = {
   bg: palette.background,
@@ -95,3 +95,35 @@ export const status = {
   success: palette.accentSuccess,
 } as const;
 
+
+export const promptCardTheme = {
+  container: {
+    minWidth: 225,
+    maxWidth: 560,
+    borderRadius: 18,
+    borderWidth: 1.5,
+  },
+  main: {
+    minHeight: 110,
+  },
+  reveal: {
+    minHeight: 60,
+  },
+  label: {
+    fontSize: 15,
+    letterSpacing: 0.6,
+  },
+  char: {
+    fontSize: 104,
+    lineHeight: 104,
+    fontWeight: fontWeight.black,
+  },
+  startButton: {
+    minWidth: 150,
+    paddingVerticalStep: 2.25,
+    paddingHorizontalStep: 5.5,
+    borderRadius: 32,
+    fontSize: 18,
+    fontWeight: fontWeight.extraBold,
+  },
+} as const;

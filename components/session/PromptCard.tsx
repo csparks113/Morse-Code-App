@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import ActionButton, { ActionButtonState } from '@/components/session/ActionButton';
-import { colors, spacing, borders, status } from '@/theme/lessonTheme';
+import { colors, spacing, borders, status, promptCardTheme } from '@/theme/lessonTheme';
 import { useTranslation } from 'react-i18next';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
@@ -21,9 +21,9 @@ type Props = {
   started: boolean;
   visibleChar: string;
   feedback: FeedbackState;
-  morse?: string | null;
   showReveal: boolean;
   onStart: () => void;
+  morse?: string | null;
   onRevealToggle?: () => void;
   onReplay?: () => void;
   canInteract?: boolean;
@@ -35,21 +35,23 @@ type Props = {
   replayAction?: PromptCardAction;
 };
 
+/**
+ * Displays the central prompt card used in send/receive sessions.
+ * Until a session starts the card renders a "Start" CTA; afterwards it shows the active glyph
+ * along with reveal/replay controls and optional content below the reveal row.
+ */
 export default function PromptCard({
   title,
   started,
   visibleChar,
   feedback,
-/*   morse, */
   showReveal,
   onStart,
   onRevealToggle,
   onReplay,
   canInteract,
-/*   mainSlotMinHeight = 116, */
+  mainSlotMinHeight = promptCardTheme.main.minHeight,
   belowReveal,
-/*   compact = false, */
-/*   revealSize, */
   revealAction,
   replayAction,
 }: Props) {
@@ -59,7 +61,7 @@ export default function PromptCard({
 
   const resolvedRevealAction = React.useMemo<PromptCardAction>(() => {
     if (revealAction) return revealAction;
-    const state: ActionButtonState = (!interactable || !onRevealToggle || showReveal) ? 'disabled' : 'active';
+    const state: ActionButtonState = !interactable || !onRevealToggle || showReveal ? 'disabled' : 'active';
     return {
       icon: 'eye-outline',
       accessibilityLabel: t('session:reveal'),
@@ -81,16 +83,15 @@ export default function PromptCard({
   }, [interactable, onReplay, replayAction, t]);
 
   return (
-    <View style={[styles.card,]}>
+    <View style={styles.card}>
+      <Text style={styles.label}>{titleText}</Text>
 
-      <Text style={[styles.label]}>{titleText}</Text>
-
-      <View style={[styles.main]}>
+      <View style={[styles.main, { minHeight: mainSlotMinHeight }]}>
         {!started ? (
           <Pressable
             accessibilityRole="button"
             onPress={onStart}
-            style={({ pressed }) => [styles.startBtn, pressed && { opacity: 0.9 }]}
+            style={({ pressed }) => [styles.startBtn, pressed && styles.startBtnPressed]}
           >
             <Text style={styles.startText}>{t('common:start')}</Text>
           </Pressable>
@@ -107,11 +108,9 @@ export default function PromptCard({
         )}
       </View>
 
-      <View style={[styles.revealMorse]}>
-        {belowReveal}
-      </View>
+      <View style={styles.reveal}>{belowReveal}</View>
 
-      <View style={[styles.actions]}>
+      <View style={styles.actions}>
         <ActionButton
           icon={resolvedRevealAction.icon}
           accessibilityLabel={resolvedRevealAction.accessibilityLabel}
@@ -130,78 +129,61 @@ export default function PromptCard({
 }
 
 const styles = StyleSheet.create({
-  revealBlock: { minHeight: 60, justifyContent: 'center' },
-revealHidden: { opacity: 0, pointerEvents: 'none' },
-// --- Main container -------------------------------------------------------------
   card: {
     alignSelf: 'center',
     backgroundColor: colors.card,
-    borderWidth: 1.5,
+    borderWidth: promptCardTheme.container.borderWidth,
     borderColor: borders.base,
-    borderRadius: 18,
+    borderRadius: promptCardTheme.container.borderRadius,
     paddingHorizontal: spacing(2),
-    alignItems: 'center',
-    minWidth: 225,
-    maxWidth: 560, 
     paddingVertical: spacing(2),
-    gap: spacing(1)
-,  },
-
-  // --- Text at Top ----------------------------------------------------------------
-  label: { 
-    color: colors.textDim, 
-    textAlign: 'center', 
-    letterSpacing: 0.6, 
-    fontSize: 15,
+    alignItems: 'center',
+    minWidth: promptCardTheme.container.minWidth,
+    maxWidth: promptCardTheme.container.maxWidth,
+    gap: spacing(1),
   },
-
-  // --- Glyph/Letter & Start Button Outer Container --------------------------------
-  main: { 
-    alignSelf: 'stretch', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    minHeight: 110,
-  },
-
-  // --- Glyph/Letter -------------------------------------------------------------
-  char: {
-    fontSize: 104,
-    lineHeight: 104,
-    fontWeight: '900',
-    color: colors.text,
-    //letterSpacing: 6,
+  label: {
+    color: colors.textDim,
     textAlign: 'center',
+    letterSpacing: promptCardTheme.label.letterSpacing,
+    fontSize: promptCardTheme.label.fontSize,
   },
-
-  charCorrect: { color: colors.gold },
-
-  charWrong: { color: status.error },
-
-  // --- Start Button --------------------------------------------------------------
-  startBtn: {
-    minWidth: 150,
-    paddingVertical: spacing(2.25),
-    paddingHorizontal: spacing(5.5),
-    borderRadius: 32,
-    backgroundColor: colors.blueNeon,
-  },
-
-  startText: {
-    color: colors.bg,
-    fontWeight: '800',
-    fontSize: 18,
-    textAlign: 'center',
-  },
-
-  // --- reveals morse code (correct answer & user input) -----------------
-  revealMorse: {
+  main: {
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 60,
   },
-  
-  // --- action button row --------------------------------------------------
+  char: {
+    fontSize: promptCardTheme.char.fontSize,
+    lineHeight: promptCardTheme.char.lineHeight,
+    fontWeight: promptCardTheme.char.fontWeight,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  charCorrect: { color: colors.gold },
+  charWrong: { color: status.error },
+  startBtn: {
+    minWidth: promptCardTheme.startButton.minWidth,
+    paddingVertical: spacing(promptCardTheme.startButton.paddingVerticalStep),
+    paddingHorizontal: spacing(promptCardTheme.startButton.paddingHorizontalStep),
+    borderRadius: promptCardTheme.startButton.borderRadius,
+    backgroundColor: colors.blueNeon,
+  },
+  startBtnPressed: {
+    opacity: 0.9,
+  },
+  startText: {
+    color: colors.bg,
+    fontWeight: promptCardTheme.startButton.fontWeight,
+    fontSize: promptCardTheme.startButton.fontSize,
+    textAlign: 'center',
+  },
+  reveal: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: promptCardTheme.reveal.minHeight,
+  },
   actions: {
     alignSelf: 'stretch',
     flexDirection: 'row',
@@ -210,4 +192,5 @@ revealHidden: { opacity: 0, pointerEvents: 'none' },
     gap: spacing(3),
   },
 });
+
 

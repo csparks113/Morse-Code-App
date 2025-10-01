@@ -1,4 +1,4 @@
-﻿// app/lessons/[group]/[lessonId]/receive.tsx
+// app/lessons/[group]/[lessonId]/receive.tsx
 
 /**
  * RECEIVE SESSION SCREEN (Pinned layout)
@@ -6,33 +6,19 @@
  * Top:    SessionHeader + ProgressBar
  * Center: PromptCard (timeline compare under reveal)
  * Bottom: OutputTogglesRow + Input (LessonChoices OR ChallengeKeyboard)
- *
- * Updates:
- * - Reviews use cumulative pool + keyboard (like challenges).
- * - Challenge hearts: decrement on wrong; early end at 0.
- * - Reviews persist progress under their own ids ("2-review", etc.).
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  Animated,
-  Dimensions,
-  Platform,
-  Vibration,
-} from 'react-native';
+import { View, Text } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import * as Haptics from 'expo-haptics';
 
 // Shared UI
 import SessionHeader from '../../../../components/session/SessionHeader';
 import ProgressBar from '../../../../components/session/ProgressBar';
 import SessionSummary from '../../../../components/session/SessionSummary';
 import PromptCard from '../../../../components/session/PromptCard';
-import type { ActionButtonState } from '../../../../components/session/ActionButton';
 import OutputTogglesRow from '../../../../components/session/OutputTogglesRow';
 import FlashOverlay from '../../../../components/session/FlashOverlay';
 import LessonChoices from '../../../../components/session/LessonChoices';
@@ -42,32 +28,15 @@ import { sessionStyleSheet, sessionContainerPadding } from '../../../../theme/se
 
 // Theme + utils
 import { colors, spacing } from '../../../../theme/lessonTheme';
-import { toMorse } from '../../../../utils/morse';
-import { playMorseCode, getMorseUnitMs } from '../../../../utils/audio';
 
-// Stores
-import { useProgressStore } from '../../../../store/useProgressStore';
+// Stores & hooks
 import { useSettingsStore } from '../../../../store/useSettingsStore';
-
-// Lesson meta
 import { buildSessionMeta } from '../../../../session/sessionMeta';
-
-const TOTAL_QUESTIONS = 5;
-
-type Summary = { correct: number; percent: number };
-type FeedbackState = 'idle' | 'correct' | 'wrong';
-
-// Normalize to a string key for progress storage
-function getStoreIdForProgress(rawId: string) {
-  return String(rawId);
-}
+import { useReceiveSession, TOTAL_RECEIVE_QUESTIONS } from '../../../../hooks/useReceiveSession';
 
 export default function ReceiveSessionScreen() {
   const insets = useSafeAreaInsets();
-  const { group, lessonId } = useLocalSearchParams<{
-    group: string;
-    lessonId: string;
-  }>();
+  const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
 
   const { t } = useTranslation(['session', 'common']);
   const meta = React.useMemo(
@@ -77,10 +46,8 @@ export default function ReceiveSessionScreen() {
 
   const isReview = React.useMemo(
     () => /^\d+-review$/.test(String(lessonId)),
-    [lessonId]
+    [lessonId],
   );
-
-  const setScore = useProgressStore((s) => s.setScore);
 
   const {
     audioEnabled,
@@ -93,284 +60,52 @@ export default function ReceiveSessionScreen() {
     setHapticsEnabled,
   } = useSettingsStore();
 
-  // Optional per-channel offsets (defaults to 0 if not present)
   const { flashOffsetMs = 0, hapticOffsetMs = 0 } = useSettingsStore() as any;
 
-  const [started, setStarted] = React.useState(false);
-  const [questions, setQuestions] = React.useState<string[]>([]);
-  const [results, setResults] = React.useState<boolean[]>([]);
-  const [feedback, setFeedback] = React.useState<FeedbackState>('idle');
-  const [showReveal, setShowReveal] = React.useState(false);
-  const [summary, setSummary] = React.useState<Summary | null>(null);
-  const [streak, setStreak] = React.useState(0);
-  const [revealUsed, setRevealUsed] = React.useState(false);
-  const [isPlaying, setIsPlaying] = React.useState(false);
-
-  // Hearts for CHALLENGE mode
-  const [hearts, setHearts] = React.useState(3);
-  // (Receive does not need a separate earlySummary object - we can set `summary` directly)
-
-  const flash = React.useRef(new Animated.Value(0)).current;
-
-  const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const currentMorseRef = React.useRef('');
-
-  const currentIndex = results.length;
-  const currentTarget = questions[currentIndex] ?? null;
-  const currentMorse = currentTarget ? (toMorse(currentTarget) ?? '') : '';
-  currentMorseRef.current = currentMorse;
+  const {
+    started,
+    summary,
+    feedback,
+    showReveal,
+    revealAction,
+    replayAction,
+    visibleChar,
+    hearts,
+    streak,
+    progressValue,
+    canInteract,
+    currentTarget,
+    wpm,
+    promptSlotHeight,
+    flashOpacity,
+    startSession,
+    submitAnswer,
+    handleSummaryContinue,
+  } = useReceiveSession({
+    pool: meta.pool,
+    isChallenge: meta.isChallenge,
+    groupId: typeof group === 'string' ? group : undefined,
+    lessonId: lessonId ? String(lessonId) : undefined,
+    lightEnabled,
+    hapticsEnabled,
+    flashOffsetMs,
+    hapticOffsetMs,
+    actionLabels: {
+      reveal: t('session:reveal'),
+      replay: t('session:replay'),
+    },
+  });
 
   const learnedSet = React.useMemo(
     () => new Set(meta.pool.map((c) => c.toUpperCase())),
     [meta.pool],
   );
 
-  const screenH = Dimensions.get('window').height;
-  const layout = screenH < 635 ? 'xsmall' : screenH < 700 ? 'small' : 'regular';
-  const promptSlotHeight =
-    layout === 'regular' ? 116 : layout === 'small' ? 96 : 84;
-
-  React.useEffect(() => {
-    return () => {
-      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-    };
-  }, []);
-
-  /** Flash overlay for playback feedback */
-  const runFlash = React.useCallback((durationMs: number) => {
-    if (!lightEnabled) return;
-
-    const fadeMs = Math.min(240, Math.max(120, Math.floor(durationMs * 0.35)));
-    const holdMs = Math.max(0, Math.floor(durationMs - fadeMs));
-
-    try {
-      flash.stopAnimation();
-    } catch {}
-    flash.setValue(1);
-
-    requestAnimationFrame(() => {
-      if (holdMs > 0) {
-        Animated.timing(flash, {
-          toValue: 1,
-          duration: holdMs,
-          useNativeDriver: true,
-        }).start(() => {
-          Animated.timing(flash, {
-            toValue: 0,
-            duration: fadeMs,
-            useNativeDriver: true,
-          }).start();
-        });
-      } else {
-        Animated.timing(flash, {
-          toValue: 0,
-          duration: fadeMs,
-          useNativeDriver: true,
-        }).start();
-      }
-    });
-  }, [lightEnabled, flash]);
-
-  /** Haptic tick per symbol during playback (optional) */
-  const hapticTick = React.useCallback(
-    (symbol: '.' | '-', durationMs: number) => {
-      if (!hapticsEnabled) return;
-
-      if (Platform.OS === 'android') {
-        try {
-          Vibration.cancel();
-        } catch {}
-        Vibration.vibrate(Math.max(15, Math.round(durationMs)));
-        return;
-      }
-
-      try {
-        const style =
-          symbol === '.'
-            ? Haptics.ImpactFeedbackStyle.Light
-            : Haptics.ImpactFeedbackStyle.Medium;
-        Haptics.impactAsync(style);
-      } catch {
-        /* ignore */
-      }
-    },
-    [hapticsEnabled],
-  );
-
-  /** Play the target character's Morse pattern */
-  const playTarget = React.useCallback(async () => {
-    if (isPlaying) return;
-    const morse = currentMorseRef.current;
-    if (!morse) return;
-
-    setIsPlaying(true);
-    try {
-      await playMorseCode(morse, getMorseUnitMs(), {
-        onSymbolStart: (symbol, duration) => {
-          if (flashOffsetMs > 0) setTimeout(() => runFlash(duration), flashOffsetMs);
-          else runFlash(duration);
-
-          if (hapticOffsetMs > 0) setTimeout(() => hapticTick(symbol, duration), hapticOffsetMs);
-          else hapticTick(symbol, duration);
-        },
-      });
-    } finally {
-      setIsPlaying(false);
-    }
-  }, [runFlash, hapticTick, flashOffsetMs, hapticOffsetMs, isPlaying]);
-
-  const playTargetRef = React.useRef<() => Promise<void> | void>(() => {});
-  React.useEffect(() => {
-    playTargetRef.current = playTarget;
-  }, [playTarget]);
-
-  /** Auto-play shortly after the prompt appears (only while idle on the prompt). */
-  React.useEffect(() => {
-    if (!started || !currentTarget || summary || feedback !== 'idle') return;
-    const timer = setTimeout(() => {
-      playTargetRef.current?.();
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [started, currentTarget, summary, feedback]);
-
-  /** Start a new receive session */
-  const startSession = React.useCallback(() => {
-    if (!meta.pool.length) return;
-    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-
-    const generated: string[] = [];
-    for (let i = 0; i < TOTAL_QUESTIONS; i += 1) {
-      const pick = meta.pool[Math.floor(Math.random() * meta.pool.length)];
-      generated.push(pick);
-    }
-
-    setQuestions(generated);
-    setResults([]);
-    setFeedback('idle');
-    setShowReveal(false);
-    setRevealUsed(false);
-    setIsPlaying(false);
-    setSummary(null);
-    setStreak(0);
-    setStarted(true);
-
-    // Reset hearts for challenges
-    if (meta.isChallenge) setHearts(3);
-  }, [meta.pool, meta.isChallenge]);
-
-  /** Finish a question and move forward (delay for quick visual feedback) */
-  const finishQuestion = React.useCallback(
-    (isCorrect: boolean) => {
-      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-
-      const willExhaustHearts =
-        meta.isChallenge && !isCorrect && hearts <= 1; // this wrong will drop to 0
-
-      setFeedback(isCorrect ? 'correct' : 'wrong');
-      setShowReveal(true);
-
-      if (!isCorrect && meta.isChallenge) {
-        setHearts((h) => Math.max(0, h - 1));
-      }
-
-      if (willExhaustHearts) {
-        // Keep the red state on screen briefly, then end.
-        const delay = 650;
-        setTimeout(() => {
-          const correctCount = results.filter(Boolean).length; // last was wrong
-          const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
-          setSummary({ correct: correctCount, percent: pct });
-          setStarted(false);
-          if (group && lessonId) {
-            setScore(group, getStoreIdForProgress(String(lessonId)), 'receive', pct);
-          }
-        }, delay);
-        return; // do NOT schedule advance/reset
-      }
-
-      // Normal advance path
-      advanceTimerRef.current = setTimeout(() => {
-        setResults((prev) => {
-          if (prev.length >= TOTAL_QUESTIONS) return prev;
-          const next = [...prev, isCorrect];
-          if (next.length === TOTAL_QUESTIONS) {
-            const correctCount = next.filter(Boolean).length;
-            const pct = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
-            setSummary({ correct: correctCount, percent: pct });
-            setStarted(false);
-            if (group && lessonId) {
-              setScore(group, getStoreIdForProgress(String(lessonId)), 'receive', pct);
-            }
-          }
-          return next;
-        });
-        setShowReveal(false);
-        setFeedback('idle');
-        setRevealUsed(false);
-        setIsPlaying(false);
-      }, 450);
-    },
-    [group, lessonId, meta.isChallenge, hearts, results, setScore],
-  );
-
-  /** Handle a user choice */
-  const submitAnswer = React.useCallback(
-    (choice: string) => {
-      if (!started || !currentTarget || summary || feedback !== 'idle') return;
-      const isCorrect =
-        choice.toUpperCase() === (currentTarget ?? '').toUpperCase();
-      finishQuestion(isCorrect);
-    },
-    [started, currentTarget, summary, feedback, finishQuestion],
-  );
-
-
-  const canInteract =
-    started && !summary && !!currentTarget && feedback === 'idle' && (!meta.isChallenge || hearts > 0);
-
-  const revealState: ActionButtonState = (() => {
-    if (meta.isChallenge) return 'disabled';
-    if (!started || !currentTarget || summary) return 'disabled';
-    if (revealUsed || showReveal || feedback !== 'idle') return 'disabled';
-    return 'active';
-  })();
-
-  const replayState: ActionButtonState = (() => {
-    if (!started || !currentTarget || summary || (meta.isChallenge && hearts <= 0)) return 'disabled';
-    if (isPlaying) return 'disabled';
-    if (!canInteract) return 'disabled';
-    return 'active';
-  })();
-
-  const handleRevealPress = React.useCallback(() => {
-    if (revealState !== 'active') return;
-    setShowReveal(true);
-    setRevealUsed(true);
-  }, [revealState, setRevealUsed, setShowReveal]);
-
-  const handleReplayPress = React.useCallback(() => {
-    if (replayState !== 'active') return;
-    playTarget();
-  }, [replayState, playTarget]);
-
-  // Large prompt char: '?' while guessing, else show the answer at result frame
-  const visibleChar = !started
-    ? ''
-    : feedback === 'idle'
-      ? '?'
-      : (currentTarget ?? '?');
-
-  const progressValue = results.length;
-
-  // Compute WPM for the timeline (matches your audio timing)
-  const unitMs = getMorseUnitMs();
-  const wpm = unitMs > 0 ? 1200 / unitMs : 12;
-
-  // Empty state
+  // Empty state when session has no glyphs available
   if (!meta.pool.length) {
     return (
       <SafeAreaView style={sessionStyleSheet.safe}>
-        <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, spacing(2), spacing(2))]}> 
+        <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, spacing(2), spacing(2))]}>
           <View style={sessionStyleSheet.emptyState}>
             <Text style={sessionStyleSheet.emptyText}>{t('session:contentUnavailable')}</Text>
           </View>
@@ -378,7 +113,8 @@ export default function ReceiveSessionScreen() {
       </SafeAreaView>
     );
   }
-  // Summary
+
+  // Results summary state
   if (summary) {
     return (
       <SafeAreaView style={sessionStyleSheet.safe}>
@@ -393,10 +129,8 @@ export default function ReceiveSessionScreen() {
           <SessionSummary
             percent={summary.percent}
             correct={summary.correct}
-            total={TOTAL_QUESTIONS}
-            onContinue={() => {
-              if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-            }}
+            total={TOTAL_RECEIVE_QUESTIONS}
+            onContinue={handleSummaryContinue}
           />
         </View>
       </SafeAreaView>
@@ -406,7 +140,7 @@ export default function ReceiveSessionScreen() {
   return (
     <SafeAreaView style={sessionStyleSheet.safe}>
       {/* Flash overlay for playback */}
-      <FlashOverlay opacity={flash} color={colors.text} maxOpacity={0.28} />
+      <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={0.28} />
 
       <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, spacing(2), spacing(2))]}>
         {/* --- TOP (fixed): header + progress --- */}
@@ -418,11 +152,7 @@ export default function ReceiveSessionScreen() {
             hearts={meta.isChallenge ? hearts : undefined}
           />
 
-          <ProgressBar
-            value={progressValue}
-            total={TOTAL_QUESTIONS}
-            streak={streak}
-          />
+          <ProgressBar value={progressValue} total={TOTAL_RECEIVE_QUESTIONS} streak={streak} />
         </View>
 
         {/* --- CENTER (flex, centered): PromptCard only --- */}
@@ -434,21 +164,11 @@ export default function ReceiveSessionScreen() {
             started={started}
             visibleChar={visibleChar}
             feedback={feedback}
-            morse={''} // disable old text reveal (avoid duplicates)
+            morse=""
             showReveal={showReveal}
             onStart={startSession}
-            revealAction={{
-              icon: 'eye-outline',
-              accessibilityLabel: t('session:reveal'),
-              onPress: handleRevealPress,
-              state: revealState,
-            }}
-            replayAction={{
-              icon: 'play',
-              accessibilityLabel: t('session:replay'),
-              onPress: handleReplayPress,
-              state: replayState,
-            }}
+            revealAction={revealAction}
+            replayAction={replayAction}
             mainSlotMinHeight={promptSlotHeight}
             belowReveal={
               (showReveal || feedback !== 'idle') && currentTarget ? (
@@ -482,7 +202,7 @@ export default function ReceiveSessionScreen() {
             />
           </View>
 
-          <View style={[sessionStyleSheet.inputZone]}>
+          <View style={sessionStyleSheet.inputZone}>
             {meta.isChallenge || isReview ? (
               <ChallengeKeyboard
                 learnedSet={learnedSet}
@@ -503,24 +223,3 @@ export default function ReceiveSessionScreen() {
     </SafeAreaView>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
