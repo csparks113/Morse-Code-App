@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SESSION SUMMARY
  * ---------------
  * Full-screen "Session Complete" summary with a circular ring that fills based
@@ -18,10 +18,17 @@ import { colors, spacing, borders, gradients } from '@/theme/lessonTheme';
 import { typography, fontWeight } from '@/theme/tokens';
 import { useTranslation } from 'react-i18next';
 
-type Props = {
+type SummaryProps = {
   percent: number;
   correct: number;
   total: number;
+};
+
+type SessionSummaryProps = SummaryProps & {
+  onContinue?: () => void;
+};
+
+type ContinueProps = {
   onContinue?: () => void;
 };
 
@@ -31,38 +38,51 @@ const STROKE = 18;
 const RADIUS = (SIZE - STROKE) / 2;
 const CIRC = 2 * Math.PI * RADIUS;
 
-export default function SessionSummary({
-  percent,
-  correct,
-  total,
-  onContinue,
-}: Props) {
-  const { t } = useTranslation(['session', 'common']);
+function useSummaryVisuals(percent: number) {
   const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
-  const strokeId = safePercent >= 80 ? 'ringGold' : 'ringBlue';
+  const isGold = safePercent >= 80;
   const dash = CIRC * (1 - safePercent / 100);
-  const accent = safePercent >= 80 ? colors.gold : colors.blueNeon;
+  const accent = isGold ? colors.gold : colors.blueNeon;
   const [summaryGoldStart, summaryGoldEnd] = gradients.summaryGold;
   const [summaryBlueStart, summaryBlueEnd] = gradients.summaryBlue;
 
-  const handleContinue = React.useCallback(() => {
-    onContinue?.();
-    router.dismissAll();
-    router.replace('/');
-  }, [onContinue]);
+  return {
+    safePercent,
+    dash,
+    accent,
+    strokeId: isGold ? 'ringGold' : 'ringBlue',
+    summaryGoldStart,
+    summaryGoldEnd,
+    summaryBlueStart,
+    summaryBlueEnd,
+  } as const;
+}
+
+export function SessionSummaryContent({ percent, correct, total }: SummaryProps) {
+  const { t } = useTranslation(['session']);
+  const {
+    safePercent,
+    dash,
+    accent,
+    strokeId,
+    summaryGoldStart,
+    summaryGoldEnd,
+    summaryBlueStart,
+    summaryBlueEnd,
+  } = useSummaryVisuals(percent);
 
   return (
-    <View style={styles.wrap}>
+    <View style={styles.content}>
       <Text style={styles.title}>{t('session:sessionComplete')}</Text>
 
       <View style={styles.ringWrap}>
         <Svg width={SIZE} height={SIZE}>
           <Defs>
-                        <SvgLinearGradient id="ringGold" x1="0" y1="0" x2="1" y2="1">
+            <SvgLinearGradient id="ringGold" x1="0" y1="0" x2="1" y2="1">
               <Stop offset="0%" stopColor={summaryGoldStart} />
               <Stop offset="100%" stopColor={summaryGoldEnd} />
             </SvgLinearGradient>
-                        <SvgLinearGradient id="ringBlue" x1="0" y1="0" x2="1" y2="1">
+            <SvgLinearGradient id="ringBlue" x1="0" y1="0" x2="1" y2="1">
               <Stop offset="0%" stopColor={summaryBlueStart} />
               <Stop offset="100%" stopColor={summaryBlueEnd} />
             </SvgLinearGradient>
@@ -96,27 +116,53 @@ export default function SessionSummary({
         {/* Center label */}
         <View style={styles.center}>
           <Text style={[styles.percent, { color: accent }]}>{safePercent}%</Text>
-          <Text style={styles.sub}>
-            {t('session:correctCount', { correct, total })}
-          </Text>
+          <Text style={styles.sub}>{t('session:correctCount', { correct, total })}</Text>
         </View>
       </View>
+    </View>
+  );
+}
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('common:continue')}
-        onPress={handleContinue}
-        style={({ pressed }) => [styles.continue, pressed && styles.continuePressed]}
-      >
-        <Text style={styles.continueText}>{t('common:continue')}</Text>
-      </Pressable>
+export function SessionSummaryContinue({ onContinue }: ContinueProps) {
+  const { t } = useTranslation(['common']);
+
+  const handleContinue = React.useCallback(() => {
+    onContinue?.();
+    router.dismissAll();
+    router.replace('/');
+  }, [onContinue]);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('common:continue')}
+      onPress={handleContinue}
+      style={({ pressed }) => [styles.continue, pressed && styles.continuePressed]}
+    >
+      <Text style={styles.continueText}>{t('common:continue')}</Text>
+    </Pressable>
+  );
+}
+
+export default function SessionSummary({ percent, correct, total, onContinue }: SessionSummaryProps) {
+  return (
+    <View style={styles.standaloneWrap}>
+      <SessionSummaryContent percent={percent} correct={correct} total={total} />
+      <SessionSummaryContinue onContinue={onContinue} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
+  standaloneWrap: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing(4),
+    marginBottom: spacing(4),
+    gap: spacing(5),
+  },
+  content: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing(4),
@@ -144,10 +190,12 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   continue: {
+    alignSelf: 'stretch',
     backgroundColor: colors.blueNeon,
     borderRadius: 30,
     paddingVertical: spacing(3),
-    paddingHorizontal: spacing(8),
+    paddingHorizontal: spacing(4),
+    marginBottom: spacing(4),
   },
   continuePressed: { opacity: 0.92 },
   continueText: {

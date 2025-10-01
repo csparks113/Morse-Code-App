@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 // Shared UI
 import SessionHeader from '../../../../components/session/SessionHeader';
 import ProgressBar from '../../../../components/session/ProgressBar';
-import SessionSummary from '../../../../components/session/SessionSummary';
+import { SessionSummaryContent, SessionSummaryContinue } from '../../../../components/session/SessionSummary';
 import PromptCard from '../../../../components/session/PromptCard';
 import OutputTogglesRow from '../../../../components/session/OutputTogglesRow';
 import KeyerButton from '../../../../components/session/KeyerButton';
@@ -118,20 +118,32 @@ export default function SendSessionScreen() {
   if (finalSummary) {
     return (
       <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
-        <View style={[sessionStyleSheet.container, sessionContainerPadding(insets)]}>
-          <SessionHeader
-            labelTop={meta.headerTop}
-            labelBottom={t('session:sendMode')}
-            mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
-            hearts={meta.isChallenge ? hearts : undefined}
-          />
+        <View
+          style={[
+            sessionStyleSheet.container,
+            sessionContainerPadding(insets, spacing(2), spacing(4)),
+          ]}
+        >
+          <View style={sessionStyleSheet.topGroup}>
+            <SessionHeader
+              labelTop={meta.headerTop}
+              labelBottom={t('session:sendMode')}
+              mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
+              hearts={meta.isChallenge ? hearts : undefined}
+            />
+          </View>
 
-          <SessionSummary
-            percent={finalSummary.percent}
-            correct={finalSummary.correct}
-            total={TOTAL_SEND_QUESTIONS}
-            onContinue={handleSummaryContinue}
-          />
+          <View style={sessionStyleSheet.centerGroup}>
+            <SessionSummaryContent
+              percent={finalSummary.percent}
+              correct={finalSummary.correct}
+              total={TOTAL_SEND_QUESTIONS}
+            />
+          </View>
+
+          <View style={[sessionStyleSheet.bottomGroup, { alignItems: 'center' }]}>
+            <SessionSummaryContinue onContinue={handleSummaryContinue} />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -219,6 +231,12 @@ export default function SendSessionScreen() {
     </SafeAreaView>
   );
 }
+
+
+
+
+
+
 
 
 

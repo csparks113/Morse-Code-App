@@ -2,8 +2,8 @@ import React from 'react';
 import { Animated, Dimensions, Platform, Vibration } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import type ActionButton from '@/components/session/ActionButton';
 import type { ActionButtonState } from '@/components/session/ActionButton';
+import type { PromptActionLabels, PromptActionConfig, SessionActionIconName } from '@/hooks/sessionActionTypes';
 import { playMorseCode, getMorseUnitMs } from '@/utils/audio';
 import { toMorse } from '@/utils/morse';
 import { useProgressStore } from '@/store/useProgressStore';
@@ -13,20 +13,11 @@ export const TOTAL_RECEIVE_QUESTIONS = 5;
 type Summary = { correct: number; percent: number };
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 
-type IconName = React.ComponentProps<typeof ActionButton>['icon'];
 
-type PromptActionLabels = {
-  reveal: string;
-  replay: string;
-};
-
-type PromptActionConfig = {
-  icon: IconName;
-  accessibilityLabel: string;
-  onPress: () => void;
-  state: ActionButtonState;
-};
-
+/**
+ * Arguments for configuring the receive session flow.
+ * @property actionLabels Localized strings backing the reveal/replay accessibility labels.
+ */
 type UseReceiveSessionArgs = {
   pool: string[];
   isChallenge: boolean;
@@ -70,6 +61,19 @@ function getStoreIdForProgress(rawId: string): string {
   return String(rawId);
 }
 
+/**
+ * Manages the receive session loop including prompt reveal/replay actions.
+ * Pass translated ctionLabels to keep the prompt controls accessible.
+ *
+ * @example
+ * const session = useReceiveSession({
+ *   pool,
+ *   isChallenge: false,
+ *   lightEnabled: true,
+ *   hapticsEnabled: true,
+ *   actionLabels: { reveal: t('session:reveal'), replay: t('session:replay') },
+ * });
+ */
 export function useReceiveSession({
   pool,
   isChallenge,
@@ -344,14 +348,14 @@ export function useReceiveSession({
   }, [replayState, playTarget]);
 
   const revealAction = React.useMemo<PromptActionConfig>(() => ({
-    icon: 'eye-outline' as IconName,
+    icon: 'eye-outline' as SessionActionIconName,
     accessibilityLabel: actionLabels.reveal,
     onPress: handleRevealPress,
     state: revealState,
   }), [actionLabels.reveal, handleRevealPress, revealState]);
 
   const replayAction = React.useMemo<PromptActionConfig>(() => ({
-    icon: 'play' as IconName,
+    icon: 'play' as SessionActionIconName,
     accessibilityLabel: actionLabels.replay,
     onPress: handleReplayPress,
     state: replayState,
@@ -398,6 +402,13 @@ export function useReceiveSession({
     handleSummaryContinue,
   };
 }
+
+
+
+
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OUTPUT TOGGLE
  * -------------
  * OVERVIEW
@@ -20,10 +20,10 @@
 import React from 'react';
 import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, borders, surfaces } from '@/theme/lessonTheme';
+import { colors, borders, surfaces, sessionControlTheme } from '@/theme/lessonTheme';
 import { withAlpha } from '@/theme/tokens';
 
-const SIZE = 48;
+const outputToggleTheme = sessionControlTheme.outputToggle;
 
 type Props = {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
@@ -59,7 +59,7 @@ export default function OutputToggle({
     >
       <MaterialCommunityIcons
         name={icon}
-        size={22}
+        size={outputToggleTheme.iconSize}
         color={active ? colors.blueNeon : withAlpha(colors.textDim, 0.9)}
       />
     </Pressable>
@@ -68,10 +68,10 @@ export default function OutputToggle({
 
 const styles = StyleSheet.create({
   base: {
-    width: SIZE,
-    height: SIZE,
-    borderRadius: 16,
-    borderWidth: 2,
+    width: outputToggleTheme.size,
+    height: outputToggleTheme.size,
+    borderRadius: outputToggleTheme.borderRadius,
+    borderWidth: outputToggleTheme.borderWidth,
     borderColor: borders.base,
     alignItems: 'center',
     justifyContent: 'center',
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.blueNeon, 0.15),
     shadowColor: colors.blueNeon,
     shadowOpacity: 0.55,
-    shadowRadius: 9,
+    shadowRadius: outputToggleTheme.activeShadowRadius,
     shadowOffset: { width: 0, height: 0 },
     elevation: 5,
   },
@@ -90,6 +90,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
+
+
 
 
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, StyleProp, Text, View, ViewStyle } from "react-native";
 
-import { colors, spacing, surfaces } from "@/theme/lessonTheme";
+import { colors, spacing, surfaces, sessionControlTheme } from "@/theme/lessonTheme";
 
 type LessonChoicesProps = {
   choices: string[];
@@ -9,6 +9,8 @@ type LessonChoicesProps = {
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 };
+
+const lessonChoiceTheme = sessionControlTheme.lessonChoice;
 
 function LessonChoices({
   choices,
@@ -44,13 +46,13 @@ const styles = StyleSheet.create({
   },
   choice: {
     flex: 1,
-    borderRadius: 18,
-    borderWidth: 2,
+    borderRadius: lessonChoiceTheme.borderRadius,
+    borderWidth: lessonChoiceTheme.borderWidth,
     borderColor: colors.border,
     backgroundColor: surfaces.sunken,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: spacing(3),
+    paddingVertical: spacing(lessonChoiceTheme.paddingVerticalStep),
   },
   choicePressed: {
     backgroundColor: surfaces.pressed,
@@ -60,10 +62,12 @@ const styles = StyleSheet.create({
   },
   choiceText: {
     color: colors.text,
-    fontSize: 32,
+    fontSize: lessonChoiceTheme.fontSize,
     fontWeight: "800",
-    letterSpacing: 4,
+    letterSpacing: lessonChoiceTheme.letterSpacing,
   },
 });
 
 export default LessonChoices;
+
+

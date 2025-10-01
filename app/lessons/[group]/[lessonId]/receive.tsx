@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 // Shared UI
 import SessionHeader from '../../../../components/session/SessionHeader';
 import ProgressBar from '../../../../components/session/ProgressBar';
-import SessionSummary from '../../../../components/session/SessionSummary';
+import { SessionSummaryContent, SessionSummaryContinue } from '../../../../components/session/SessionSummary';
 import PromptCard from '../../../../components/session/PromptCard';
 import OutputTogglesRow from '../../../../components/session/OutputTogglesRow';
 import FlashOverlay from '../../../../components/session/FlashOverlay';
@@ -104,8 +104,8 @@ export default function ReceiveSessionScreen() {
   // Empty state when session has no glyphs available
   if (!meta.pool.length) {
     return (
-      <SafeAreaView style={sessionStyleSheet.safe}>
-        <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, spacing(2), spacing(2))]}>
+      <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
+        <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, spacing(2), spacing(4))]}>
           <View style={sessionStyleSheet.emptyState}>
             <Text style={sessionStyleSheet.emptyText}>{t('session:contentUnavailable')}</Text>
           </View>
@@ -117,32 +117,44 @@ export default function ReceiveSessionScreen() {
   // Results summary state
   if (summary) {
     return (
-      <SafeAreaView style={sessionStyleSheet.safe}>
-        <View style={sessionStyleSheet.summaryContainer}>
-          <SessionHeader
-            labelTop={meta.headerTop}
-            labelBottom={t('session:receiveMode')}
-            mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
-            hearts={meta.isChallenge ? hearts : undefined}
-          />
+      <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
+        <View
+          style={[
+            sessionStyleSheet.container,
+            sessionContainerPadding(insets, spacing(2), spacing(4)),
+          ]}
+        >
+          <View style={sessionStyleSheet.topGroup}>
+            <SessionHeader
+              labelTop={meta.headerTop}
+              labelBottom={t('session:receiveMode')}
+              mode={meta.isChallenge ? 'challenge' : isReview ? 'review' : 'normal'}
+              hearts={meta.isChallenge ? hearts : undefined}
+            />
+          </View>
 
-          <SessionSummary
-            percent={summary.percent}
-            correct={summary.correct}
-            total={TOTAL_RECEIVE_QUESTIONS}
-            onContinue={handleSummaryContinue}
-          />
+          <View style={sessionStyleSheet.centerGroup}>
+            <SessionSummaryContent
+              percent={summary.percent}
+              correct={summary.correct}
+              total={TOTAL_RECEIVE_QUESTIONS}
+            />
+          </View>
+
+          <View style={[sessionStyleSheet.bottomGroup, { alignItems: 'center' }]}>
+            <SessionSummaryContinue onContinue={handleSummaryContinue} />
+          </View>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={sessionStyleSheet.safe}>
+    <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
       {/* Flash overlay for playback */}
       <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={0.28} />
 
-      <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, spacing(2), spacing(2))]}>
+      <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, spacing(2), spacing(4))]}>
         {/* --- TOP (fixed): header + progress --- */}
         <View style={sessionStyleSheet.topGroup}>
           <SessionHeader
@@ -223,3 +235,9 @@ export default function ReceiveSessionScreen() {
     </SafeAreaView>
   );
 }
+
+
+
+
+
+

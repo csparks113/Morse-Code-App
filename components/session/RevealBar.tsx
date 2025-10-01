@@ -1,10 +1,9 @@
-﻿// components/session/RevealBar.tsx
+// components/session/RevealBar.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-import { colors, spacing } from '@/theme/lessonTheme';
+import { colors, spacing, revealBarTheme } from '@/theme/lessonTheme';
 import { withAlpha } from '@/theme/tokens';
-import { typography, fontWeight } from '@/theme/tokens';
 import { MorseGlyphRow, MorseTimeline } from '@/components/MorseViz';
 import {
   textToMorseElements,
@@ -16,7 +15,7 @@ import {
   type PressWindow,
 } from '@/utils/morseUtils';
 
-type Size = 'sm' | 'md' | 'lg';
+type Size = keyof typeof revealBarTheme.sizes;
 type Align = 'center' | 'left';
 
 type BaseProps = {
@@ -62,11 +61,15 @@ type CompareModeProps = BaseProps & {
 
 type RevealBarProps = GlyphsModeProps | TimelineModeProps | CompareModeProps;
 
-const SIZE_CONFIG: Record<Size, { glyphSize: number; glyphGap: number; timelineHeight: number }> = {
-  sm: { glyphSize: 10, glyphGap: 6, timelineHeight: 10 },
-  md: { glyphSize: 12, glyphGap: 8, timelineHeight: 12 },
-  lg: { glyphSize: 14, glyphGap: 10, timelineHeight: 14 },
+type SizeConfig = {
+  glyphSize: number;
+  glyphGapStep: number;
+  timelineHeight: number;
+  compareUnitPx: number;
 };
+
+const SIZE_CONFIG = revealBarTheme.sizes;
+const SLOT_PADDING = spacing(revealBarTheme.slotPaddingStep);
 
 const EMPTY_ELEMENTS: MorseElement[] = [];
 const EMPTY_PRESSES: PressWindow[] = [];
@@ -97,16 +100,16 @@ function buildCanonicalElements(
 
 export default function RevealBar(props: RevealBarProps) {
   const mode = props.mode ?? 'glyphs';
-  const size = props.size ?? 'md';
+  const size: Size = props.size ?? 'md';
   const align = props.align ?? 'center';
-  const sizeConfig = SIZE_CONFIG[size];
+  const sizeConfig: SizeConfig = size === 'sm' ? SIZE_CONFIG.sm : size === 'md' ? SIZE_CONFIG.md : SIZE_CONFIG.lg;
   const alignItems: 'flex-start' | 'center' = align === 'left' ? 'flex-start' : 'center';
 
   const baseSlotStyle = [
     styles.slot,
     {
       alignItems,
-      minHeight: sizeConfig.timelineHeight + 24,
+      minHeight: sizeConfig.timelineHeight + SLOT_PADDING,
       opacity: props.visible ? 1 : 0,
     },
   ];
@@ -116,7 +119,10 @@ export default function RevealBar(props: RevealBarProps) {
   const compareProps = mode === 'compare' ? (props as CompareModeProps) : undefined;
 
   const dashUnits = timelineProps?.dashUnits ?? compareProps?.dashUnits ?? DEFAULT_DASH_UNITS;
-  const unitPx = timelineProps?.unitPx ?? compareProps?.unitPx ?? sizeConfig.timelineHeight;
+  const unitPx =
+    timelineProps?.unitPx ??
+    compareProps?.unitPx ??
+    (sizeConfig.compareUnitPx ?? sizeConfig.timelineHeight);
   const barHeight = timelineProps?.barHeight ?? compareProps?.barHeight ?? sizeConfig.timelineHeight;
   const canonicalChar = timelineProps?.char ?? compareProps?.char ?? null;
   const canonicalMorse = timelineProps?.morse ?? compareProps?.morse ?? null;
@@ -129,7 +135,7 @@ export default function RevealBar(props: RevealBarProps) {
   }, [mode, canonicalChar, canonicalMorse, dashUnits]);
 
   const comparePresses = compareProps?.presses ?? EMPTY_PRESSES;
-  const compareWpm = compareProps?.wpm ?? 12;
+  const compareWpm = compareProps?.wpm ?? revealBarTheme.timeline.defaultCompareWpm;
 
   const userElements = React.useMemo(() => {
     if (mode !== 'compare' || comparePresses.length === 0) {
@@ -140,7 +146,12 @@ export default function RevealBar(props: RevealBarProps) {
   }, [mode, comparePresses, compareWpm]);
 
   if (glyphProps) {
-    const { morse, color = colors.text, gapPx = sizeConfig.glyphGap, dashRatio = 3 } = glyphProps;
+    const {
+      morse,
+      color = colors.text,
+      gapPx = spacing(sizeConfig.glyphGapStep),
+      dashRatio = revealBarTheme.glyphs.defaultDashRatio,
+    } = glyphProps;
     const pattern = (morse ?? '').trim();
 
     if (!pattern) {
@@ -184,7 +195,7 @@ export default function RevealBar(props: RevealBarProps) {
     );
   }
 
-  const rowGapPx = compareProps?.rowGapPx ?? spacing(0.75);
+  const rowGapPx = compareProps?.rowGapPx ?? spacing(revealBarTheme.compareRowGapStep);
   const topColor = compareProps?.topColor ?? colors.blueNeon;
   const bottomColor = compareProps?.bottomColor ?? colors.gold;
   const showLegend = compareProps?.showLegend ?? false;
@@ -192,10 +203,10 @@ export default function RevealBar(props: RevealBarProps) {
   return (
     <View style={baseSlotStyle}>
       {showLegend && (
-        <View style={[styles.legendRow, { marginBottom: spacing(0.5) }]}>
+        <View style={styles.legendRow}>
           <View style={[styles.legendDot, { backgroundColor: topColor }]} />
           <Text style={styles.legendText}>Target</Text>
-          <View style={{ width: spacing(1.5) }} />
+          <View style={{ width: spacing(revealBarTheme.legend.spacerStep) }} />
           <View style={[styles.legendDot, { backgroundColor: bottomColor }]} />
           <Text style={styles.legendText}>You</Text>
         </View>
@@ -238,8 +249,27 @@ export default function RevealBar(props: RevealBarProps) {
 
 const styles = StyleSheet.create({
   slot: { alignSelf: 'stretch', justifyContent: 'flex-start' },
-  legendRow: { flexDirection: 'row', alignItems: 'center' },
-  legendDot: { width: 10, height: 10, borderRadius: 5, marginRight: spacing(0.75) },
-  legendText: { color: colors.text, fontWeight: fontWeight.medium, fontSize: typography.label },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing(revealBarTheme.legend.marginBottomStep),
+  },
+  legendDot: {
+    width: revealBarTheme.legend.dotSize,
+    height: revealBarTheme.legend.dotSize,
+    borderRadius: revealBarTheme.legend.dotRadius,
+    marginRight: spacing(revealBarTheme.legend.dotMarginStep),
+  },
+  legendText: {
+    color: colors.text,
+    fontWeight: revealBarTheme.legend.labelFontWeight,
+    fontSize: revealBarTheme.legend.labelFontSize,
+  },
 });
+
+
+
+
+
+
 

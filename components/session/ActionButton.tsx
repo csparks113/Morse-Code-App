@@ -9,9 +9,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, surfaces, borders, icons } from '@/theme/lessonTheme';
+import { colors, surfaces, borders, icons, sessionControlTheme } from '@/theme/lessonTheme';
 
-const SIZE = 58;
+const actionButtonTheme = sessionControlTheme.actionButton;
 
 export type ActionButtonState = 'active' | 'disabled';
 
@@ -64,17 +64,17 @@ export default function ActionButton({
         style,
       ]}
     >
-      <MaterialCommunityIcons name={icon} size={28} color={iconColor} />
+      <MaterialCommunityIcons name={icon} size={actionButtonTheme.iconSize} color={iconColor} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    width: SIZE,
-    height: SIZE,
-    borderRadius: 20,
-    borderWidth: 2,
+    width: actionButtonTheme.size,
+    height: actionButtonTheme.size,
+    borderRadius: actionButtonTheme.borderRadius,
+    borderWidth: actionButtonTheme.borderWidth,
     borderColor: borders.subtle,
     backgroundColor: surfaces.keyer,
     alignItems: 'center',
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     borderColor: colors.blueNeon,
     shadowColor: colors.blueNeon,
     shadowOpacity: 0.7,
-    shadowRadius: 12,
+    shadowRadius: actionButtonTheme.shadowRadius,
     shadowOffset: { width: 0, height: 0 },
     elevation: 6,
   },
@@ -97,3 +97,5 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
 });
+
+

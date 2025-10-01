@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, StyleProp, Text, ViewStyle } from "react-native";
 
-import { colors, spacing, surfaces } from "@/theme/lessonTheme";
+import { colors, spacing, surfaces, sessionControlTheme } from "@/theme/lessonTheme";
 
 type KeyerButtonProps = {
   onPressIn?: () => void;
@@ -13,7 +13,7 @@ type KeyerButtonProps = {
 };
 
 const DEFAULT_LABEL = "Tap & Hold to Key";
-
+const keyerButtonTheme = sessionControlTheme.keyerButton;
 function KeyerButton({
   onPressIn,
   onPressOut,
@@ -43,13 +43,13 @@ function KeyerButton({
 const styles = StyleSheet.create({
   base: {
     width: "100%",
-    borderRadius: 18,
-    borderWidth: 2,
+    borderRadius: keyerButtonTheme.borderRadius,
+    borderWidth: keyerButtonTheme.borderWidth,
     borderColor: colors.border,
     backgroundColor: surfaces.sunken,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: spacing(3),
+    paddingVertical: spacing(keyerButtonTheme.paddingVerticalStep),
   },
   pressed: {
     backgroundColor: surfaces.pressed,
@@ -60,9 +60,13 @@ const styles = StyleSheet.create({
   text: {
     color: colors.text,
     fontWeight: "800",
-    fontSize: 18,
-    letterSpacing: 0.5,
+    fontSize: keyerButtonTheme.fontSize,
+    letterSpacing: keyerButtonTheme.letterSpacing,
   },
 });
 
 export default KeyerButton;
+
+
+
+

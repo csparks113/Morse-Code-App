@@ -1,7 +1,31 @@
 // theme/lessonTheme.ts
 // Neon dark theme tokens for the Lessons path UI
 
-import { palette, spacing as spacingTokens, lessonRadii, withAlpha, fontWeight } from './tokens';
+import { palette, spacing as spacingTokens, lessonRadii, withAlpha, fontWeight, typography } from './tokens';
+
+type RevealBarSizeKey = 'sm' | 'md' | 'lg';
+type RevealBarSizeTokens = {
+  glyphSize: number;
+  glyphGapStep: number;
+  timelineHeight: number;
+  compareUnitPx: number;
+};
+type RevealBarTheme = {
+  slotPaddingStep: number;
+  compareRowGapStep: number;
+  sizes: Record<RevealBarSizeKey, RevealBarSizeTokens>;
+  legend: {
+    dotSize: number;
+    dotRadius: number;
+    dotMarginStep: number;
+    marginBottomStep: number;
+    spacerStep: number;
+    labelFontSize: number;
+    labelFontWeight: (typeof fontWeight)[keyof typeof fontWeight];
+  };
+  glyphs: { defaultDashRatio: number };
+  timeline: { defaultCompareWpm: number };
+};
 
 export const colors = {
   bg: palette.background,
@@ -127,3 +151,113 @@ export const promptCardTheme = {
     fontWeight: fontWeight.extraBold,
   },
 } as const;
+export const revealBarTheme = {
+  slotPaddingStep: 3,
+  compareRowGapStep: 0.75,
+  sizes: {
+    sm: {
+      glyphSize: 10,
+      glyphGapStep: 0.75,
+      timelineHeight: 10,
+      compareUnitPx: 9,
+    },
+    md: {
+      glyphSize: 12,
+      glyphGapStep: 1,
+      timelineHeight: 12,
+      compareUnitPx: 12,
+    },
+    lg: {
+      glyphSize: 14,
+      glyphGapStep: 1.25,
+      timelineHeight: 14,
+      compareUnitPx: 14,
+    },
+  },
+  legend: {
+    dotSize: 10,
+    dotRadius: 5,
+    dotMarginStep: 0.75,
+    marginBottomStep: 0.5,
+    spacerStep: 1.5,
+    labelFontSize: typography.label,
+    labelFontWeight: fontWeight.medium,
+  },
+  glyphs: {
+    defaultDashRatio: 3,
+  },
+  timeline: {
+    defaultCompareWpm: 12,
+  },
+} as const satisfies RevealBarTheme;
+
+export const sessionLayoutTheme = {
+  container: {
+    paddingHorizontalStep: 3,
+  },
+  groups: {
+    verticalGapStep: 0.5,
+  },
+  toggles: {
+    minHeight: 64,
+  },
+  inputZone: {
+    minHeight: 140,
+  },
+  summary: {
+    paddingHorizontalStep: 3,
+    paddingTopStep: 2,
+    paddingBottomStep: 2,
+  },
+  emptyState: {
+    gapStep: 4,
+    paddingStep: 4,
+  },
+} as const;
+
+
+
+
+
+export const sessionControlTheme = {
+  actionButton: {
+    size: 58,
+    borderRadius: 20,
+    borderWidth: 2,
+    iconSize: 28,
+    shadowRadius: 12,
+  },
+  outputToggle: {
+    size: 48,
+    borderRadius: 16,
+    borderWidth: 2,
+    iconSize: 22,
+    activeShadowRadius: 9,
+  },
+  keyerButton: {
+    borderRadius: 18,
+    borderWidth: 2,
+    paddingVerticalStep: 3,
+    fontSize: 18,
+    letterSpacing: 0.5,
+  },
+  challengeKeyboard: {
+    rowGapStep: 0.6,
+    key: {
+      width: 32,
+      height: 40,
+      borderRadius: 14,
+      borderWidth: 2,
+      fontSize: 16,
+      letterSpacing: 0.5,
+    },
+  },
+  lessonChoice: {
+    borderRadius: 18,
+    borderWidth: 2,
+    paddingVerticalStep: 3,
+    fontSize: 32,
+    letterSpacing: 4,
+  },
+} as const;
+

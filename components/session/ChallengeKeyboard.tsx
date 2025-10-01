@@ -1,7 +1,7 @@
-﻿// components/session/ChallengeKeyboard.tsx
+// components/session/ChallengeKeyboard.tsx
 import React from 'react';
 import { View, Pressable, Text, StyleSheet } from 'react-native';
-import { colors, spacing, surfaces, borders } from '@/theme/lessonTheme';
+import { colors, spacing, surfaces, borders, sessionControlTheme } from '@/theme/lessonTheme';
 import { withAlpha } from '@/theme/tokens';
 
 export type ChallengeKeyboardProps = {
@@ -11,6 +11,7 @@ export type ChallengeKeyboardProps = {
   onKeyPress: (key: string) => void;
 };
 
+const challengeKeyboardTheme = sessionControlTheme.challengeKeyboard;
 const DEFAULT_LAYOUT: string[][] = [
   ['Q','W','E','R','T','Y','U','I','O','P'],
   ['A','S','D','F','G','H','J','K','L'],
@@ -56,19 +57,19 @@ export default function ChallengeKeyboard({
 
 const styles = StyleSheet.create({
   keyboard: {
-    gap: spacing(0.6),
+    gap: spacing(challengeKeyboardTheme.rowGapStep),
     alignItems: 'center',
   },
   
   keyboardRow: {
     flexDirection: 'row',
-    gap: spacing(0.6),
+    gap: spacing(challengeKeyboardTheme.rowGapStep),
   },
   key: {
-    width: 32,
-    height: 40,
-    borderRadius: 14,
-    borderWidth: 2,
+    width: challengeKeyboardTheme.key.width,
+    height: challengeKeyboardTheme.key.height,
+    borderRadius: challengeKeyboardTheme.key.borderRadius,
+    borderWidth: challengeKeyboardTheme.key.borderWidth,
     borderColor: borders.key,
     backgroundColor: surfaces.sunken,
     alignItems: 'center',
@@ -78,13 +79,15 @@ const styles = StyleSheet.create({
   keyPressed: { backgroundColor: surfaces.pressed },
   keyDisabled: { opacity: 0.35 },
   keyText: {
-    fontSize: 16,
+    fontSize: challengeKeyboardTheme.key.fontSize,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: challengeKeyboardTheme.key.letterSpacing,
   },
   keyTextActive: { color: colors.text },
   keyTextDisabled: { color: withAlpha(colors.textDim, 0.65) },
 });
+
+
 
 
 

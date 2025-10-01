@@ -3,7 +3,7 @@ import { StyleSheet, StyleProp, View, ViewStyle } from "react-native";
 
 import RevealBar from "@/components/session/RevealBar";
 import { MorseTimeline } from "@/components/MorseViz";
-import { colors } from "@/theme/lessonTheme";
+import { colors, revealBarTheme } from "@/theme/lessonTheme";
 import type { PressWindow } from "@/utils/morseUtils";
 
 /**
@@ -21,19 +21,26 @@ import type { PressWindow } from "@/utils/morseUtils";
  *   showing just the canonical timeline for the target.
  *
  * Inputs:
- * - mode: "guessing" | "compare" — controls which visualization we render.
+ * - mode: "guessing" | "compare" � controls which visualization we render.
  * - char: the canonical glyph to render/compare against (e.g., "K").
  * - presses: an array of { startMs, endMs } describing user press windows.
  * - wpm: the current dot-unit speed (used to scale both timeline and compare).
  * - size: visual density; adjusts unit pixel scale + heights.
- * - topColor/bottomColor: color accents for the “target” and “user” tracks.
+ * - topColor/bottomColor: color accents for the target and user tracks.
  * - align: left/center alignment for the block.
  * - style: optional outer container style.
  */
 
 type Mode = "guessing" | "compare";
-type Size = "sm" | "md";
+type Size = Extract<keyof typeof revealBarTheme.sizes, "sm" | "md">;
 type Align = "left" | "center";
+
+type SizeConfig = {
+  glyphSize: number;
+  glyphGapStep: number;
+  timelineHeight: number;
+  compareUnitPx: number;
+};
 
 type MorseCompareProps = {
   mode: Mode;
@@ -47,15 +54,6 @@ type MorseCompareProps = {
   style?: StyleProp<ViewStyle>;  // Optional container style pass-through
 };
 
-/**
- * Size presets: "unitPx" maps a dot unit to pixels; also tweak timeline height.
- * Keep these small; the idea is to be compact under the PromptCard reveal area.
- */
-const SIZE_CONFIG: Record<Size, { unitPx: number; timelineHeight: number }> = {
-  sm: { unitPx: 9,  timelineHeight: 10 },
-  md: { unitPx: 12, timelineHeight: 12 },
-};
-
 function MorseCompare({
   mode,
   char,
@@ -67,8 +65,11 @@ function MorseCompare({
   align = "center",
   style,
 }: MorseCompareProps) {
+  const config: SizeConfig = size === "sm" ? revealBarTheme.sizes.sm : revealBarTheme.sizes.md;
+  const unitPx = config.compareUnitPx ?? config.timelineHeight;
+  const timelineHeight = config.timelineHeight;
+
   // Look up the size preset and translate align prop to flexbox value
-  const config = SIZE_CONFIG[size];
   const alignItems = align === "left" ? "flex-start" : "center";
   const justifyContent = mode === "compare" ? "flex-start" : "center";
 
@@ -89,7 +90,7 @@ function MorseCompare({
             visible={true}
             size={size}
             wpm={wpm}
-            unitPx={config.unitPx} // scale dots/dashes to pixels
+            unitPx={unitPx}        // scale dots/dashes to pixels
             color={topColor}
             align={align}
             showGaps={false}
@@ -108,7 +109,7 @@ function MorseCompare({
           visible={true}
           size={size}
           wpm={wpm}
-          unitPx={config.unitPx}
+          unitPx={unitPx}
           showLegend={false}       // compact look: omit the mini legend
           topColor={topColor}      // target track
           bottomColor={bottomColor}// user track
@@ -128,12 +129,12 @@ function MorseCompare({
       <MorseTimeline
         // Source "presses" means: draw bars exactly where the user pressed
         source={{ mode: "presses", presses, wpm, granularity: 16 }}
-        unitPx={config.unitPx}         // same pixel scale as compare view
-        height={config.timelineHeight} // compact bar height
-        color={bottomColor}            // use user color in guessing mode
+        unitPx={unitPx}             // same pixel scale as compare view
+        height={timelineHeight}     // compact bar height
+        color={bottomColor}         // use user color in guessing mode
         inactiveColor="transparent"    // no background grid
-        showGaps={false}               // keep it minimal; just show active presses
-        rounded                        // rounded bar caps for a softer look
+        showGaps={false}            // keep it minimal; just show active presses
+        rounded                     // rounded bar caps for a softer look
         style={{
           // Allow aligning the entire bar to the left for certain layouts
           alignSelf: align === "left" ? "flex-start" : "center",

@@ -2,8 +2,8 @@ import React from 'react';
 import { Animated, Dimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import type ActionButton from '@/components/session/ActionButton';
 import type { ActionButtonState } from '@/components/session/ActionButton';
+import type { PromptActionLabels, PromptActionConfig, SessionActionIconName } from '@/hooks/sessionActionTypes';
 import { useSessionFlow } from '@/hooks/useSessionFlow';
 import { useKeyerOutputs } from '@/hooks/useKeyerOutputs';
 import { useProgressStore } from '@/store/useProgressStore';
@@ -19,19 +19,6 @@ import {
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 type PressWindow = { startMs: number; endMs: number };
 type Summary = { correct: number; percent: number };
-type IconName = React.ComponentProps<typeof ActionButton>['icon'];
-
-type PromptActionLabels = {
-  reveal: string;
-  replay: string;
-};
-
-type PromptActionConfig = {
-  icon: IconName;
-  accessibilityLabel: string;
-  onPress: () => void;
-  state: ActionButtonState;
-};
 
 
 const HEARTS_INITIAL = 3;
@@ -51,6 +38,10 @@ function getStoreIdForProgress(rawId: string): string {
   return String(rawId);
 }
 
+/**
+ * Arguments for configuring the send session flow.
+ * @property actionLabels Localized strings for the reveal/replay prompt actions.
+ */
 type UseSendSessionArgs = {
   pool: string[];
   isChallenge: boolean;
@@ -96,6 +87,24 @@ type UseSendSessionResult = {
   handleSummaryContinue: () => void;
 };
 
+/**
+ * Orchestrates the send session prompt/card behaviour and prompt actions.
+ * Supply localized ctionLabels so the reveal/replay buttons speak in the user's language.
+ *
+ * @example
+ * const session = useSendSession({
+ *   pool,
+ *   isChallenge: false,
+ *   audioEnabled: true,
+ *   hapticsEnabled: true,
+ *   lightEnabled: false,
+ *   torchEnabled: false,
+ *   toneHz: 600,
+ *   signalTolerancePercent: 20,
+ *   gapTolerancePercent: 20,
+ *   actionLabels: { reveal: t('session:reveal'), replay: t('session:replay') },
+ * });
+ */
 export function useSendSession({
   pool,
   isChallenge,
@@ -470,14 +479,14 @@ export function useSendSession({
   }, [replayState, playCurrentTarget]);
 
   const revealAction = React.useMemo<PromptActionConfig>(() => ({
-    icon: 'eye-outline' as IconName,
+    icon: 'eye-outline' as SessionActionIconName,
     accessibilityLabel: actionLabels.reveal,
     onPress: handleRevealPress,
     state: revealState,
   }), [actionLabels.reveal, handleRevealPress, revealState]);
 
   const replayAction = React.useMemo<PromptActionConfig>(() => ({
-    icon: 'play' as IconName,
+    icon: 'play' as SessionActionIconName,
     accessibilityLabel: actionLabels.replay,
     onPress: handleReplayPress,
     state: replayState,
@@ -519,6 +528,13 @@ export function useSendSession({
     handleSummaryContinue,
   };
 }
+
+
+
+
+
+
+
 
 
 
