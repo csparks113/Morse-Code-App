@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { spacing, sessionLayoutTheme } from '@/theme/lessonTheme';
+import { useOutputsService } from '@/services/outputs/OutputsService';
 import OutputToggle from '@/components/session/OutputToggle';
 
 type Props = {
@@ -25,6 +26,22 @@ export default function OutputTogglesRow({
   setAudioEnabled,
   setTorchEnabled,
 }: Props) {
+  const outputs = useOutputsService();
+  const torchSupported = React.useMemo(() => outputs.isTorchSupported(), [outputs]);
+
+  React.useEffect(() => {
+    if (!torchSupported && torchEnabled) {
+      setTorchEnabled(false);
+    }
+  }, [torchSupported, torchEnabled, setTorchEnabled]);
+
+  const handleTorchPress = React.useCallback(() => {
+    if (!torchSupported) {
+      return;
+    }
+    setTorchEnabled(!torchEnabled);
+  }, [torchEnabled, torchSupported, setTorchEnabled]);
+
   return (
     <View style={styles.outputContainer}>
       <View style={styles.toggleRow}>
@@ -48,9 +65,10 @@ export default function OutputTogglesRow({
         />
         <OutputToggle
           icon="flashlight"
-          accessibilityLabel="Toggle flashlight"
-          active={torchEnabled}
-          onPress={() => setTorchEnabled(!torchEnabled)}
+          accessibilityLabel={torchSupported ? 'Toggle flashlight' : 'Flashlight unavailable'}
+          active={torchSupported && torchEnabled}
+          disabled={!torchSupported}
+          onPress={handleTorchPress}
         />
       </View>
     </View>

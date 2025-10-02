@@ -14,5 +14,17 @@
   "hearts": "[!! Hearts !!]",
   "sessionComplete": "[!! Session Complete !!]",
   "correctCount": "[!! {{correct}} / {{total}} correct !!]",
-  "identifyCharacter": "[!! Identify the character !!]"
+  "identifyCharacter": "[!! Identify the character !!]",
+  "torchDiagnosticsTitle": "[!! Torch output !!]",
+  "torchStatusAvailable": "[!! Available !!]",
+  "torchStatusUnavailable": "[!! Unavailable !!]",
+  "torchNoTelemetry": "[!! Torch pulses haven't run yet. !!]",
+  "torchPulseCount_one": "[!! {{count}} pulse logged !!]",
+  "torchPulseCount_other": "[!! {{count}} pulses logged !!]",
+  "torchAverageLatency": "[!! Avg latency {{latency}} ms !!]",
+  "torchLastLatency": "[!! Last latency {{latency}} ms !!]",
+  "torchFallbackMessage": "[!! Torch unavailable. Using screen flash fallback. !!]",
+  "torchFailureMessage_one": "[!! Fallback triggered once (last: {{reason}}). !!]",
+  "torchFailureMessage_other": "[!! Fallback triggered {{count}} times (last: {{reason}}). !!]",
+  "torchFailureUnknown": "[!! Unknown error !!]"
 }

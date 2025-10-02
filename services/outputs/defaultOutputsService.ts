@@ -7,6 +7,7 @@ import { playMorseCode, stopPlayback } from '@/utils/audio';
 import { acquireTorch, releaseTorch, resetTorch, isTorchAvailable } from '@/utils/torch';
 import { nowMs } from '@/utils/time';
 import { traceOutputs } from './trace';
+import { updateTorchSupport, recordTorchPulse, recordTorchFailure } from '@/store/useOutputsDiagnosticsStore';
 import type {
   OutputsService,
   FlashPulseOptions,
@@ -293,15 +294,20 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions): KeyerOut
   };
 
   const enableTorch = async (startedAt: number) => {
-    if (!options.torchEnabled || torchActive || !isTorchAvailable()) return;
+    const supported = isTorchAvailable();
+    updateTorchSupport(supported);
+    if (!options.torchEnabled || torchActive || !supported) return;
     torchActive = true;
     try {
       await acquireTorch();
+      const latencyMs = nowMs() - startedAt;
       traceOutputs('keyer.torch.start', {
-        latencyMs: nowMs() - startedAt,
+        latencyMs,
       });
-    } catch {
+      recordTorchPulse(latencyMs, 'keyer');
+    } catch (error) {
       torchActive = false;
+      recordTorchFailure(error instanceof Error ? error.message : String(error), 'keyer');
     }
   };
 
@@ -534,3 +540,4 @@ const defaultOutputsService: OutputsService = {
 };
 
 export { defaultOutputsService };
+

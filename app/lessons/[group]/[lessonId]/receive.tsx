@@ -20,6 +20,7 @@ import ProgressBar from '../../../../components/session/ProgressBar';
 import { SessionSummaryContent, SessionSummaryContinue } from '../../../../components/session/SessionSummary';
 import PromptCard from '../../../../components/session/PromptCard';
 import OutputTogglesRow from '../../../../components/session/OutputTogglesRow';
+import TorchDiagnosticsNotice from '../../../../components/session/TorchDiagnosticsNotice';
 import FlashOverlay from '../../../../components/session/FlashOverlay';
 import LessonChoices from '../../../../components/session/LessonChoices';
 import MorseCompare from '../../../../components/session/MorseCompare';
@@ -211,6 +212,7 @@ export default function ReceiveSessionScreen() {
               setAudioEnabled={setAudioEnabled}
               setTorchEnabled={setTorchEnabled}
             />
+            <TorchDiagnosticsNotice />
           </View>
 
           <View style={sessionStyleSheet.inputZone}>

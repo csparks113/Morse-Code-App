@@ -24,6 +24,7 @@ import {
 } from '@/store/useDeveloperStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useOutputsService, type KeyerOutputsOptions } from '@/services/outputs/OutputsService';
+import { useOutputsDiagnosticsStore } from '@/store/useOutputsDiagnosticsStore';
 import FlashOverlay from '@/components/session/FlashOverlay';
 
 const TIMESTAMP_DECIMALS = 1;
@@ -157,6 +158,28 @@ export default function DeveloperConsoleScreen() {
   const manualHandleRef = React.useRef<ReturnType<typeof outputs.createKeyerOutputs> | null>(null);
   const manualTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const torchSupported = outputs.isTorchSupported();
+  const torchPulseCount = useOutputsDiagnosticsStore((state) => state.torchPulseCount);
+  const totalTorchLatencyMs = useOutputsDiagnosticsStore((state) => state.totalLatencyMs);
+  const lastTorchLatencyMs = useOutputsDiagnosticsStore((state) => state.lastLatencyMs);
+  const torchFailureCount = useOutputsDiagnosticsStore((state) => state.torchFailureCount);
+  const torchFailureReason = useOutputsDiagnosticsStore((state) => state.lastFailureReason);
+
+  const averageTorchLatency = React.useMemo(() => {
+    if (torchPulseCount <= 0) {
+      return null;
+    }
+    const avg = totalTorchLatencyMs / torchPulseCount;
+    return Math.round(avg);
+  }, [torchPulseCount, totalTorchLatencyMs]);
+
+  const lastTorchLatency = React.useMemo(() => {
+    if (lastTorchLatencyMs == null) {
+      return null;
+    }
+    return Math.round(lastTorchLatencyMs);
+  }, [lastTorchLatencyMs]);
+
+  const trimmedTorchFailureReason = React.useMemo(() => torchFailureReason?.trim() || null, [torchFailureReason]);
 
   React.useEffect(() => {
     if (!developerMode) {
@@ -558,6 +581,28 @@ export default function DeveloperConsoleScreen() {
               <View style={styles.statsChip}>
                 <Text style={styles.statsChipLabel}>Replays</Text>
                 <Text style={styles.statsChipValue}>{traceStats.replayCount}</Text>
+              </View>
+              <View style={styles.statsChip}>
+                <Text style={styles.statsChipLabel}>Torch pulses</Text>
+                <Text style={styles.statsChipValue}>
+                  {torchPulseCount}
+                  {averageTorchLatency != null ? ` (${averageTorchLatency}ms avg)` : ''}
+                  {lastTorchLatency != null ? `, last ${lastTorchLatency}ms` : ''}
+                </Text>
+              </View>
+              <View style={styles.statsChip}>
+                <Text style={styles.statsChipLabel}>Torch failures</Text>
+                <Text
+                  style={[
+                    styles.statsChipValue,
+                    torchFailureCount > 0 && styles.consoleMetaWarning,
+                  ]}
+                >
+                  {torchFailureCount}
+                  {torchFailureCount > 0 && trimmedTorchFailureReason
+                    ? ` (${trimmedTorchFailureReason})`
+                    : ''}
+                </Text>
               </View>
             </View>
           </View>
@@ -1111,3 +1156,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
+
+
+
+

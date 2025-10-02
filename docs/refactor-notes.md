@@ -5,6 +5,7 @@
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
 ## Completed (Today)
+- Gated torch diagnostics to developer mode and mirrored torch telemetry inside the developer console.
 - Extended the session style guard to lint `app/dev` and the practice tab after routing colors through shared theme surfaces.
 - Pulled SessionHeader into the developer console and practice tab, wiring their copy onto header tokens and reusing summary spacing for practice sections.
 - Routed SessionHeader and SessionSummary layout spacing through `sessionLayoutTheme` header/summary tokens to remove inline overrides.
@@ -41,6 +42,12 @@
 1. Observe the new spacing/color guard over the next few session updates and expand it beyond `components/session` once the signal stays clean.
 2. Monitor guard coverage across dev/practice and plan the next expansion (settings/home) once the signal stays clean.
 
+### Hygiene & Guardrails
+1. Extend docs with session UI conventions and outputs service architecture notes so new contributors follow the same patterns.
+2. Prepare an Expo smoke-test checklist (send, receive, summary) to run after major changes and link it in this doc.
+3. Add simple mocks/tests around the outputs service to protect against regressions during future rewrites.
+4. Integrate `npm run check:session-controls` into CI so the spacing guard runs automatically (not just locally).
+
 ### Output Touchpoint Inventory (Current)
 1. Surface torch availability and instrumentation feedback in the UI (fallback messaging + metrics).
 2. Document the offset-tuning workflow and expose the knobs inside the developer console.
@@ -52,52 +59,50 @@
 3. Explore file-based or streaming exports so long developer sessions are not limited by the Share sheet payload size.
 4. Add a Settings � Output card (below Language) linking to an output settings screen covering audio volume, tone frequency, vibration intensity, and screen flash brightness�with room to extend later.
 
-### Outputs Service Rewire (STOP - Research & Plan)
-1. Pause implementation to research platform constraints (Expo Audio/Haptics, flashlight APIs) and outline the risks of low-latency playback across devices.
-2. Produce a written implementation plan (data flow, sequencing, fallbacks) for rewiring remaining outputs through the service before coding.
+### Outputs Rewire Plan
+1. Foundations & benchmarks: confirm New Architecture support, benchmark current latency, and lock the orchestrator interface.
+2. Audio + haptics: integrate @siteed/expo-audio-studio and react-native-nitro-haptics with preload/warm-up hooks.
+3. Visual channels: rebuild FlashOverlay with Reanimated UI worklets and wire torch control via expo-torch.
+4. Orchestration: add an OutputsOrchestrator service and rewire session/practice hooks plus toggles.
+5. Keyer precision: move the send keyer onto react-native-gesture-handler with high-res timing and improved diagnostics.
+6. QA & ops: run device smoke tests, add calibration UX, expand tracing, and finish EAS prep.
+
+### Outputs Rewire Fallbacks
+- Audio: escalate to react-native-audio-api or a scoped Expo module if @siteed/expo-audio-studio misses targets.
+- Haptics: fall back to expo-haptics on unsupported hardware while keeping Nitro as the preferred path.
+- Screen flash: promote the overlay to a native view if Reanimated animations stutter or layer ordering fails.
+- Torch: detect OEM throttling and gracefully fall back to screen-flash-only feedback when torch pulses fail.
+- Keyer: expose calibration controls and tap histograms if gesture thresholds still misclassify dots/dashes.
+
+- Reference: docs/outputs-rewire-plan.md for full specification.
 
 ### Developer Mode Shell
 1. Publish an offset-tuning walkthrough (linking the new metrics to recommended baselines) so the team can calibrate devices consistently.
 2. Add timeline filtering/pinning in the console (time range, event bookmarks) to make long trace sessions easier to audit.
 3. Support saving/loading manual pattern presets so testers can jump between common sequences without retyping.
 
+### Lessons Tab Restructure
+1. Design section/subsection data model and update navigation routes to support the new hierarchy (see docs/lessons-structure-plan.md).
+2. Redesign the lessons hamburger entry point into a sections overview with progress bars and accordion subsections.
+3. Ensure lesson path screens receive section/subsection context while keeping existing header styling.
+4. Update progress analytics and storage to track section + subsection completion.
+
 ### Practice-Tab Groundwork
 1. Inventory the shared components the practice tab will reuse (keyboards, summary cards, toggles) and confirm each has tokens/theming hooks.
 2. Define navigation and data scaffolding for practice flows so future tasks are additive rather than structural.
 3. Collect and log practice-content ideas/TODOs in a dedicated subsection of this file or companion doc.
 
-### Hygiene & Guardrails
-1. Extend docs with session UI conventions and outputs service architecture notes so new contributors follow the same patterns.
-2. Prepare an Expo smoke-test checklist (send, receive, summary) to run after major changes and link it in this doc.
-3. Add simple mocks/tests around the outputs service to protect against regressions during future rewrites.
-4. Integrate `npm run check:session-controls` into CI so the spacing guard runs automatically (not just locally).
+### Practice Modes Revamp
+1. Ship the new Practice tab card layout with themed modes (Timing/Target/Custom).
+2. Build setup flows for each mode (configuration screens ? start session).
+3. Implement timing drill surface with scrolling target/user graphs and accuracy feedback.
+4. Reuse lesson send/receive shells for Target/Custom modes with mode-specific styling.
+5. Introduce a mode registry/config so future practice modes are plug-and-play (see docs/practice-revamp-plan.md).
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### Multi-language Expansion
+1. Finish i18n sweep so all UI/lesson copy lives in resource bundles and is language-switchable.
+2. Build per-language keyboard layouts and wire them into lessons/keyer flows.
+3. Extend lesson data (characters, words, sentences) for Latin-based languages with diacritics.
+4. Update settings UI/workflows to add language selection and persistence.
+5. Capture the process in docs/multilanguage-plan.md and add localization QA checklists.
 
