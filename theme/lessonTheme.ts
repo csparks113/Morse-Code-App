@@ -200,7 +200,14 @@ export const sessionLayoutTheme = {
   },
   toggles: {
     minHeight: 64,
+    paddingHorizontalStep: 0,
+    paddingVerticalStep: 0.5,
+    columnGapStep: 1.5,
   },
+  choices: {
+    gridGapStep: 2,
+  },
+
   inputZone: {
     minHeight: 140,
   },

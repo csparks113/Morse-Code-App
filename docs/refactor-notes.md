@@ -5,6 +5,7 @@
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
 ## Completed (Today)
+- Documented the developer console upgrades (`docs/developer-console-updates.md`), including offset controls, quick filters, torch indicator, and source-tagged ``outputs.*`` traces across send/receive/manual flows.
 - Centralized prompt action configuration in `hooks/useSendSession.ts` and `hooks/useReceiveSession.ts`.
 - Updated send/receive screens to consume hook-provided `revealAction`/`replayAction` and removed local memoization.
 - Refreshed `PromptCard` styles to use shared `promptCardTheme` tokens; added the theme block to `theme/lessonTheme.ts`.
@@ -26,10 +27,10 @@
 ### Output Touchpoint Matrix (Oct 2025)
 | Hook / Surface | Outputs | Timing Knobs | Instrumentation / Latency Notes |
 | --- | --- | --- | --- |
-| `useSendSession` | `OutputsService.flashPulse` & `hapticSymbol`; `playMorse` for replay loops | `signalTolerancePercent`, `gapTolerancePercent`, `getMorseUnitMs()` | Replay sticks with idle timeout + gap classifiers; tracing stays TODO until the developer console lands. |
-| `useReceiveSession` | `OutputsService.flashPulse`, `hapticSymbol`, `playMorse` for target playback | `flashOffsetMs`, `hapticOffsetMs`, `getMorseUnitMs()` | Currently un-instrumented; relies on offsets to mask hardware latency. |
-| `useKeyerOutputs` + `KeyerButton` | `OutputsService.createKeyerOutputs` sidetone + haptics + flash + torch | `toneHz`, `audioEnabled`, `lightEnabled`, `torchEnabled`, monotonic press timestamps | Emits `keyer.*` trace events (press start/stop, tone/flash/haptics/torch) when developer-mode tracing is enabled; shared helper normalizes timestamps. |
-| `services/outputs/defaultOutputsService` | Shared flash/haptics/audio helpers plus keyer handle | `computeFlashTimings`, `clampToneHz`, optional `prepare()` warm-up | Torch acquisition released via guard; logs warm-up latency and torch toggles for developer traces. |
+| `useSendSession` | `OutputsService.flashPulse` & `hapticSymbol`; `playMorse` for replay loops | `signalTolerancePercent`, `gapTolerancePercent`, `getMorseUnitMs()` | Replay uses idle/gap classifiers; now emits `playMorse.*` and `outputs.*` pulses tagged with `session.send`. |
+| `useReceiveSession` | `OutputsService.flashPulse`, `hapticSymbol`, `playMorse` for target playback | `flashOffsetMs`, `hapticOffsetMs`, `getMorseUnitMs()` | Emits `outputs.*` pulses with `session.receive` source; still relies on configurable offsets to mask hardware latency. |
+| `useKeyerOutputs` + `KeyerButton` | `OutputsService.createKeyerOutputs` sidetone + haptics + flash + torch | `toneHz`, `audioEnabled`, `lightEnabled`, `torchEnabled`, monotonic press timestamps | Emits `keyer.*` trace events; console pulses appear via `outputs.*` when developer tracing is enabled. |
+| `services/outputs/defaultOutputsService` | Shared flash/haptics/audio helpers plus keyer handle | `computeFlashTimings`, `clampToneHz`, optional `prepare()` warm-up | Emits `outputs.flashPulse`/`outputs.hapticSymbol` traces with source metadata; keyer surfaces retain `keyer.*` events. |
 
 ## Next Steps
 
@@ -38,23 +39,24 @@
 2. Audit session layouts for lingering inline spacing overrides and queue migrations onto `sessionLayoutTheme` where practical.
 
 ### Output Touchpoint Inventory (Current)
-1. Verify the matrix above matches current code (send, receive, keyer, console) and patch any drift.
-2. Capture remaining touchpoint quirks (torch availability, haptic offsets, etc.) so the rewire plan starts from a single source of truth.
-3. Flag any instrumentation gaps that need developer-mode coverage before we broaden the tooling.
+1. Surface torch availability and instrumentation feedback in the UI (fallback messaging + metrics).
+2. Document the offset-tuning workflow and expose the knobs inside the developer console.
+3. Publish a short guide summarising the new `outputs.*` trace metrics (latency, source counts) so offset tuning is data-driven.
 
 ### Output Architecture Preparation
-1. Add console-side affordances (filters, auto-scroll, export) so trace analysis scales beyond raw log dumps.
-2. Compare buffer strategies (ring vs. aggregated segments) to keep long developer sessions responsive.
-3. Extend instrumentation to replay (`playMorse`) so we can correlate live keyer latency with playback latency.
+1. Persist console filter/search state once developer mode toggles survive reloads.
+2. Prototype segmented trace buffers versus the current 200-event ring before raising history limits.
+3. Explore file-based or streaming exports so long developer sessions are not limited by the Share sheet payload size.
+4. Add a Settings › Output card (below Language) linking to an output settings screen covering audio volume, tone frequency, vibration intensity, and screen flash brightness—with room to extend later.
 
-### Outputs Service Rewire (STOP — Research & Plan)
+### Outputs Service Rewire (STOP - Research & Plan)
 1. Pause implementation to research platform constraints (Expo Audio/Haptics, flashlight APIs) and outline the risks of low-latency playback across devices.
 2. Produce a written implementation plan (data flow, sequencing, fallbacks) for rewiring remaining outputs through the service before coding.
 
 ### Developer Mode Shell
-1. Extend the developer console with manual output triggers (audio, flash, haptics, torch) and live filters before exposing it to wider QA.
-2. Add a short doc snippet covering the unlock gesture + console route so new contributors can enable the tools quickly.
-3. Surface developer entry points outside settings once the unlock flow stabilises (e.g., long-press on lesson header).
+1. Publish an offset-tuning walkthrough (linking the new metrics to recommended baselines) so the team can calibrate devices consistently.
+2. Add timeline filtering/pinning in the console (time range, event bookmarks) to make long trace sessions easier to audit.
+3. Support saving/loading manual pattern presets so testers can jump between common sequences without retyping.
 
 ### Practice-Tab Groundwork
 1. Inventory the shared components the practice tab will reuse (keyboards, summary cards, toggles) and confirm each has tokens/theming hooks.
@@ -66,6 +68,15 @@
 2. Prepare an Expo smoke-test checklist (send, receive, summary) to run after major changes and link it in this doc.
 3. Add simple mocks/tests around the outputs service to protect against regressions during future rewrites.
 4. Integrate `npm run check:session-controls` into CI so the spacing guard runs automatically (not just locally).
+
+
+
+
+
+
+
+
+
 
 
 

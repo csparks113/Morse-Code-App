@@ -40,7 +40,11 @@ const sessionStyleDefs = {
     justifyContent: 'center',
     minHeight: sessionLayoutTheme.inputZone.minHeight,
   },
-  lessonChoices: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing(2) },
+  lessonChoices: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing(sessionLayoutTheme.choices.gridGapStep),
+  },
   summaryContainer: {
     flex: 1,
     paddingHorizontal: spacing(sessionLayoutTheme.summary.paddingHorizontalStep),

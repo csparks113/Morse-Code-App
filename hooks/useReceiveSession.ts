@@ -137,7 +137,7 @@ export function useReceiveSession({
 
   const hapticTick = React.useCallback(
     (symbol: '.' | '-', durationMs: number) => {
-      outputs.hapticSymbol({ enabled: hapticsEnabled, symbol, durationMs });
+      outputs.hapticSymbol({ enabled: hapticsEnabled, symbol, durationMs, source: 'session.receive' });
     },
     [outputs, hapticsEnabled],
   );

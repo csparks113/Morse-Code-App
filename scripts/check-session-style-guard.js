@@ -2,8 +2,10 @@ const fs = require('fs');
 const path = require('path');
 
 const projectRoot = path.resolve(__dirname, '..');
-const targetDirs = [
+const targetRoots = [
   path.join(projectRoot, 'components', 'session'),
+  path.join(projectRoot, 'app', 'lessons', '[group]', '[lessonId]'),
+  path.join(projectRoot, 'theme', 'sessionStyles.ts'),
 ];
 
 const spacingProps = [
@@ -55,6 +57,18 @@ function collectFiles(dir) {
     }
   }
   return files;
+}
+
+function collectTargets(root) {
+  if (!fs.existsSync(root)) return [];
+  const stat = fs.statSync(root);
+  if (stat.isDirectory()) {
+    return collectFiles(root);
+  }
+  if (stat.isFile()) {
+    return [root];
+  }
+  return [];
 }
 
 function isInsideBlockComment(source, index) {
@@ -123,7 +137,7 @@ function scanColors(content, filePath, violations) {
   }
 }
 
-const files = targetDirs.flatMap(collectFiles);
+const files = targetRoots.flatMap(collectTargets);
 const violations = [];
 
 for (const filePath of files) {

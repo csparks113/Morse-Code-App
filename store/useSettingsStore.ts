@@ -14,8 +14,10 @@ type SettingsState = {
   // Morse timing
   wpm: number; // words per minute (dot = 1200 / WPM ms)
   toneHz: number; // tone frequency in Hz
-  signalTolerancePercent: number; // dot/dash tolerance window (±%)
-  gapTolerancePercent: number; // gap tolerance window (±%)
+  signalTolerancePercent: number; // dot/dash tolerance window (percent)
+  gapTolerancePercent: number; // gap tolerance window (percent)
+  flashOffsetMs: number;
+  hapticOffsetMs: number;
 
   setReceiveOnly: (value: boolean) => void;
   setAudioEnabled: (value: boolean) => void;
@@ -26,6 +28,8 @@ type SettingsState = {
   setToneHz: (value: number) => void;
   setSignalTolerancePercent: (value: number) => void;
   setGapTolerancePercent: (value: number) => void;
+  setFlashOffsetMs: (value: number) => void;
+  setHapticOffsetMs: (value: number) => void;
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -42,6 +46,8 @@ export const useSettingsStore = create<SettingsState>()(
       toneHz: 600,
       signalTolerancePercent: 30,
       gapTolerancePercent: 50,
+      flashOffsetMs: 0,
+      hapticOffsetMs: 0,
 
       setReceiveOnly: (value) => set({ receiveOnly: value }),
       setAudioEnabled: (value) => set({ audioEnabled: value }),
@@ -64,6 +70,14 @@ export const useSettingsStore = create<SettingsState>()(
         const clamped = Math.max(30, Math.min(80, Math.round(value)));
         set({ gapTolerancePercent: clamped });
       },
+      setFlashOffsetMs: (value) => {
+        const clamped = Math.max(-300, Math.min(300, Math.round(value)));
+        set({ flashOffsetMs: clamped });
+      },
+      setHapticOffsetMs: (value) => {
+        const clamped = Math.max(-300, Math.min(300, Math.round(value)));
+        set({ hapticOffsetMs: clamped });
+      },
     }),
     {
       name: 'settings',
@@ -78,6 +92,8 @@ export const useSettingsStore = create<SettingsState>()(
         toneHz: state.toneHz,
         signalTolerancePercent: state.signalTolerancePercent,
         gapTolerancePercent: state.gapTolerancePercent,
+        flashOffsetMs: state.flashOffsetMs,
+        hapticOffsetMs: state.hapticOffsetMs,
       }),
     },
   ),

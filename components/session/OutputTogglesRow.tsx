@@ -1,7 +1,7 @@
 // components/session/OutputTogglesRow.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { spacing } from '@/theme/lessonTheme';
+import { spacing, sessionLayoutTheme } from '@/theme/lessonTheme';
 import OutputToggle from '@/components/session/OutputToggle';
 
 type Props = {
@@ -57,11 +57,13 @@ export default function OutputTogglesRow({
   );
 }
 
+const togglesLayout = sessionLayoutTheme.toggles;
+
 const styles = StyleSheet.create({
   outputContainer: {
     alignSelf: 'stretch',
-    paddingHorizontal: spacing(0),
-    paddingVertical: spacing(.5),
+    paddingHorizontal: spacing(togglesLayout.paddingHorizontalStep),
+    paddingVertical: spacing(togglesLayout.paddingVerticalStep),
     justifyContent: 'center',
   },
 
@@ -69,7 +71,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-evenly',
-    columnGap: spacing(1.5),
+    columnGap: spacing(togglesLayout.columnGapStep),
     flexWrap: 'nowrap',
     width: '100%',
   },

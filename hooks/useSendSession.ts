@@ -213,7 +213,7 @@ export function useSendSession({
 
   const hapticSymbol = React.useCallback(
     (symbol: '.' | '-') => {
-      outputs.hapticSymbol({ enabled: hapticsEnabled, symbol });
+      outputs.hapticSymbol({ enabled: hapticsEnabled, symbol, source: 'session.send' });
     },
     [outputs, hapticsEnabled],
   );

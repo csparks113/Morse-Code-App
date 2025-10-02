@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, StyleProp, Text, View, ViewStyle } from "react-native";
 
-import { colors, spacing, surfaces, sessionControlTheme } from "@/theme/lessonTheme";
+import { colors, spacing, surfaces, sessionControlTheme, sessionLayoutTheme } from "@/theme/lessonTheme";
 
 type LessonChoicesProps = {
   choices: string[];
@@ -11,6 +11,7 @@ type LessonChoicesProps = {
 };
 
 const lessonChoiceTheme = sessionControlTheme.lessonChoice;
+const choicesLayout = sessionLayoutTheme.choices;
 
 function LessonChoices({
   choices,
@@ -42,7 +43,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: spacing(2),
+    gap: spacing(choicesLayout.gridGapStep),
   },
   choice: {
     flex: 1,

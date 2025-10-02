@@ -9,12 +9,14 @@ export type FlashPulseOptions = {
   enabled: boolean;
   durationMs: number;
   flashValue: Animated.Value;
+  source?: string;
 };
 
 export type HapticSymbolOptions = {
   enabled: boolean;
   symbol: MorseSymbol;
   durationMs?: number;
+  source?: string;
 };
 
 export type PlayMorseOptions = {

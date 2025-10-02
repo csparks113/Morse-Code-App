@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import type { KeyerOutputsOptions } from '@/services/outputs/OutputsService';
+
 export type OutputsTraceEntry = {
   id: number;
   event: string;
@@ -15,13 +17,29 @@ type DeveloperState = {
   outputsTracingEnabled: boolean;
   traces: OutputsTraceEntry[];
   nextTraceId: number;
+  manualTriggers: KeyerOutputsOptions;
+  manualPattern: string;
+  manualWpm: number;
   setDeveloperMode: (enabled: boolean) => void;
   setOutputsTracingEnabled: (enabled: boolean) => void;
   appendTrace: (entry: Omit<OutputsTraceEntry, 'id'>) => void;
   clearTraces: () => void;
+  setManualTriggers: (partial: Partial<KeyerOutputsOptions>) => void;
+  setManualPattern: (pattern: string) => void;
+  setManualWpm: (wpm: number) => void;
 };
 
 const TRACE_BUFFER_SIZE = 200;
+const DEFAULT_PATTERN = '... --- ...';
+const DEFAULT_WPM = 10;
+
+const createDefaultManualTriggers = (): KeyerOutputsOptions => ({
+  audioEnabled: true,
+  hapticsEnabled: true,
+  lightEnabled: true,
+  torchEnabled: false,
+  toneHz: 600,
+});
 
 export const useDeveloperStore = create<DeveloperState>()(
   persist(
@@ -30,6 +48,9 @@ export const useDeveloperStore = create<DeveloperState>()(
       outputsTracingEnabled: false,
       traces: [],
       nextTraceId: 1,
+      manualTriggers: createDefaultManualTriggers(),
+      manualPattern: DEFAULT_PATTERN,
+      manualWpm: DEFAULT_WPM,
       setDeveloperMode: (enabled) => {
         set((state) => {
           if (enabled) {
@@ -44,6 +65,9 @@ export const useDeveloperStore = create<DeveloperState>()(
             outputsTracingEnabled: false,
             traces: [],
             nextTraceId: 1,
+            manualTriggers: createDefaultManualTriggers(),
+            manualPattern: DEFAULT_PATTERN,
+            manualWpm: DEFAULT_WPM,
           };
         });
       },
@@ -88,6 +112,17 @@ export const useDeveloperStore = create<DeveloperState>()(
         });
       },
       clearTraces: () => set({ traces: [], nextTraceId: 1 }),
+      setManualTriggers: (partial) => {
+        set((state) => ({
+          manualTriggers: { ...state.manualTriggers, ...partial },
+        }));
+      },
+      setManualPattern: (pattern) => {
+        set({ manualPattern: pattern || DEFAULT_PATTERN });
+      },
+      setManualWpm: (wpm) => {
+        set({ manualWpm: Number.isFinite(wpm) && wpm > 0 ? wpm : DEFAULT_WPM });
+      },
     }),
     {
       name: 'developer-settings',
@@ -95,6 +130,9 @@ export const useDeveloperStore = create<DeveloperState>()(
       partialize: (state) => ({
         developerMode: state.developerMode,
         outputsTracingEnabled: state.outputsTracingEnabled,
+        manualTriggers: state.manualTriggers,
+        manualPattern: state.manualPattern,
+        manualWpm: state.manualWpm,
       }),
     },
   ),

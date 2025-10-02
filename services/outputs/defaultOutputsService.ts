@@ -439,7 +439,13 @@ const defaultOutputsService: OutputsService = {
     return new Animated.Value(0);
   },
 
-  flashPulse({ enabled, durationMs, flashValue }: FlashPulseOptions) {
+  flashPulse({ enabled, durationMs, flashValue, source }: FlashPulseOptions) {
+    traceOutputs('outputs.flashPulse', {
+      enabled,
+      durationMs,
+      source: source ?? 'unspecified',
+    });
+
     if (!enabled) return;
     const { fadeMs, holdMs } = computeFlashTimings(durationMs);
 
@@ -456,7 +462,16 @@ const defaultOutputsService: OutputsService = {
     });
   },
 
-  hapticSymbol({ enabled, symbol, durationMs }: HapticSymbolOptions) {
+  hapticSymbol({ enabled, symbol, durationMs, source }: HapticSymbolOptions) {
+    traceOutputs('outputs.hapticSymbol', {
+      enabled,
+      symbol,
+      durationMs: durationMs ?? null,
+      platform: Platform.OS,
+      source: source ?? 'unspecified',
+    });
+
+    if (!enabled) return;
     if (!enabled) return;
 
     if (Platform.OS === 'android' && typeof durationMs === 'number') {
@@ -475,7 +490,34 @@ const defaultOutputsService: OutputsService = {
   },
 
   async playMorse({ morse, unitMs, onSymbolStart }: PlayMorseOptions) {
-    await playMorseCode(morse, unitMs, onSymbolStart ? { onSymbolStart } : undefined);
+    const startedAt = nowMs();
+    traceOutputs('playMorse.start', {
+      unitMs,
+      length: morse.length,
+    });
+
+    let symbolIndex = 0;
+    const symbolTracker = (symbol: '.' | '-', durationMs: number) => {
+      traceOutputs('playMorse.symbol', {
+        symbol,
+        durationMs,
+        index: symbolIndex,
+      });
+      symbolIndex += 1;
+      onSymbolStart?.(symbol, durationMs);
+    };
+
+    try {
+      await playMorseCode(morse, unitMs, { onSymbolStart: symbolTracker });
+      traceOutputs('playMorse.complete', {
+        durationMs: nowMs() - startedAt,
+      });
+    } catch (error) {
+      traceOutputs('playMorse.error', {
+        message: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   },
 
   stopMorse() {
