@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Modal, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -14,6 +14,9 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { theme } from '../../theme/theme';
 import { withAlpha } from '@/theme/tokens';
 import { useProgressStore } from '../../store/useProgressStore';
+import { useDeveloperStore } from '@/store/useDeveloperStore';
+import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 
 type StepperRowProps = {
   title: string;
@@ -86,6 +89,91 @@ export default function SettingsScreen() {
   } = useSettingsStore();
 
   const { resetAll } = useProgressStore();
+  const router = useRouter();
+
+  const developerMode = useDeveloperStore((state) => state.developerMode);
+  const setDeveloperMode = useDeveloperStore((state) => state.setDeveloperMode);
+  const outputsTracingEnabled = useDeveloperStore((state) => state.outputsTracingEnabled);
+  const setOutputsTracingEnabled = useDeveloperStore((state) => state.setOutputsTracingEnabled);
+  const clearTraces = useDeveloperStore((state) => state.clearTraces);
+  const traceCount = useDeveloperStore((state) => state.traces.length);
+
+  const unlockRef = React.useRef<{ count: number; timeout: ReturnType<typeof setTimeout> | null }>({
+    count: 0,
+    timeout: null,
+  });
+
+  const versionLabel = React.useMemo(() => {
+    const config = Constants.expoConfig;
+    const version = config?.version ?? 'dev';
+    const buildNumbers = [config?.ios?.buildNumber, config?.android?.versionCode]
+      .filter((value) => value != null && value !== '');
+    if (buildNumbers.length > 0) {
+      return `${version} (${buildNumbers.join('/')})`;
+    }
+    return version;
+  }, []);
+
+  const handleUnlockPress = React.useCallback(() => {
+    if (developerMode) {
+      return;
+    }
+    const ref = unlockRef.current;
+    if (ref.timeout) {
+      clearTimeout(ref.timeout);
+    }
+    ref.count += 1;
+    if (ref.count >= 5) {
+      setDeveloperMode(true);
+      ref.count = 0;
+      Alert.alert('Developer Mode', 'Developer tools unlocked. A new section is available below.');
+    } else {
+      ref.timeout = setTimeout(() => {
+        ref.count = 0;
+        ref.timeout = null;
+      }, 1200);
+    }
+  }, [developerMode, setDeveloperMode]);
+
+  React.useEffect(() => {
+    return () => {
+      const ref = unlockRef.current;
+      if (ref.timeout) {
+        clearTimeout(ref.timeout);
+      }
+    };
+  }, []);
+
+  const handleToggleDeveloperMode = React.useCallback(
+    (value: boolean) => {
+      setDeveloperMode(value);
+      if (!value) {
+        setOutputsTracingEnabled(false);
+        clearTraces();
+      }
+    },
+    [clearTraces, setDeveloperMode, setOutputsTracingEnabled],
+  );
+
+  const handleTracingToggle = React.useCallback(
+    (value: boolean) => {
+      setOutputsTracingEnabled(value);
+      if (value) {
+        setDeveloperMode(true);
+      }
+    },
+    [setDeveloperMode, setOutputsTracingEnabled],
+  );
+
+  const handleClearTraces = React.useCallback(() => {
+    clearTraces();
+  }, [clearTraces]);
+
+  const handleOpenConsole = React.useCallback(() => {
+    router.push('/dev');
+  }, [router]);
+
+  const developerSectionVisible = developerMode;
 
   const languageOptions = React.useMemo<LanguageOption[]>(() => getAvailableLanguages(), []);
   const [languageModalVisible, setLanguageModalVisible] = React.useState(false);
@@ -222,8 +310,69 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
-      </Modal>
-    </ScrollView>
+      </Modal>          <Pressable
+            accessibilityRole="button"
+            onPress={handleUnlockPress}
+            style={({ pressed }) => [styles.buildRow, pressed && styles.pressed]}
+          >
+            <View style={styles.buildInfo}>
+              <Text style={styles.buildLabel}>Build</Text>
+              <Text style={styles.buildValue}>{versionLabel}</Text>
+            </View>
+            <Text style={styles.buildHint}>
+              {developerMode ? 'Developer mode enabled' : 'Tap five times to unlock'}
+            </Text>
+          </Pressable>
+
+          {developerSectionVisible ? (
+            <View style={[styles.section, styles.developerSection]}>
+              <View style={[styles.row, styles.developerRow]}>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowTitle}>Developer mode</Text>
+                  <Text style={styles.rowSub}>Unlock hidden tools and debug surfaces.</Text>
+                </View>
+                <Switch
+                  value={developerMode}
+                  onValueChange={handleToggleDeveloperMode}
+                  trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                  thumbColor={developerMode ? theme.colors.accent : theme.colors.disabled}
+                />
+              </View>
+
+              <View style={[styles.row, styles.developerRow]}>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowTitle}>Outputs tracing</Text>
+                  <Text style={styles.rowSub}>
+                    Logs keyer / replay events ({traceCount} cached).
+                  </Text>
+                </View>
+                <Switch
+                  value={outputsTracingEnabled}
+                  onValueChange={handleTracingToggle}
+                  trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                  thumbColor={outputsTracingEnabled ? theme.colors.accent : theme.colors.disabled}
+                />
+              </View>
+
+              <Pressable
+                onPress={handleOpenConsole}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.devButton, pressed && styles.pressed]}
+              >
+                <Text style={styles.devButtonText}>Open developer console</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleClearTraces}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.devButtonGhost, pressed && styles.pressed]}
+              >
+                <Text style={styles.devButtonGhostText}>Clear trace buffer</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+        </ScrollView>
     
       </View>
 
@@ -441,6 +590,73 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'auto',
   },
+  buildRow: {
+    marginTop: theme.spacing(4),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
+    paddingHorizontal: theme.spacing(4),
+    paddingVertical: theme.spacing(2.5),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    gap: theme.spacing(3),
+  },
+  buildInfo: {
+    flex: 1,
+    gap: theme.spacing(0.5),
+  },
+  buildLabel: {
+    color: theme.colors.textSecondary,
+    fontWeight: '700',
+    fontSize: theme.typography.tiny,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  buildValue: {
+    color: theme.colors.textPrimary,
+    fontWeight: '700',
+  },
+  buildHint: {
+    color: theme.colors.textSecondary,
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  developerSection: {
+    gap: theme.spacing(2),
+    paddingBottom: theme.spacing(4),
+  },
+  developerRow: {
+    alignItems: 'center',
+  },
+  devButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing(2),
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.accent,
+  },
+  devButtonText: {
+    color: theme.colors.background,
+    fontWeight: '700',
+  },
+  devButtonGhost: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing(2),
+    borderRadius: theme.radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+  },
+  devButtonGhostText: {
+    color: theme.colors.textSecondary,
+    fontWeight: '700',
+  },
 });
+
+
+
+
 
 

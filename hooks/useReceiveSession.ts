@@ -1,10 +1,11 @@
 import React from 'react';
-import { Animated, Dimensions, Platform, Vibration } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { Dimensions } from 'react-native';
+import type { Animated } from 'react-native';
 
 import type { ActionButtonState } from '@/components/session/ActionButton';
 import type { PromptActionLabels, PromptActionConfig, SessionActionIconName } from '@/hooks/sessionActionTypes';
-import { playMorseCode, getMorseUnitMs } from '@/utils/audio';
+import { useOutputsService } from '@/services/outputs/OutputsService';
+import { getMorseUnitMs } from '@/utils/audio';
 import { toMorse } from '@/utils/morse';
 import { useProgressStore } from '@/store/useProgressStore';
 
@@ -12,7 +13,6 @@ export const TOTAL_RECEIVE_QUESTIONS = 5;
 
 type Summary = { correct: number; percent: number };
 type FeedbackState = 'idle' | 'correct' | 'wrong';
-
 
 /**
  * Arguments for configuring the receive session flow.
@@ -85,6 +85,7 @@ export function useReceiveSession({
   hapticOffsetMs = 0,
   actionLabels,
 }: UseReceiveSessionArgs): UseReceiveSessionResult {
+  const outputs = useOutputsService();
   const setScore = useProgressStore((state) => state.setScore);
 
   const [started, setStarted] = React.useState(false);
@@ -98,7 +99,7 @@ export function useReceiveSession({
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [hearts, setHearts] = React.useState(HEARTS_INITIAL);
 
-  const flash = React.useRef(new Animated.Value(0)).current;
+  const flash = React.useRef(outputs.createFlashValue()).current;
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentMorseRef = React.useRef('');
 
@@ -116,73 +117,29 @@ export function useReceiveSession({
       if (advanceTimerRef.current) {
         clearTimeout(advanceTimerRef.current);
       }
+      outputs.stopMorse();
+      flash.stopAnimation?.(() => {
+        flash.setValue(0);
+      });
     };
-  }, []);
+  }, [outputs, flash]);
 
   const runFlash = React.useCallback(
     (durationMs: number) => {
-      if (!lightEnabled) return;
-
-      const fadeMs = Math.min(240, Math.max(120, Math.floor(durationMs * 0.35)));
-      const holdMs = Math.max(0, Math.floor(durationMs - fadeMs));
-
-      try {
-        flash.stopAnimation();
-      } catch {
-        // no-op
-      }
-      flash.setValue(1);
-
-      requestAnimationFrame(() => {
-        if (holdMs > 0) {
-          Animated.timing(flash, {
-            toValue: 1,
-            duration: holdMs,
-            useNativeDriver: true,
-          }).start(() => {
-            Animated.timing(flash, {
-              toValue: 0,
-              duration: fadeMs,
-              useNativeDriver: true,
-            }).start();
-          });
-        } else {
-          Animated.timing(flash, {
-            toValue: 0,
-            duration: fadeMs,
-            useNativeDriver: true,
-          }).start();
-        }
+      outputs.flashPulse({
+        enabled: lightEnabled,
+        durationMs,
+        flashValue: flash,
       });
     },
-    [lightEnabled, flash],
+    [outputs, lightEnabled, flash],
   );
 
   const hapticTick = React.useCallback(
     (symbol: '.' | '-', durationMs: number) => {
-      if (!hapticsEnabled) return;
-
-      if (Platform.OS === 'android') {
-        try {
-          Vibration.cancel();
-        } catch {
-          // ignore
-        }
-        Vibration.vibrate(Math.max(15, Math.round(durationMs)));
-        return;
-      }
-
-      try {
-        const style =
-          symbol === '.'
-            ? Haptics.ImpactFeedbackStyle.Light
-            : Haptics.ImpactFeedbackStyle.Medium;
-        Haptics.impactAsync(style);
-      } catch {
-        // ignore
-      }
+      outputs.hapticSymbol({ enabled: hapticsEnabled, symbol, durationMs });
     },
-    [hapticsEnabled],
+    [outputs, hapticsEnabled],
   );
 
   const playTarget = React.useCallback(async () => {
@@ -192,7 +149,9 @@ export function useReceiveSession({
 
     setIsPlaying(true);
     try {
-      await playMorseCode(morse, getMorseUnitMs(), {
+      await outputs.playMorse({
+        morse,
+        unitMs: getMorseUnitMs(),
         onSymbolStart: (symbol, duration) => {
           if (flashOffsetMs > 0) {
             setTimeout(() => runFlash(duration), flashOffsetMs);
@@ -210,7 +169,7 @@ export function useReceiveSession({
     } finally {
       setIsPlaying(false);
     }
-  }, [runFlash, hapticTick, flashOffsetMs, hapticOffsetMs, isPlaying]);
+  }, [outputs, runFlash, hapticTick, flashOffsetMs, hapticOffsetMs, isPlaying]);
 
   const playTargetRef = React.useRef<() => Promise<void> | void>(() => {});
   React.useEffect(() => {
@@ -241,6 +200,10 @@ export function useReceiveSession({
       clearTimeout(advanceTimerRef.current);
     }
 
+    outputs.stopMorse();
+    flash.stopAnimation?.(() => {
+      flash.setValue(0);
+    });
     setQuestions(generateQuestions());
     setResults([]);
     setFeedback('idle');
@@ -251,7 +214,7 @@ export function useReceiveSession({
     setStreak(0);
     setStarted(true);
     if (isChallenge) setHearts(HEARTS_INITIAL);
-  }, [pool, generateQuestions, isChallenge]);
+  }, [pool, generateQuestions, isChallenge, outputs, flash]);
 
   const finalizeScore = React.useCallback(
     (answers: boolean[]) => {
@@ -273,6 +236,11 @@ export function useReceiveSession({
       if (advanceTimerRef.current) {
         clearTimeout(advanceTimerRef.current);
       }
+
+      outputs.stopMorse();
+      flash.stopAnimation?.(() => {
+        flash.setValue(0);
+      });
 
       const willExhaustHearts = isChallenge && !isCorrect && hearts <= 1;
 
@@ -307,7 +275,7 @@ export function useReceiveSession({
         setIsPlaying(false);
       }, 450);
     },
-    [isChallenge, hearts, finalizeScore, results],
+    [isChallenge, hearts, finalizeScore, results, outputs, flash],
   );
 
   const submitAnswer = React.useCallback(
@@ -375,7 +343,11 @@ export function useReceiveSession({
     if (advanceTimerRef.current) {
       clearTimeout(advanceTimerRef.current);
     }
-  }, []);
+    outputs.stopMorse();
+    flash.stopAnimation?.(() => {
+      flash.setValue(0);
+    });
+  }, [outputs, flash]);
 
   return {
     started,
@@ -402,25 +374,4 @@ export function useReceiveSession({
     handleSummaryContinue,
   };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

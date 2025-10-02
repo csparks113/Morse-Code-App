@@ -213,6 +213,15 @@ export const sessionLayoutTheme = {
     gapStep: 4,
     paddingStep: 4,
   },
+  footer: {
+    topPaddingStep: 2,
+    paddingStep: {
+      standard: 2,
+      summary: 4,
+      dev: 2,
+      practice: 2,
+    },
+  },
 } as const;
 
 

@@ -8,7 +8,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "check:session-controls": "node scripts/check-session-control-theme.js && node scripts/check-session-style-guard.js",
+    "check:session-styles": "node scripts/check-session-style-guard.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

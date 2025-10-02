@@ -4,8 +4,8 @@ import { Pressable, StyleSheet, StyleProp, Text, ViewStyle } from "react-native"
 import { colors, spacing, surfaces, sessionControlTheme } from "@/theme/lessonTheme";
 
 type KeyerButtonProps = {
-  onPressIn?: () => void;
-  onPressOut?: () => void;
+  onPressIn?: (timestampMs?: number) => void;
+  onPressOut?: (timestampMs?: number) => void;
   disabled?: boolean;
   minHeight?: number;
   label?: string;
@@ -24,8 +24,12 @@ function KeyerButton({
 }: KeyerButtonProps) {
   return (
     <Pressable
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
+      onPressIn={(event) => {
+        onPressIn?.(event?.nativeEvent?.timestamp);
+      }}
+      onPressOut={(event) => {
+        onPressOut?.(event?.nativeEvent?.timestamp);
+      }}
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
@@ -66,6 +70,7 @@ const styles = StyleSheet.create({
 });
 
 export default KeyerButton;
+
 
 
 

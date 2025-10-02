@@ -27,8 +27,7 @@ import ChallengeKeyboard from '../../../../components/session/ChallengeKeyboard'
 import { sessionStyleSheet, sessionContainerPadding } from '../../../../theme/sessionStyles';
 
 // Theme + utils
-import { colors, spacing } from '../../../../theme/lessonTheme';
-
+import { colors, sessionLayoutTheme } from '../../../../theme/lessonTheme';
 // Stores & hooks
 import { useSettingsStore } from '../../../../store/useSettingsStore';
 import { buildSessionMeta } from '../../../../session/sessionMeta';
@@ -105,7 +104,7 @@ export default function ReceiveSessionScreen() {
   if (!meta.pool.length) {
     return (
       <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
-        <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, spacing(2), spacing(4))]}>
+        <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'summary' })]}>
           <View style={sessionStyleSheet.emptyState}>
             <Text style={sessionStyleSheet.emptyText}>{t('session:contentUnavailable')}</Text>
           </View>
@@ -121,7 +120,7 @@ export default function ReceiveSessionScreen() {
         <View
           style={[
             sessionStyleSheet.container,
-            sessionContainerPadding(insets, spacing(2), spacing(4)),
+            sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'summary' }),
           ]}
         >
           <View style={sessionStyleSheet.topGroup}>
@@ -154,7 +153,7 @@ export default function ReceiveSessionScreen() {
       {/* Flash overlay for playback */}
       <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={0.28} />
 
-      <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, spacing(2), spacing(4))]}>
+      <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'summary' })]}>
         {/* --- TOP (fixed): header + progress --- */}
         <View style={sessionStyleSheet.topGroup}>
           <SessionHeader
@@ -235,9 +234,3 @@ export default function ReceiveSessionScreen() {
     </SafeAreaView>
   );
 }
-
-
-
-
-
-

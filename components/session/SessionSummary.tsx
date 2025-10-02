@@ -14,7 +14,8 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 import { router } from 'expo-router';
-import { colors, spacing, borders, gradients } from '@/theme/lessonTheme';
+import { colors, spacing, borders, gradients, sessionLayoutTheme } from '@/theme/lessonTheme';
+import { getSessionFooterSpacing } from '@/theme/sessionStyles';
 import { typography, fontWeight } from '@/theme/tokens';
 import { useTranslation } from 'react-i18next';
 
@@ -31,6 +32,8 @@ type SessionSummaryProps = SummaryProps & {
 type ContinueProps = {
   onContinue?: () => void;
 };
+
+const SUMMARY_FOOTER_SPACING = getSessionFooterSpacing('summary');
 
 // Drawing constants for the ring
 const SIZE = 220;
@@ -159,7 +162,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing(4),
-    marginBottom: spacing(4),
+    marginBottom: SUMMARY_FOOTER_SPACING,
     gap: spacing(5),
   },
   content: {
@@ -195,7 +198,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     paddingVertical: spacing(3),
     paddingHorizontal: spacing(4),
-    marginBottom: spacing(4),
+    marginBottom: SUMMARY_FOOTER_SPACING,
   },
   continuePressed: { opacity: 0.92 },
   continueText: {
@@ -204,6 +207,3 @@ const styles = StyleSheet.create({
     fontSize: typography.subtitle,
   },
 });
-
-
-

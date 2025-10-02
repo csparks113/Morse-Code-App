@@ -27,9 +27,9 @@ import OutputTogglesRow from '../../../../components/session/OutputTogglesRow';
 import KeyerButton from '../../../../components/session/KeyerButton';
 import FlashOverlay from '../../../../components/session/FlashOverlay';
 import MorseCompare from '../../../../components/session/MorseCompare';
+import { colors, status, sessionLayoutTheme } from '../../../../theme/lessonTheme';
 import { sessionStyleSheet, sessionContainerPadding } from '../../../../theme/sessionStyles';
 
-import { colors, spacing, status } from '../../../../theme/lessonTheme';
 
 // Stores & hooks
 import { useSettingsStore } from '../../../../store/useSettingsStore';
@@ -121,7 +121,7 @@ export default function SendSessionScreen() {
         <View
           style={[
             sessionStyleSheet.container,
-            sessionContainerPadding(insets, spacing(2), spacing(4)),
+            sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'summary' }),
           ]}
         >
           <View style={sessionStyleSheet.topGroup}>
@@ -157,10 +157,7 @@ export default function SendSessionScreen() {
       <View
         style={[
           sessionStyleSheet.container,
-          {
-            paddingTop: insets.top + spacing(2),
-            paddingBottom: insets.bottom + spacing(2),
-          },
+          sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'standard' }),
         ]}
       >
         <View style={sessionStyleSheet.topGroup}>
@@ -231,25 +228,3 @@ export default function SendSessionScreen() {
     </SafeAreaView>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,13 +1,12 @@
 import React from 'react';
 import { Animated, Dimensions } from 'react-native';
-import * as Haptics from 'expo-haptics';
 
 import type { ActionButtonState } from '@/components/session/ActionButton';
 import type { PromptActionLabels, PromptActionConfig, SessionActionIconName } from '@/hooks/sessionActionTypes';
 import { useSessionFlow } from '@/hooks/useSessionFlow';
 import { useKeyerOutputs } from '@/hooks/useKeyerOutputs';
+import { useOutputsService } from '@/services/outputs/OutputsService';
 import { useProgressStore } from '@/store/useProgressStore';
-import { playMorseCode, stopPlayback } from '@/utils/audio';
 import { toMorse } from '@/utils/morse';
 import {
   classifyGapDuration,
@@ -15,6 +14,7 @@ import {
   getMorseUnitMs,
   MORSE_UNITS,
 } from '@/utils/morseTiming';
+import { toMonotonicTime } from '@/utils/time';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 type PressWindow = { startMs: number; endMs: number };
@@ -24,11 +24,6 @@ type Summary = { correct: number; percent: number };
 const HEARTS_INITIAL = 3;
 
 export const TOTAL_SEND_QUESTIONS = 5;
-
-const nowMs = () =>
-  typeof performance !== 'undefined' && typeof performance.now === 'function'
-    ? performance.now()
-    : Date.now();
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -80,8 +75,8 @@ type UseSendSessionResult = {
   canInteract: boolean;
   isReplaying: boolean;
   startSession: () => void;
-  onPressIn: () => void;
-  onPressOut: () => void;
+  onPressIn: (timestampMs?: number) => void;
+  onPressOut: (timestampMs?: number) => void;
   handleRevealPress: () => void;
   handleReplayPress: () => void;
   handleSummaryContinue: () => void;
@@ -119,6 +114,7 @@ export function useSendSession({
   gapTolerancePercent,
   actionLabels,
 }: UseSendSessionArgs): UseSendSessionResult {
+  const outputs = useOutputsService();
   const setScore = useProgressStore((state) => state.setScore);
 
   const signalTolerance = clamp(signalTolerancePercent / 100, 0, 0.45);
@@ -166,7 +162,6 @@ export function useSendSession({
   const ignorePressRef = React.useRef(false);
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const idleTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const playbackTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const canInteractRef = React.useRef(false);
 
   const updateInput = React.useCallback((next: string) => {
@@ -189,11 +184,10 @@ export function useSendSession({
   }, []);
 
   const clearPlaybackTimeout = React.useCallback(() => {
-    if (playbackTimeoutRef.current) {
-      clearTimeout(playbackTimeoutRef.current);
-      playbackTimeoutRef.current = null;
-    }
-  }, []);
+    flashOpacity.stopAnimation?.(() => {
+      flashOpacity.setValue(0);
+    });
+  }, [flashOpacity]);
 
   React.useEffect(() => {
     prepare().catch(() => {});
@@ -202,36 +196,26 @@ export function useSendSession({
       clearIdleTimeout();
       clearPlaybackTimeout();
       teardown().catch(() => {});
-      stopPlayback();
+      outputs.stopMorse();
     };
   }, [prepare, teardown, clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout]);
 
   const flashSymbol = React.useCallback(
     (durationMs: number) => {
-      if (!lightEnabled) return;
-      flashOpacity.stopAnimation?.(() => {});
-      flashOpacity.setValue(1);
-      clearPlaybackTimeout();
-      const fadeDelay = Math.max(0, durationMs);
-      playbackTimeoutRef.current = setTimeout(() => {
-        Animated.timing(flashOpacity, {
-          toValue: 0,
-          duration: Math.min(120, Math.max(45, durationMs * 0.6)),
-          useNativeDriver: true,
-        }).start();
-        playbackTimeoutRef.current = null;
-      }, fadeDelay);
+      outputs.flashPulse({
+        enabled: lightEnabled,
+        durationMs,
+        flashValue: flashOpacity,
+      });
     },
-    [lightEnabled, flashOpacity, clearPlaybackTimeout],
+    [outputs, lightEnabled, flashOpacity],
   );
 
   const hapticSymbol = React.useCallback(
     (symbol: '.' | '-') => {
-      if (!hapticsEnabled) return;
-      const style = symbol === '-' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light;
-      Haptics.impactAsync(style).catch(() => {});
+      outputs.hapticSymbol({ enabled: hapticsEnabled, symbol });
     },
-    [hapticsEnabled],
+    [outputs, hapticsEnabled],
   );
 
   const screenH = Dimensions.get('window').height;
@@ -250,7 +234,7 @@ export function useSendSession({
     clearAdvanceTimer();
     clearIdleTimeout();
     clearPlaybackTimeout();
-    stopPlayback();
+    outputs.stopMorse();
 
     setIsReplaying(false);
     updateInput('');
@@ -344,11 +328,11 @@ export function useSendSession({
     canInteractRef.current = canInteractBase;
   }, [canInteractBase]);
 
-  const onPressIn = React.useCallback(() => {
+  const onPressIn = React.useCallback((rawTimestamp?: number) => {
     if (!canInteractBase || isReplaying) return;
     clearIdleTimeout();
 
-    const timestamp = nowMs();
+    const timestamp = toMonotonicTime(rawTimestamp);
 
     if (inputRef.current.length > 0 && lastReleaseRef.current !== null) {
       const gapDuration = timestamp - lastReleaseRef.current;
@@ -363,7 +347,7 @@ export function useSendSession({
 
     ignorePressRef.current = false;
     pressStartRef.current = timestamp;
-    onDown();
+    onDown(timestamp);
   }, [canInteractBase, isReplaying, unitMs, gapTolerance, finishQuestion, onDown, clearIdleTimeout]);
 
   const appendSymbol = React.useCallback(
@@ -387,8 +371,9 @@ export function useSendSession({
     [currentTarget, finishQuestion, updateInput, scheduleIdleTimeout],
   );
 
-  const onPressOut = React.useCallback(() => {
-    onUp();
+  const onPressOut = React.useCallback((rawTimestamp?: number) => {
+    const releaseAt = toMonotonicTime(rawTimestamp);
+    onUp(releaseAt);
 
     if (!canInteractBase || isReplaying) {
       ignorePressRef.current = false;
@@ -406,7 +391,6 @@ export function useSendSession({
     pressStartRef.current = null;
     if (!startAt) return;
 
-    const releaseAt = nowMs();
     const duration = releaseAt - startAt;
 
     setPresses((prev) => [...prev, { startMs: startAt, endMs: releaseAt }]);
@@ -426,7 +410,7 @@ export function useSendSession({
     clearAdvanceTimer();
     clearIdleTimeout();
     clearPlaybackTimeout();
-    stopPlayback();
+    outputs.stopMorse();
   }, [clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout]);
 
   const playCurrentTarget = React.useCallback(async () => {
@@ -437,7 +421,9 @@ export function useSendSession({
     setIsReplaying(true);
     clearIdleTimeout();
     try {
-      await playMorseCode(morse, unitMs, {
+      await outputs.playMorse({
+        morse,
+        unitMs,
         onSymbolStart: (symbol, durationMs) => {
           hapticSymbol(symbol);
           flashSymbol(durationMs);
@@ -528,6 +514,25 @@ export function useSendSession({
     handleSummaryContinue,
   };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
