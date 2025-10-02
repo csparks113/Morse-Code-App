@@ -34,6 +34,10 @@ type ContinueProps = {
 };
 
 const SUMMARY_FOOTER_SPACING = getSessionFooterSpacing('summary');
+const summaryLayout = sessionLayoutTheme.summary;
+const summaryStandalone = summaryLayout.standalone;
+const summaryContentLayout = summaryLayout.content;
+const summaryContinueLayout = summaryLayout.continue;
 
 // Drawing constants for the ring
 const SIZE = 220;
@@ -161,15 +165,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing(4),
+    paddingHorizontal: spacing(summaryStandalone.paddingHorizontalStep),
     marginBottom: SUMMARY_FOOTER_SPACING,
-    gap: spacing(5),
+    gap: spacing(summaryStandalone.gapStep),
   },
   content: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing(4),
-    gap: spacing(5),
+    paddingHorizontal: spacing(summaryContentLayout.paddingHorizontalStep),
+    gap: spacing(summaryContentLayout.gapStep),
   },
   title: {
     color: colors.text,
@@ -189,15 +193,15 @@ const styles = StyleSheet.create({
   },
   sub: {
     color: colors.textDim,
-    marginTop: spacing(1),
+    marginTop: spacing(summaryContentLayout.subLabelMarginTopStep),
     fontWeight: fontWeight.medium,
   },
   continue: {
     alignSelf: 'stretch',
     backgroundColor: colors.blueNeon,
     borderRadius: 30,
-    paddingVertical: spacing(3),
-    paddingHorizontal: spacing(4),
+    paddingVertical: spacing(summaryContinueLayout.paddingVerticalStep),
+    paddingHorizontal: spacing(summaryContinueLayout.paddingHorizontalStep),
     marginBottom: SUMMARY_FOOTER_SPACING,
   },
   continuePressed: { opacity: 0.92 },

@@ -211,10 +211,32 @@ export const sessionLayoutTheme = {
   inputZone: {
     minHeight: 140,
   },
+  header: {
+    sideMinWidthStep: 5.5,
+    paddingHorizontalStep: 2,
+    paddingVerticalStep: 2,
+    marginBottomStep: 1.5,
+    centerPaddingHorizontalStep: 1,
+    centerGapStep: 0,
+    heartsGapStep: 0.5,
+  },
   summary: {
     paddingHorizontalStep: 3,
     paddingTopStep: 2,
     paddingBottomStep: 2,
+    standalone: {
+      gapStep: 5,
+      paddingHorizontalStep: 4,
+    },
+    content: {
+      gapStep: 5,
+      paddingHorizontalStep: 4,
+      subLabelMarginTopStep: 1,
+    },
+    continue: {
+      paddingVerticalStep: 3,
+      paddingHorizontalStep: 4,
+    },
   },
   emptyState: {
     gapStep: 4,

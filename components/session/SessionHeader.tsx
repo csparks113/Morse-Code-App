@@ -15,7 +15,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet, Animated, LayoutChangeEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { colors, glow, radii, spacing, status } from '@/theme/lessonTheme';
+import { colors, glow, radii, spacing, status, sessionLayoutTheme } from '@/theme/lessonTheme';
 import { withAlpha } from '@/theme/tokens';
 import { useTranslation } from 'react-i18next';
 
@@ -25,6 +25,8 @@ export type SessionHeaderProps = {
   onClose?: () => void;
   mode?: 'normal' | 'review' | 'challenge';
   hearts?: number; // only meaningful in challenge mode
+  exitToHome?: boolean;
+  showCloseButton?: boolean;
 };
 
 // Keep only "Lesson N" or "Challenge" from labelTop
@@ -35,7 +37,8 @@ function extractPrimary(labelTop: string): string {
   return first.trim() || labelTop.trim();
 }
 
-const DEFAULT_SIDE_WIDTH = spacing(5.5);
+const headerLayout = sessionLayoutTheme.header;
+const DEFAULT_SIDE_WIDTH = spacing(headerLayout.sideMinWidthStep);
 
 export default function SessionHeader({
   labelTop,
@@ -43,13 +46,17 @@ export default function SessionHeader({
   onClose,
   mode = 'normal',
   hearts = 3,
+  exitToHome = true,
+  showCloseButton = true,
 }: SessionHeaderProps) {
   const { t } = useTranslation(['common', 'session']);
   const handlePressClose = React.useCallback(() => {
     onClose?.();
-    router.dismissAll();
-    router.replace('/');
-  }, [onClose]);
+    if (exitToHome) {
+      router.dismissAll();
+      router.replace('/');
+    }
+  }, [onClose, exitToHome]);
 
   // Compute primary line: prefer explicit mode labels
   let topLine: string;
@@ -109,13 +116,15 @@ export default function SessionHeader({
   return (
     <View style={styles.wrap}>
       <View style={[styles.side, styles.sideLeft, { width: sideWidth }]}>
-        <Pressable
-          accessibilityLabel={t('common:close')}
-          onPress={handlePressClose}
-          style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}
-        >
-          <Ionicons name="close" size={22} color={colors.text} />
-        </Pressable>
+        {showCloseButton ? (
+          <Pressable
+            accessibilityLabel={t('common:close')}
+            onPress={handlePressClose}
+            style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}
+          >
+            <Ionicons name="close" size={22} color={colors.text} />
+          </Pressable>
+        ) : null}
       </View>
 
       <View style={styles.center}>
@@ -171,9 +180,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
 
-    paddingVertical: spacing(2),
-    paddingHorizontal: spacing(2),
-    marginBottom: spacing(1.5),
+    paddingVertical: spacing(headerLayout.paddingVerticalStep),
+    paddingHorizontal: spacing(headerLayout.paddingHorizontalStep),
+    marginBottom: spacing(headerLayout.marginBottomStep),
 
     ...glow.neon,
   },
@@ -198,7 +207,12 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.9 },
 
-  center: { flex: 1, alignItems: 'center', gap: spacing(0), paddingHorizontal: spacing(1) },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing(headerLayout.centerGapStep),
+    paddingHorizontal: spacing(headerLayout.centerPaddingHorizontalStep),
+  },
   top: {
     color: colors.text,
     fontSize: 18,
@@ -220,6 +234,6 @@ const styles = StyleSheet.create({
   heartsRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: spacing(0.5),
+    gap: spacing(headerLayout.heartsGapStep),
   },
 });

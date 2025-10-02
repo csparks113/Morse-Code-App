@@ -6,6 +6,8 @@ const targetRoots = [
   path.join(projectRoot, 'components', 'session'),
   path.join(projectRoot, 'app', 'lessons', '[group]', '[lessonId]'),
   path.join(projectRoot, 'theme', 'sessionStyles.ts'),
+  path.join(projectRoot, 'app', 'dev'),
+  path.join(projectRoot, 'app', '(tabs)', 'practice.tsx'),
 ];
 
 const spacingProps = [

@@ -14,7 +14,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 
 import { sessionStyleSheet, sessionContainerPadding } from '@/theme/sessionStyles';
-import { colors as lessonColors, spacing } from '@/theme/lessonTheme';
+import SessionHeader from '@/components/session/SessionHeader';
+import { colors as lessonColors, spacing, surfaces } from '@/theme/lessonTheme';
 import { theme } from '@/theme/theme';
 import {
   useDeveloperStore,
@@ -46,6 +47,13 @@ const QUICK_FILTERS: Array<{ id: string; label: string; filterKey?: FilterKey; s
   { id: 'replays', label: 'Replays', filterKey: 'replay' },
   { id: 'keyer', label: 'Keyer', filterKey: 'keyer' },
 ];
+
+const devConsoleTheme = {
+  panel: surfaces.slate,
+  subtle: surfaces.sunken,
+  chip: surfaces.muted,
+  switchThumb: surfaces.slate,
+};
 
 function formatMonotonicTimestamp(value: number) {
   return `${value.toFixed(TIMESTAMP_DECIMALS)} ms`;
@@ -96,6 +104,10 @@ export default function DeveloperConsoleScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const outputs = useOutputsService();
+
+  const handleClose = React.useCallback(() => {
+    router.back();
+  }, [router]);
 
   const developerMode = useDeveloperStore((state) => state.developerMode);
   const outputsTracingEnabled = useDeveloperStore((state) => state.outputsTracingEnabled);
@@ -437,7 +449,12 @@ export default function DeveloperConsoleScreen() {
         <FlashOverlay opacity={manualFlashValue} color={lessonColors.text} maxOpacity={0.28} />
 
         <View style={sessionStyleSheet.topGroup}>
-          <Text style={styles.title}>Developer Console</Text>
+          <SessionHeader
+            labelTop="Developer Mode"
+            labelBottom="CONSOLE"
+            exitToHome={false}
+            onClose={handleClose}
+          />
           <Text style={styles.subtitle}>
             Outputs tracing buffer stores the {outputsTraceBufferSize} most recent events.
           </Text>
@@ -588,7 +605,7 @@ export default function DeveloperConsoleScreen() {
                   value={manualOptions.audioEnabled}
                   onValueChange={handleManualToggle('audioEnabled')}
                   trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
-                  thumbColor={manualOptions.audioEnabled ? lessonColors.blueNeon : '#1F2430'}
+                  thumbColor={manualOptions.audioEnabled ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
                 />
               </View>
 
@@ -598,7 +615,7 @@ export default function DeveloperConsoleScreen() {
                   value={manualOptions.hapticsEnabled}
                   onValueChange={handleManualToggle('hapticsEnabled')}
                   trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
-                  thumbColor={manualOptions.hapticsEnabled ? lessonColors.blueNeon : '#1F2430'}
+                  thumbColor={manualOptions.hapticsEnabled ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
                 />
               </View>
 
@@ -608,7 +625,7 @@ export default function DeveloperConsoleScreen() {
                   value={manualOptions.lightEnabled}
                   onValueChange={handleManualToggle('lightEnabled')}
                   trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
-                  thumbColor={manualOptions.lightEnabled ? lessonColors.blueNeon : '#1F2430'}
+                  thumbColor={manualOptions.lightEnabled ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
                 />
               </View>
 
@@ -627,7 +644,7 @@ export default function DeveloperConsoleScreen() {
                   thumbColor={
                     torchSupported && manualOptions.torchEnabled
                       ? lessonColors.blueNeon
-                      : '#1F2430'
+                      : devConsoleTheme.switchThumb
                   }
                 />
               </View>
@@ -751,7 +768,7 @@ export default function DeveloperConsoleScreen() {
               value={outputsTracingEnabled}
               onValueChange={setOutputsTracingEnabled}
               trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
-              thumbColor={outputsTracingEnabled ? lessonColors.blueNeon : '#1F2430'}
+              thumbColor={outputsTracingEnabled ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
             />
           </View>
 
@@ -761,7 +778,7 @@ export default function DeveloperConsoleScreen() {
               value={autoScroll}
               onValueChange={setAutoScroll}
               trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
-              thumbColor={autoScroll ? lessonColors.blueNeon : '#1F2430'}
+              thumbColor={autoScroll ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
             />
           </View>
 
@@ -791,12 +808,6 @@ export default function DeveloperConsoleScreen() {
             </Pressable>
           </View>
 
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.buttonSecondary, pressed && styles.buttonPressed]}
-          >
-            <Text style={styles.buttonSecondaryText}>Close</Text>
-          </Pressable>
         </View>
       </View>
     </SafeAreaView>
@@ -804,16 +815,10 @@ export default function DeveloperConsoleScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: lessonColors.text,
-    fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'left',
-  },
   subtitle: {
     color: lessonColors.textDim,
     marginTop: spacing(1),
-    textAlign: 'left',
+    textAlign: 'center',
   },
   traceListWrapper: {
     alignSelf: 'stretch',
@@ -861,7 +866,7 @@ const styles = StyleSheet.create({
     color: lessonColors.text,
     fontFamily: 'Courier',
     fontSize: 12,
-    backgroundColor: '#181D28',
+    backgroundColor: devConsoleTheme.subtle,
     borderRadius: theme.radius.md,
     padding: spacing(2),
   },
@@ -881,7 +886,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.colors.border,
-    backgroundColor: '#1C222E',
+    backgroundColor: devConsoleTheme.panel,
   },
   filterChipActive: {
     backgroundColor: lessonColors.blueNeon,
@@ -895,7 +900,7 @@ const styles = StyleSheet.create({
     color: theme.colors.background,
   },
   searchInput: {
-    backgroundColor: '#1C222E',
+    backgroundColor: devConsoleTheme.panel,
     color: lessonColors.text,
     borderRadius: theme.radius.md,
     paddingVertical: spacing(1),
@@ -932,7 +937,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     padding: spacing(2),
     borderRadius: theme.radius.lg,
-    backgroundColor: '#131822',
+    backgroundColor: devConsoleTheme.chip,
     gap: spacing(1.5),
   },
   manualHeading: {
@@ -968,7 +973,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(0.5),
     paddingHorizontal: spacing(1.25),
     borderRadius: theme.radius.md,
-    backgroundColor: '#1C222E',
+    backgroundColor: devConsoleTheme.panel,
     gap: spacing(0.75),
   },
   manualToggleLabel: {
@@ -995,7 +1000,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   manualInput: {
-    backgroundColor: '#1C222E',
+    backgroundColor: devConsoleTheme.panel,
     color: lessonColors.text,
     borderRadius: theme.radius.md,
     paddingVertical: spacing(1),
@@ -1018,7 +1023,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.colors.border,
-    backgroundColor: '#1C222E',
+    backgroundColor: devConsoleTheme.panel,
   },
   quickFilterChipActive: {
     backgroundColor: lessonColors.blueNeon,
@@ -1038,7 +1043,7 @@ const styles = StyleSheet.create({
     marginTop: spacing(1),
   },
   statsChip: {
-    backgroundColor: '#1C222E',
+    backgroundColor: devConsoleTheme.panel,
     borderRadius: theme.radius.md,
     paddingVertical: spacing(0.75),
     paddingHorizontal: spacing(1.25),
@@ -1061,7 +1066,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(1.5),
     paddingHorizontal: spacing(2),
     borderRadius: theme.radius.lg,
-    backgroundColor: '#1C222E',
+    backgroundColor: devConsoleTheme.panel,
   },
   toggleLabel: {
     color: lessonColors.text,

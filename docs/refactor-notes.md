@@ -5,6 +5,9 @@
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
 ## Completed (Today)
+- Extended the session style guard to lint `app/dev` and the practice tab after routing colors through shared theme surfaces.
+- Pulled SessionHeader into the developer console and practice tab, wiring their copy onto header tokens and reusing summary spacing for practice sections.
+- Routed SessionHeader and SessionSummary layout spacing through `sessionLayoutTheme` header/summary tokens to remove inline overrides.
 - Documented the developer console upgrades (`docs/developer-console-updates.md`), including offset controls, quick filters, torch indicator, and source-tagged ``outputs.*`` traces across send/receive/manual flows.
 - Centralized prompt action configuration in `hooks/useSendSession.ts` and `hooks/useReceiveSession.ts`.
 - Updated send/receive screens to consume hook-provided `revealAction`/`replayAction` and removed local memoization.
@@ -36,7 +39,7 @@
 
 ### Session UI Cleanup
 1. Observe the new spacing/color guard over the next few session updates and expand it beyond `components/session` once the signal stays clean.
-2. Audit session layouts for lingering inline spacing overrides and queue migrations onto `sessionLayoutTheme` where practical.
+2. Monitor guard coverage across dev/practice and plan the next expansion (settings/home) once the signal stays clean.
 
 ### Output Touchpoint Inventory (Current)
 1. Surface torch availability and instrumentation feedback in the UI (fallback messaging + metrics).
@@ -47,7 +50,7 @@
 1. Persist console filter/search state once developer mode toggles survive reloads.
 2. Prototype segmented trace buffers versus the current 200-event ring before raising history limits.
 3. Explore file-based or streaming exports so long developer sessions are not limited by the Share sheet payload size.
-4. Add a Settings › Output card (below Language) linking to an output settings screen covering audio volume, tone frequency, vibration intensity, and screen flash brightness—with room to extend later.
+4. Add a Settings ï¿½ Output card (below Language) linking to an output settings screen covering audio volume, tone frequency, vibration intensity, and screen flash brightnessï¿½with room to extend later.
 
 ### Outputs Service Rewire (STOP - Research & Plan)
 1. Pause implementation to research platform constraints (Expo Audio/Haptics, flashlight APIs) and outline the risks of low-latency playback across devices.
