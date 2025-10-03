@@ -49,19 +49,23 @@
 3. Add simple mocks/tests around the outputs service to protect against regressions during future rewrites.
 4. Integrate `npm run check:session-controls` into CI so the spacing guard runs automatically (not just locally).
 
-### Output Touchpoint Inventory (Current)
-1. Surface torch availability and instrumentation feedback in the UI (fallback messaging + metrics).
+### Output Touchpoint Inventory (Current)\r\n- Status: Pending; monitor alongside Foundations work so UI + telemetry docs stay aligned.\r\n1. Surface torch availability and instrumentation feedback in the UI (fallback messaging + metrics).
 2. Document the offset-tuning workflow and expose the knobs inside the developer console.
 3. Publish a short guide summarising the new `outputs.*` trace metrics (latency, source counts) so offset tuning is data-driven.
 
-### Output Architecture Preparation
-1. Persist console filter/search state once developer mode toggles survive reloads.
+### Output Architecture Preparation\r\n- Status: Carry forward; schedule after Foundations benchmarks unless console gaps block latency tooling.\r\n1. Persist console filter/search state once developer mode toggles survive reloads.
 2. Prototype segmented trace buffers versus the current 200-event ring before raising history limits.
 3. Explore file-based or streaming exports so long developer sessions are not limited by the Share sheet payload size.
 4. Add a Settings � Output card (below Language) linking to an output settings screen covering audio volume, tone frequency, vibration intensity, and screen flash brightness�with room to extend later.
 
 ### Outputs Rewire Plan
-1. Foundations & benchmarks: confirm New Architecture support, benchmark current latency against a <=10 ms target, and lock the orchestrator interface.
+1. Foundations & benchmarks:
+   - Run a compatibility audit for `react-native-audio-api` / `react-native-nitro-haptics` (RN 0.81, Expo SDK 54, hermes, autolinking) and log any native dependency caveats.
+   - Stage package installs + Expo prebuild smoke so we know the JSI modules compile in dev client and EAS profiles.
+   - Layer instrumentation on current keyer + OutputsService paths to capture touch-to-output latency (audio, haptics, flash, torch) with p50/p95/jitter aggregates recorded in the developer console.
+   - Draft the orchestrator contract (prep/engage/release/cancel/timeline offset + telemetry hooks) ahead of implementation.
+   - Guardrail: `react-native-audio-api@0.8.2` enforces RN >=0.76, so contributors must stay on Expo SDK 54 / RN 0.81+; flag any local envs lagging behind before integration.
+   - Note: module also adds FFmpeg xcframeworks + Android Oboe/foreground-service wiring, and Nitro Haptics pulls in `react-native-nitro-modules`; capture these in the install checklist so Expo prebuild scripts stay deterministic.
 2. Audio + haptics: integrate react-native-audio-api and react-native-nitro-haptics with oscillator warm-up hooks.
 3. Visual channels: rebuild FlashOverlay with Reanimated UI worklets and wire torch control via expo-torch.
 4. Orchestration: add an OutputsOrchestrator service and rewire session/practice hooks plus toggles.

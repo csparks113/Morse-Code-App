@@ -8,10 +8,25 @@
 
 ## Integration Phases
 1. **Foundations & Benchmarks**
-   - Confirm all dependencies support Expo's New Architecture (RN >=0.73, Expo SDK >=51).
-   - Capture current latency metrics across devices for audio/haptics/flash/torch and keyer input.
-   - Establish latency acceptance gates (<=10 ms touch-to-tone p50, <=15 ms p95, jitter <=5 ms).
-   - Finalize API contract for the outputs orchestrator (prepare/start/stop/tap events, telemetry callbacks).
+   - **Compatibility audit**
+     - Confirm `react-native-audio-api` (>=0.3.x) and `react-native-nitro-haptics` expose TurboModule/JSI entry points compatible with React Native 0.81 / Expo SDK 54 builds.
+     - Validate the packages ship podspecs/Gradle configs that do not conflict with Expo prebuild (no manual `Podfile` edits, supports hermes/metro).
+     - Review native dependency requirements (AudioKit/AAE on iOS, Oboe on Android) and note any minimum OS versions or NDK constraints in the backlog.
+     - **Current findings**
+       - `react-native-audio-api@0.8.2` hard-blocks React Native <0.76 via its Gradle guard; Expo SDK 51 (RN 0.73) cannot build until we upgrade Expo (>=53) or negotiate a patch upstream. Module ships an Expo config plugin that adds iOS background audio modes plus Android foreground-service + media playback permissions.
+       - iOS bundles FFmpeg-based xcframeworks (~30 MB) and links CoreAudio/Accelerate; confirm our EAS binary size budget and ensure `ENABLE_BITCODE=NO` stays set. Android pulls in `com.google.oboe:oboe:1.9.3`, requires NDK r25+, and enables CMake with 16KB aligned packaging.
+       - `react-native-nitro-haptics@0.1.0` depends on `react-native-nitro-modules@0.29.8`; both assume New Architecture + Nitro toolchain. Expo prebuild must enable `newArchEnabled`, add the Nitro package, and satisfy Kotlin/Swift toolchain requirements. No Expo plugin is provided, so we will author a lightweight config plugin to register Nitro's Gradle/PBX tweaks if Expo demands it.
+   - **Install prep**
+     - Add both packages plus supporting dev types to `package.json`; update `expo` plugin config if either module provides an Expo config plugin.
+     - Run a local `expo prebuild` smoke to ensure autolinking succeeds and capture any manual pod/Gradle steps we must script in EAS.
+     - Prepare EAS build profiles with `EX_DEV_CLIENT` toggles so we can test the audio stack inside dev client without reinstall friction.
+   - **Baseline instrumentation**
+     - Add high-resolution timers on the keyer press path (gesture-handler `onBegin`/`onFinalize`) and current OutputsService sinks to measure input-to-output deltas per channel.
+     - Emit structured telemetry (`latency.touchToTone`, `latency.touchToHaptic`, etc.) with p50/p95/jitter aggregates into the developer console and log to disk for later regression comparison.
+     - Capture device/build metadata (model, OS, JS engine, release vs dev client) alongside each sample to map variability.
+   - **Orchestrator contract**
+     - Draft the `OutputsOrchestrator` interface (`prepareChannels`, `engage`, `release`, `cancel`, `setTimelineOffset`) and document required timeline guarantees.
+     - Define telemetry callbacks/events (success/failure, latency samples, warm-up complete) that the orchestrator must emit for downstream tooling.
 2. **Audio + Haptics**
    - Install react-native-audio-api and react-native-nitro-haptics (ensure JSI build steps in EAS).
    - Prewarm the tone generators (steady oscillator + gated envelope) and expose a warm-up hook to avoid first-call lag.
