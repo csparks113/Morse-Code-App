@@ -26,6 +26,7 @@
      - Run a local `expo prebuild` smoke to ensure autolinking succeeds and capture any manual pod/Gradle steps we must script in EAS.
      - Prepare EAS build profiles with `EX_DEV_CLIENT` toggles so we can test the audio stack inside dev client without reinstall friction.
      - Follow `docs/nitro-integration-prep.md` to stage Nitro dependencies, codegen, and new-architecture checks before running `expo prebuild`.
+     - Wire `app.config.ts` to call the audio API plugin with safe defaults (background audio opt-out, permissions empty) so Expo/GitHub workflows stay deterministic.
    - **Baseline instrumentation**
      - Add high-resolution timers on the keyer press path (gesture-handler `onBegin`/`onFinalize`) and current OutputsService sinks to measure input-to-output deltas per channel.
      - Emit structured telemetry (`latency.touchToTone`, `latency.touchToHaptic`, etc.) with p50/p95/jitter aggregates into the developer console and log to disk for later regression comparison.
@@ -37,6 +38,7 @@
      - Draft the `OutputsOrchestrator` interface (`prepareChannels`, `engage`, `release`, `cancel`, `setTimelineOffset`) and document required timeline guarantees.
      - Define telemetry callbacks/events (success/failure, latency samples, warm-up complete) that the orchestrator must emit for downstream tooling.
 2. **Audio + Haptics**
+   - (2025-10-03) Completed: Updated `utils/audio.ts` with a reusable tone controller that prefers `react-native-audio-api`, falls back to Expo, and migrated `services/outputs/defaultOutputsService` to consume it so latency telemetry records the active backend.
    - Install react-native-audio-api and react-native-nitro-haptics (ensure JSI build steps in EAS).
    - Prewarm the tone generators (steady oscillator + gated envelope) and expose a warm-up hook to avoid first-call lag.
    - Map orchestrator calls to native fire-and-forget triggers; capture success/failure events for tracing.
@@ -73,6 +75,9 @@
 - Refactor backlog entry: ### Outputs Rewire Plan in docs/refactor-notes.md.
 - Developer console tracing updates: docs/developer-console-updates.md.
 - Practice revamp will reuse the new orchestrator once complete.
+
+
+
 
 
 

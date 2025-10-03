@@ -5,7 +5,11 @@
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
 ## Completed (Today)
+- Built the shared `ToneController` in `utils/audio.ts` and migrated `services/outputs/defaultOutputsService` to the audio-api-first flow with backend-tagged latency logging.
 - Added the AudioAPI Gradle override plugin (`plugins/withAudioApiAndroidConfig.js`) and began logging keyer touch-to-output latency (tone/haptic/flash/torch) through the outputs service.
+- Integrated `react-native-audio-api` scaffolding: updated `utils/audio.ts` to prefer the Nitro module with an expo fallback, wired the Expo config/plugin, and added the placeholder Nitro spec (`outputs-native/audio.nitro.ts`).
+- Extended outputs instrumentation with a shared `pressTracker` helper, replay latency capture (`OutputsService.playMorse`), and Nitro-ready metadata across send/receive/dev console flows.
+- Installed Nitro dependencies (`react-native-nitro-modules`, `react-native-nitro-haptics`, `nitrogen`), wired `npm run nitro:codegen` via `withNitroCodegen`, and migrated Expo settings to `app.config.ts` for pluggable stacks.
 - Made the developer console action footer scrollable so manual triggers and toggles stay reachable on smaller screens.
 - Gated torch diagnostics to developer mode and mirrored torch telemetry inside the developer console.
 - Surfaced per-channel latency telemetry (tone/haptic/flash/torch) plus reset controls in the developer console.
@@ -46,6 +50,11 @@
 1. Observe the new spacing/color guard over the next few session updates and expand it beyond `components/session` once the signal stays clean.
 2. Monitor guard coverage across dev/practice and plan the next expansion (settings/home) once the signal stays clean.
 
+### Audio Orchestrator
+1. Run on-device smoke tests (iOS/Android) to confirm the audio-api-first tone controller spins up quickly and logs backend metadata.
+2. Review the audio API Expo plugin options (background audio, permissions) and document overrides in `docs/nitro-integration-prep.md`.
+3. Define the `OutputsAudio` Nitro interface (replace the placeholder spec) before wiring orchestrator bindings.
+
 ### Hygiene & Guardrails
 1. Update `docs/codex-handoff.md` at the end of every working session and run `npm run verify:handoff` so new chats resume with full context.
 2. Extend docs with session UI conventions and outputs service architecture notes so new contributors follow the same patterns.
@@ -63,6 +72,7 @@
 4. Add a Settings � Output card (below Language) linking to an output settings screen covering audio volume, tone frequency, vibration intensity, and screen flash brightness�with room to extend later.
 
 ### Outputs Rewire Plan
+- Status 2025-10-03: Shared `ToneController` + audio-api-first playback are live; device validation and Nitro outputs bindings remain outstanding.
 1. Foundations & benchmarks:
    - Run a compatibility audit for `react-native-audio-api` / `react-native-nitro-haptics` (RN 0.81, Expo SDK 54, hermes, autolinking) and log any native dependency caveats.
    - Stage package installs + Expo prebuild smoke so we know the JSI modules compile in dev client and EAS profiles.
@@ -116,6 +126,16 @@
 3. Extend lesson data (characters, words, sentences) for Latin-based languages with diacritics.
 4. Update settings UI/workflows to add language selection and persistence.
 5. Capture the process in docs/multilanguage-plan.md and add localization QA checklists.
+
+
+
+
+
+
+
+
+
+
 
 
 

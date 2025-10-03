@@ -9,18 +9,18 @@ Use this document to capture the single source of truth after each working sessi
 
 ## Latest Update
 - **When:** 2025-10-03
-- **Summary:** Implemented the AudioAPI Gradle override plugin, instrumented keyer touch-to-output latency (tone/haptic/flash/torch), and made the developer console footer scrollable so all controls stay accessible.
-- **State:** Ready to extend latency capture to replay/OutputsService pulses and stage the Nitro dependencies/codegen tooling.
+- **Summary:** Migrated `services/outputs/defaultOutputsService` to the shared tone controller from `utils/audio`, so keyer playback now prefers `react-native-audio-api` with an Expo fallback, and latency telemetry records the active backend. Added the reusable `ToneController` helpers in `utils/audio.ts` and cleared the TypeScript errors.
+- **State:** Morse tone utilities and outputs service now share the audio-api-first flow; pending real-device validation and plugin configuration review before enabling the Nitro specs end-to-end.
 
 ## Next Steps
 
-1. Extend latency capture beyond keyer presses (replay `playMorse`, flash/haptic pulses, torch) and drop in the shared press tracker helper.
-2. Bring in Nitro dependencies (`react-native-nitro-modules`, `react-native-nitro-haptics`, `nitrogen`) and wire a `withNitroCodegen` plugin so prebuild/EAS run codegen automatically.
-3. Convert `app.json` to `app.config.ts` (or equivalent) so we can parameterize plugin stacks before the Expo prebuild smoke test.
+1. Run on-device smoke tests (iOS/Android) to confirm the audio API path spins up quickly and latency logs capture backend metadata.
+2. Confirm the audio API Expo plugin settings cover permissions/background needs and document any overrides in `docs/nitro-integration-prep.md`.
+3. Flesh out the Nitro outputs specs (beyond the placeholder) and re-run `npx nitrogen` so generated bindings reflect the new orchestrator.
 
 ## Verification
-- **Outstanding checks:** `npx tsc --noEmit` still fails while expo-audio typings remain in the tree; expect to revisit after the rewire swaps the module.
-- **Recent checks:** `npm run verify:handoff` (passes 2025-10-03).
+- **Outstanding checks:** Device smoke tests for tone playback + latency logging on the audio API path.
+- **Recent checks:** `npx tsc --noEmit` (2025-10-03); `npx nitrogen` (generates stubs, 2025-10-03); `npm run verify:handoff` (passes).
 
 ## Reference Docs
 - `docs/refactor-notes.md` - master backlog and daily log.
@@ -37,4 +37,3 @@ Use this document to capture the single source of truth after each working sessi
 - [ ] Run `npm run verify:handoff` and resolve any failures.
 
 _Tip: Keep entries terse but explicit enough that a new chat can resume work immediately._
-

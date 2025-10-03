@@ -1,6 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 import type { Animated } from 'react-native';
 
+import { createPressTracker, type PressTracker } from '@/services/latency/pressTracker';
 import { useOutputsService } from '@/services/outputs/OutputsService';
 
 type UseKeyerOutputsOptions = {
@@ -13,6 +14,7 @@ type UseKeyerOutputsOptions = {
 
 type UseKeyerOutputsMetadata = {
   source?: string;
+  pressTracker?: PressTracker;
 };
 
 type UseKeyerOutputsResult = {
@@ -50,16 +52,29 @@ export function useKeyerOutputs(
   const stableOptions = useStableOptions(options);
   const source = metadata?.source ?? 'session.keyer';
 
+  const pressTracker = React.useMemo(
+    () => metadata?.pressTracker ?? createPressTracker(source),
+    [metadata?.pressTracker, source],
+  );
+
   const serviceRef = React.useRef(outputs);
   const sourceRef = React.useRef(source);
-  const handleRef = React.useRef(outputs.createKeyerOutputs(stableOptions, { source }));
+  const trackerRef = React.useRef(pressTracker);
+  const handleRef = React.useRef(
+    outputs.createKeyerOutputs(stableOptions, { source, pressTracker }),
+  );
   const prevOptionsRef = React.useRef(stableOptions);
 
-  if (serviceRef.current !== outputs || sourceRef.current !== source) {
+  if (
+    serviceRef.current !== outputs ||
+    sourceRef.current !== source ||
+    trackerRef.current !== pressTracker
+  ) {
     handleRef.current.teardown().catch(() => {});
     serviceRef.current = outputs;
     sourceRef.current = source;
-    handleRef.current = outputs.createKeyerOutputs(stableOptions, { source });
+    trackerRef.current = pressTracker;
+    handleRef.current = outputs.createKeyerOutputs(stableOptions, { source, pressTracker });
     prevOptionsRef.current = stableOptions;
   } else if (prevOptionsRef.current !== stableOptions) {
     handleRef.current.updateOptions(stableOptions);

@@ -1,0 +1,22 @@
+{
+  "": "https://nitro.margelo.com/schema.json",
+  "cxxNamespace": [
+    "morse"
+  ],
+  "ios": {
+    "iosModuleName": "MorseNitro"
+  },
+  "android": {
+    "androidNamespace": [
+      "com",
+      "morsecode",
+      "generated"
+    ],
+    "androidCxxLibName": "morseNitro"
+  },
+  "autolinking": {
+    "OutputsAudio": {
+      "cpp": "OutputsAudio"
+    }
+  }
+}

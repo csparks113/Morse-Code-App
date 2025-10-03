@@ -1,10 +1,10 @@
-import React from 'react';
+﻿import React from 'react';
 import { Dimensions } from 'react-native';
 import type { Animated } from 'react-native';
 
 import type { ActionButtonState } from '@/components/session/ActionButton';
 import type { PromptActionLabels, PromptActionConfig, SessionActionIconName } from '@/hooks/sessionActionTypes';
-import { useOutputsService } from '@/services/outputs/OutputsService';
+import { useOutputsService, type PlaybackSymbolContext } from '@/services/outputs/OutputsService';
 import { getMorseUnitMs } from '@/utils/audio';
 import { toMorse } from '@/utils/morse';
 import { useProgressStore } from '@/store/useProgressStore';
@@ -125,23 +125,32 @@ export function useReceiveSession({
   }, [outputs, flash]);
 
   const runFlash = React.useCallback(
-    (durationMs: number) => {
+    (durationMs: number, context?: PlaybackSymbolContext) => {
       outputs.flashPulse({
         enabled: lightEnabled,
         durationMs,
         flashValue: flash,
+        source: context?.source ?? 'session.receive',
+        requestedAtMs: context?.requestedAtMs,
+        correlationId: context?.correlationId,
       });
     },
     [outputs, lightEnabled, flash],
   );
 
   const hapticTick = React.useCallback(
-    (symbol: '.' | '-', durationMs: number) => {
-      outputs.hapticSymbol({ enabled: hapticsEnabled, symbol, durationMs, source: 'session.receive' });
+    (symbol: '.' | '-', durationMs: number, context?: PlaybackSymbolContext) => {
+      outputs.hapticSymbol({
+        enabled: hapticsEnabled,
+        symbol,
+        durationMs,
+        source: context?.source ?? 'session.receive',
+        requestedAtMs: context?.requestedAtMs,
+        correlationId: context?.correlationId,
+      });
     },
     [outputs, hapticsEnabled],
   );
-
   const playTarget = React.useCallback(async () => {
     if (isPlaying) return;
     const morse = currentMorseRef.current;
@@ -152,17 +161,18 @@ export function useReceiveSession({
       await outputs.playMorse({
         morse,
         unitMs: getMorseUnitMs(),
-        onSymbolStart: (symbol, duration) => {
+        source: 'session.receive.replay',
+        onSymbolStart: (symbol, duration, context) => {
           if (flashOffsetMs > 0) {
-            setTimeout(() => runFlash(duration), flashOffsetMs);
+            setTimeout(() => runFlash(duration, context), flashOffsetMs);
           } else {
-            runFlash(duration);
+            runFlash(duration, context);
           }
 
           if (hapticOffsetMs > 0) {
-            setTimeout(() => hapticTick(symbol, duration), hapticOffsetMs);
+            setTimeout(() => hapticTick(symbol, duration, context), hapticOffsetMs);
           } else {
-            hapticTick(symbol, duration);
+            hapticTick(symbol, duration, context);
           }
         },
       });

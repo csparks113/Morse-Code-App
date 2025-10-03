@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import {
 } from '@/store/useDeveloperStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useOutputsService, type KeyerOutputsOptions } from '@/services/outputs/OutputsService';
+import { createPressTracker } from '@/services/latency/pressTracker';
 import { useOutputsDiagnosticsStore } from '@/store/useOutputsDiagnosticsStore';
 import {
   useLatencyStats,
@@ -177,6 +178,7 @@ export default function DeveloperConsoleScreen() {
   const [manualFlashValue, setManualFlashValue] = React.useState(() => outputs.createFlashValue());
   const manualHandleRef = React.useRef<ReturnType<typeof outputs.createKeyerOutputs> | null>(null);
   const manualTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const manualPressTracker = React.useMemo(() => createPressTracker('console.manual'), []);
   const torchSupported = outputs.isTorchSupported();
   const torchFailureCount = useOutputsDiagnosticsStore((state) => state.torchFailureCount);
   const torchFailureReason = useOutputsDiagnosticsStore((state) => state.lastFailureReason);
@@ -214,16 +216,17 @@ export default function DeveloperConsoleScreen() {
   }, [developerMode, router]);
 
   React.useEffect(() => {
-    const handle = outputs.createKeyerOutputs(manualOptions, { source: 'console.manual' });
+    const handle = outputs.createKeyerOutputs(manualOptions, { source: 'console.manual', pressTracker: manualPressTracker });
     const previous = manualHandleRef.current;
     manualHandleRef.current = handle;
+    manualPressTracker.reset();
     previous?.teardown().catch(() => {});
     setManualFlashValue(outputs.createFlashValue());
 
     return () => {
       handle.teardown().catch(() => {});
     };
-  }, [outputs]);
+  }, [outputs, manualPressTracker]);
 
   React.useEffect(() => {
     manualHandleRef.current?.updateOptions(manualOptions);
@@ -288,16 +291,17 @@ export default function DeveloperConsoleScreen() {
       }
 
       const durationMs = units * unitMs;
-      const startedAt = Date.now();
+      const press = manualPressTracker.begin();
+      const startedAt = press.startedAtMs;
       handle.pressStart(startedAt);
       manualTimeoutRef.current = setTimeout(() => {
-        handle.pressEnd(startedAt + durationMs);
+        const completed = manualPressTracker.end();
+        handle.pressEnd(completed?.endedAtMs ?? startedAt + durationMs);
         manualTimeoutRef.current = null;
       }, durationMs);
     },
-    [clearManualTimeout, unitMs],
+    [clearManualTimeout, unitMs, manualPressTracker],
   );
-
   const triggerReplay = React.useCallback(async () => {
     clearManualTimeout();
     const pattern = (manualPattern || DEFAULT_PATTERN).replace(/\s+/g, ' ').trim() || DEFAULT_PATTERN;
@@ -306,16 +310,23 @@ export default function DeveloperConsoleScreen() {
       await outputs.playMorse({
         morse: pattern,
         unitMs,
-        onSymbolStart: (symbol, durationMs) => {
+        source: 'console.replay',
+        onSymbolStart: (symbol, durationMs, context) => {
           outputs.hapticSymbol({
             enabled: manualOptions.hapticsEnabled,
             symbol,
             durationMs,
+            source: context?.source ?? 'console.replay',
+            requestedAtMs: context?.requestedAtMs,
+            correlationId: context?.correlationId,
           });
           outputs.flashPulse({
             enabled: manualOptions.lightEnabled,
             durationMs,
             flashValue: manualFlashValue,
+            source: context?.source ?? 'console.replay',
+            requestedAtMs: context?.requestedAtMs,
+            correlationId: context?.correlationId,
           });
         },
       });
@@ -326,12 +337,13 @@ export default function DeveloperConsoleScreen() {
 
   const triggerStop = React.useCallback(() => {
     clearManualTimeout();
-    manualHandleRef.current?.pressEnd(Date.now());
+    const completed = manualPressTracker.end();
+    manualHandleRef.current?.pressEnd(completed?.endedAtMs);
     outputs.stopMorse();
     manualFlashValue.stopAnimation?.(() => {
       manualFlashValue.setValue(0);
     });
-  }, [clearManualTimeout, manualFlashValue, outputs]);
+  }, [clearManualTimeout, manualFlashValue, manualPressTracker, outputs]);
 
   const orderedTraces = React.useMemo(() => [...traces].reverse(), [traces]);
 
@@ -1316,3 +1328,4 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
+

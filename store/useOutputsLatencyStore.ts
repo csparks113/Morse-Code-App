@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
@@ -23,6 +23,8 @@ export type LatencySample = {
   capturedAt: number;
   requestedAt?: number;
   source?: string | null;
+  correlationId?: string | null;
+  metadata?: Record<string, string | number | boolean> | null;
   device: DeviceMetadata;
 };
 
@@ -35,6 +37,7 @@ export type LatencyStats = {
   lastLatencyMs: number | null;
   lastCapturedAt: number | null;
   lastSource: string | null;
+  lastCorrelationId: string | null;
 };
 
 type ChannelState = {
@@ -46,6 +49,8 @@ type RecordSampleInput = {
   latencyMs: number;
   requestedAt?: number;
   source?: string | null;
+  correlationId?: string | null;
+  metadata?: Record<string, string | number | boolean> | null;
 };
 
 type LatencyState = {
@@ -66,6 +71,7 @@ const createEmptyStats = (): LatencyStats => ({
   lastLatencyMs: null,
   lastCapturedAt: null,
   lastSource: null,
+  lastCorrelationId: null,
 });
 
 const createEmptyChannel = (): ChannelState => ({
@@ -121,6 +127,7 @@ function computeStats(samples: LatencySample[]): LatencyStats {
     lastLatencyMs: lastSample ? Math.round(lastSample.latencyMs) : null,
     lastCapturedAt: lastSample?.capturedAt ?? null,
     lastSource: lastSample?.source ?? null,
+    lastCorrelationId: lastSample?.correlationId ?? null,
   };
 }
 
@@ -172,6 +179,8 @@ export const useOutputsLatencyStore = create<LatencyState>((set, get) => ({
       capturedAt: nowMs(),
       requestedAt: sample.requestedAt,
       source: sample.source ?? null,
+      correlationId: sample.correlationId ?? null,
+      metadata: sample.metadata ?? null,
       device,
     };
 
@@ -240,4 +249,3 @@ export function getLatencyDeviceMetadata(): DeviceMetadata {
 export function useLatencyStats(channel: LatencyChannel): LatencyStats {
   return useOutputsLatencyStore((state) => state.channels[channel].stats);
 }
-

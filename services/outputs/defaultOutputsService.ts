@@ -1,14 +1,13 @@
 import { Animated, Platform, Vibration } from 'react-native';
-import { Audio } from 'expo-audio';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 
-import { playMorseCode, stopPlayback } from '@/utils/audio';
+import { playMorseCode, stopPlayback, createToneController } from '@/utils/audio';
 import { acquireTorch, releaseTorch, resetTorch, isTorchAvailable } from '@/utils/torch';
 import { nowMs } from '@/utils/time';
 import { traceOutputs } from './trace';
 import { updateTorchSupport, recordTorchPulse, recordTorchFailure } from '@/store/useOutputsDiagnosticsStore';
 import { recordLatencySample } from '@/store/useOutputsLatencyStore';
+import { createPressCorrelation, createPressTracker, normalizePressTimestamp, type PressCorrelation } from '@/services/latency/pressTracker';
 import type {
   OutputsService,
   FlashPulseOptions,
@@ -35,139 +34,36 @@ const clampToneHz = (value: number) => {
   return Math.max(80, Math.min(2000, Math.round(numeric)));
 };
 
-function bytesToBase64(bytes: Uint8Array): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-  let out = '';
-  for (let i = 0; i < bytes.length; i += 3) {
-    const b1 = bytes[i] ?? 0;
-    const b2 = bytes[i + 1];
-    const b3 = bytes[i + 2];
-    const e1 = b1 >> 2;
-    const e2 = ((b1 & 3) << 4) | ((b2 ?? 0) >> 4);
-    const e3 = b2 !== undefined ? (((b2 & 15) << 2) | ((b3 ?? 0) >> 6)) : 64;
-    const e4 = b3 !== undefined ? (b3 & 63) : 64;
-    out += chars.charAt(e1) + chars.charAt(e2) + chars.charAt(e3) + chars.charAt(e4);
-  }
-  return out;
-}
-
-function generateLoopingSineWav(
-  frequency: number,
-  opts?: { sampleRate?: number; cycles?: number; amplitude?: number },
-): Uint8Array {
-  const sampleRate = opts?.sampleRate ?? 44100;
-  const amplitude = Math.max(0, Math.min(1, opts?.amplitude ?? 0.28));
-  const periodSamples = Math.max(1, Math.round(sampleRate / frequency));
-  const cycles = opts?.cycles ?? 2000;
-  const totalSamples = periodSamples * cycles;
-
-  const bytesPerSample = 2;
-  const dataSize = totalSamples * bytesPerSample;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-
-  const writeString = (offset: number, value: string) => {
-    for (let i = 0; i < value.length; i += 1) {
-      view.setUint8(offset + i, value.charCodeAt(i));
-    }
-  };
-
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * bytesPerSample, true);
-  view.setUint16(32, bytesPerSample, true);
-  view.setUint16(34, 16, true);
-  writeString(36, 'data');
-  view.setUint32(40, dataSize, true);
-
-  let offset = 44;
-  const rampIn = Math.min(128, Math.floor(totalSamples * 0.002));
-  for (let i = 0; i < totalSamples; i += 1) {
-    const t = i / sampleRate;
-    const s = Math.sin(2 * Math.PI * (sampleRate / periodSamples) * t);
-    const env = i < rampIn ? i / rampIn : 1;
-    const val = (Math.max(-1, Math.min(1, s)) * amplitude * env * 32767) | 0;
-    view.setInt16(offset, val, true);
-    offset += 2;
-  }
-
-  return new Uint8Array(buffer);
-}
-
 function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?: KeyerOutputsContext): KeyerOutputsHandle {
   let options: KeyerOutputsOptions = { ...initialOptions };
   const contextSource = context?.source ?? 'unspecified';
   const flashOpacity = new Animated.Value(0);
-  const recordChannelLatency = (channel: 'touchToTone' | 'touchToHaptic' | 'touchToFlash' | 'touchToTorch', startedAt: number, latencyMs: number) => {
+  const pressTracker = context?.pressTracker ?? createPressTracker(contextSource);
+  let activePress: PressCorrelation | null = pressTracker.peek();
+  const recordChannelLatency = (
+    channel: 'touchToTone' | 'touchToHaptic' | 'touchToFlash' | 'touchToTorch',
+    startedAt: number,
+    latencyMs: number,
+    overrides?: { source?: string; correlationId?: string; metadata?: Record<string, string | number | boolean> },
+  ) => {
     const clamped = Math.max(0, latencyMs);
-    recordLatencySample(channel, clamped, { requestedAt: startedAt, source: contextSource });
+    const sampleSource = overrides?.source ?? contextSource;
+    const correlationId = overrides?.correlationId ?? activePress?.id ?? null;
+    recordLatencySample(channel, clamped, {
+      requestedAt: startedAt,
+      source: sampleSource,
+      correlationId,
+      metadata: overrides?.metadata ?? null,
+    });
   };
-  let sound: Audio.Sound | null = null;
-  let preparedToneHz: number | null = null;
+  const toneController = createToneController();
   let hapticInterval: ReturnType<typeof setInterval> | null = null;
   let hapticsActive = false;
   let toneActive = false;
   let torchActive = false;
   let flashActive = false;
-  let pressStartedAt: number | null = null;
-
-  const ensureAudioMode = async () => {
-    try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        staysActiveInBackground: false,
-        playThroughEarpieceAndroid: false,
-      });
-    } catch {
-      // ignore
-    }
-  };
 
   const resolveToneHz = () => clampToneHz(options.toneHz);
-
-  const prepareTone = async (hz: number) => {
-    if (preparedToneHz === hz && sound) {
-      return;
-    }
-
-    try {
-      await sound?.unloadAsync();
-    } catch {
-      // ignore
-    }
-    sound = null;
-    preparedToneHz = null;
-
-    await ensureAudioMode();
-
-    const wav = generateLoopingSineWav(hz, { cycles: 2000, amplitude: 0.28 });
-    const base64 = bytesToBase64(wav);
-    const dir = `${FileSystem.cacheDirectory ?? ''}morse-keyer/`;
-    try {
-      await FileSystem.makeDirectoryAsync(dir, { intermediates: true } as any);
-    } catch {
-      // ignore
-    }
-    const uri = `${dir}keyer_${hz}.wav`;
-    await FileSystem.writeAsStringAsync(uri, base64, { encoding: 'base64' as any });
-
-    const created = await Audio.Sound.createAsync({ uri });
-    sound = created.sound;
-    preparedToneHz = hz;
-    try {
-      await sound.setIsLoopingAsync(true);
-    } catch {
-      // ignore
-    }
-  };
 
   const flashOn = (startedAt: number) => {
     if (!options.lightEnabled) return;
@@ -278,33 +174,46 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   const startTone = async (startedAt: number) => {
     if (!options.audioEnabled) return;
     const hz = resolveToneHz();
-    await prepareTone(hz);
     try {
-      await sound?.setPositionAsync(0);
-      await sound?.playAsync();
+      await toneController.start(hz);
       toneActive = true;
       const latencyMs = nowMs() - startedAt;
       traceOutputs('keyer.tone.start', {
         hz,
         latencyMs,
+        backend: toneController.backend,
       });
-      recordChannelLatency('touchToTone', startedAt, latencyMs);
-    } catch {
+      recordChannelLatency('touchToTone', startedAt, latencyMs, {
+        metadata: { backend: toneController.backend, hz },
+      });
+    } catch (error) {
       toneActive = false;
+      traceOutputs('keyer.tone.error', {
+        message: error instanceof Error ? error.message : String(error),
+        hz,
+        backend: toneController.backend,
+        phase: 'start',
+      });
     }
   };
 
   const stopTone = async (endedAt: number) => {
-    if (!sound || !toneActive) return;
+    const wasActive = toneActive;
     toneActive = false;
     try {
-      await sound.stopAsync();
-      await sound.setPositionAsync(0);
-      traceOutputs('keyer.tone.stop', {
-        latencyMs: nowMs() - endedAt,
+      await toneController.stop();
+      if (wasActive) {
+        traceOutputs('keyer.tone.stop', {
+          latencyMs: nowMs() - endedAt,
+          backend: toneController.backend,
+        });
+      }
+    } catch (error) {
+      traceOutputs('keyer.tone.error', {
+        message: error instanceof Error ? error.message : String(error),
+        backend: toneController.backend,
+        phase: 'stop',
       });
-    } catch {
-      // ignore
     }
   };
 
@@ -344,7 +253,15 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     if (!options.audioEnabled) return;
     const hz = resolveToneHz();
     traceOutputs('keyer.prepare', { hz });
-    await prepareTone(hz);
+    try {
+      await toneController.prepare(hz);
+    } catch (error) {
+      traceOutputs('keyer.prepare.error', {
+        hz,
+        backend: toneController.backend,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
   };
 
   const teardown = async () => {
@@ -357,12 +274,13 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
 
     await stopTone(nowMs());
     try {
-      await sound?.unloadAsync();
-    } catch {
-      // ignore
+      await toneController.teardown();
+    } catch (error) {
+      traceOutputs('keyer.teardown.error', {
+        backend: toneController.backend,
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
-    sound = null;
-    preparedToneHz = null;
 
     flashActive = false;
     try {
@@ -388,11 +306,13 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   };
 
   const pressStart = (timestampMs?: number) => {
-    const startedAt = typeof timestampMs === 'number' ? timestampMs : nowMs();
-    pressStartedAt = startedAt;
+    const press = pressTracker.begin(typeof timestampMs === 'number' ? timestampMs : undefined);
+    activePress = press;
+    const startedAt = press.startedAtMs;
     traceOutputs('keyer.press.start', {
       startedAt,
       source: contextSource,
+      correlationId: press.id,
       options: {
         audio: options.audioEnabled,
         haptics: options.hapticsEnabled,
@@ -410,13 +330,20 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   };
 
   const pressEnd = (timestampMs?: number) => {
-    const endedAt = typeof timestampMs === 'number' ? timestampMs : nowMs();
-    const holdMs = pressStartedAt != null ? Math.max(0, endedAt - pressStartedAt) : undefined;
-    pressStartedAt = null;
+    const currentPress = activePress;
+    const completed = pressTracker.end(typeof timestampMs === 'number' ? timestampMs : undefined);
+    activePress = null;
+    const endedAt =
+      completed?.endedAtMs ??
+      (typeof timestampMs === 'number' ? normalizePressTimestamp(timestampMs) : nowMs());
+    const holdMs =
+      completed?.holdDurationMs ??
+      (currentPress ? Math.max(0, endedAt - currentPress.startedAtMs) : undefined);
     traceOutputs('keyer.press.stop', {
       endedAt,
       holdMs,
       source: contextSource,
+      correlationId: currentPress?.id ?? null,
     });
     flashOff(endedAt);
     stopHaptics(endedAt);
@@ -463,18 +390,38 @@ const defaultOutputsService: OutputsService = {
     return new Animated.Value(0);
   },
 
-  flashPulse({ enabled, durationMs, flashValue, source }: FlashPulseOptions) {
+  flashPulse({ enabled, durationMs, flashValue, source, requestedAtMs, correlationId, metadata }: FlashPulseOptions) {
+    const eventSource = source ?? 'unspecified';
     traceOutputs('outputs.flashPulse', {
       enabled,
       durationMs,
-      source: source ?? 'unspecified',
+      source: eventSource,
+      correlationId: correlationId ?? null,
     });
 
     if (!enabled) return;
+
+    const requestedAt =
+      typeof requestedAtMs === 'number' && Number.isFinite(requestedAtMs) ? requestedAtMs : nowMs();
+    const sampleMetadata = metadata ?? { durationMs };
     const { fadeMs, holdMs } = computeFlashTimings(durationMs);
 
-    flashValue.stopAnimation?.(() => {
+    const startSequence = () => {
       flashValue.setValue(1);
+      const commitAt = nowMs();
+      const latencyMs = Math.max(0, commitAt - requestedAt);
+      traceOutputs('outputs.flashPulse.commit', {
+        durationMs,
+        source: eventSource,
+        correlationId: correlationId ?? null,
+        latencyMs,
+      });
+      recordLatencySample('touchToFlash', latencyMs, {
+        requestedAt,
+        source: eventSource,
+        correlationId: correlationId ?? null,
+        metadata: sampleMetadata,
+      });
       Animated.sequence([
         Animated.delay(holdMs),
         Animated.timing(flashValue, {
@@ -483,20 +430,59 @@ const defaultOutputsService: OutputsService = {
           useNativeDriver: true,
         }),
       ]).start();
-    });
+    };
+
+    if (typeof flashValue.stopAnimation === 'function') {
+      flashValue.stopAnimation(() => {
+        startSequence();
+      });
+      return;
+    }
+
+    startSequence();
   },
 
-  hapticSymbol({ enabled, symbol, durationMs, source }: HapticSymbolOptions) {
+  hapticSymbol({
+    enabled,
+    symbol,
+    durationMs,
+    source,
+    requestedAtMs,
+    correlationId,
+    metadata,
+  }: HapticSymbolOptions) {
+    const eventSource = source ?? 'unspecified';
     traceOutputs('outputs.hapticSymbol', {
       enabled,
       symbol,
       durationMs: durationMs ?? null,
       platform: Platform.OS,
-      source: source ?? 'unspecified',
+      source: eventSource,
+      correlationId: correlationId ?? null,
     });
 
     if (!enabled) return;
-    if (!enabled) return;
+
+    const requestedAt =
+      typeof requestedAtMs === 'number' && Number.isFinite(requestedAtMs) ? requestedAtMs : nowMs();
+    const baseMetadata: Record<string, string | number | boolean> = {
+      ...(metadata ?? {}),
+      symbol,
+    };
+
+    let recorded = false;
+    const recordOnce = (extra?: Record<string, string | number | boolean>) => {
+      if (recorded) return;
+      recorded = true;
+      const commitAt = nowMs();
+      const latencyMs = Math.max(0, commitAt - requestedAt);
+      recordLatencySample('touchToHaptic', latencyMs, {
+        requestedAt,
+        source: eventSource,
+        correlationId: correlationId ?? null,
+        metadata: { ...baseMetadata, ...(extra ?? {}) },
+      });
+    };
 
     if (Platform.OS === 'android' && typeof durationMs === 'number') {
       try {
@@ -506,39 +492,83 @@ const defaultOutputsService: OutputsService = {
       }
       const pulse = Math.max(15, Math.round(durationMs));
       Vibration.vibrate(pulse);
+      recordOnce({ dispatch: 'vibration', pulseMs: pulse });
       return;
     }
 
     const style = symbol === '-' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light;
-    Haptics.impactAsync(style).catch(() => {});
+
+    try {
+      const promise = Haptics.impactAsync(style);
+      let fallback: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+        recordOnce({ dispatch: 'impactAsync', style, fallback: true });
+        fallback = null;
+      }, 120);
+      if (promise && typeof promise.then === 'function') {
+        promise
+          .then(() => {
+            if (fallback) {
+              clearTimeout(fallback);
+              fallback = null;
+            }
+            recordOnce({ dispatch: 'impactAsync', style });
+          })
+          .catch(() => {
+            if (fallback) {
+              clearTimeout(fallback);
+              fallback = null;
+            }
+            recordOnce({ dispatch: 'impactAsync', style, rejected: true });
+          });
+      } else {
+        if (fallback) {
+          clearTimeout(fallback);
+          fallback = null;
+        }
+        recordOnce({ dispatch: 'impactSync', style });
+      }
+    } catch {
+      recordOnce({ dispatch: 'impactAsync', style, rejected: true });
+    }
   },
 
-  async playMorse({ morse, unitMs, onSymbolStart }: PlayMorseOptions) {
+  async playMorse({ morse, unitMs, onSymbolStart, source }: PlayMorseOptions) {
+    const playbackSource = source ?? 'replay';
     const startedAt = nowMs();
     traceOutputs('playMorse.start', {
       unitMs,
       length: morse.length,
+      source: playbackSource,
     });
 
     let symbolIndex = 0;
     const symbolTracker = (symbol: '.' | '-', durationMs: number) => {
+      const correlation = createPressCorrelation(playbackSource);
       traceOutputs('playMorse.symbol', {
         symbol,
         durationMs,
         index: symbolIndex,
+        source: playbackSource,
+        correlationId: correlation.id,
       });
       symbolIndex += 1;
-      onSymbolStart?.(symbol, durationMs);
+      onSymbolStart?.(symbol, durationMs, {
+        requestedAtMs: correlation.startedAtMs,
+        correlationId: correlation.id,
+        source: playbackSource,
+      });
     };
 
     try {
       await playMorseCode(morse, unitMs, { onSymbolStart: symbolTracker });
       traceOutputs('playMorse.complete', {
         durationMs: nowMs() - startedAt,
+        source: playbackSource,
       });
     } catch (error) {
       traceOutputs('playMorse.error', {
         message: error instanceof Error ? error.message : String(error),
+        source: playbackSource,
       });
       throw error;
     }

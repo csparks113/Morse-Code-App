@@ -1,11 +1,50 @@
+type AudioApiModule = typeof import('react-native-audio-api');
+
+let audioApiModule: AudioApiModule | null = null;
+let audioApiModuleLoaded = false;
+let expoAudioModule: any | null = null;
+let expoAudioLoaded = false;
+
+function loadAudioApi(): AudioApiModule | null {
+  if (audioApiModuleLoaded) {
+    return audioApiModule;
+  }
+  audioApiModuleLoaded = true;
+  if (Platform.OS === 'web') {
+    audioApiModule = null;
+    return audioApiModule;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    audioApiModule = require('react-native-audio-api');
+  } catch (error) {
+    audioApiModule = null;
+  }
+  return audioApiModule;
+}
+
+async function ensureExpoAudioModule(): Promise<any | null> {
+  if (expoAudioLoaded) {
+    return expoAudioModule;
+  }
+  expoAudioLoaded = true;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    expoAudioModule = require('expo-audio');
+  } catch (error) {
+    expoAudioModule = null;
+  }
+  return expoAudioModule;
+}
+
 // utils/audio.ts
 // Ultra-low-latency Morse audio
 // - Web: WebAudio oscillator + gain envelope for near-instant start
 // - Native (iOS/Android): expo-audio with preloaded tones, replayAsync(), pre-warm, and ping-pong players
 
 import { Platform } from 'react-native';
-import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
+import type { AudioContext as AudioApiContext, GainNode as AudioApiGainNode, OscillatorNode as AudioApiOscillatorNode } from 'react-native-audio-api';
 
 // Shared settings
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -98,27 +137,157 @@ function stopPlaybackWeb() {
 }
 
 // ---------------------------------------------------------------------------
-// NATIVE PATH: expo-audio\r\n// ---------------------------------------------------------------------------\r\n
-let nativeToken = 0;
-let dotA: Audio.Sound | null = null;
-let dotB: Audio.Sound | null = null;
-let dashA: Audio.Sound | null = null;
-let dashB: Audio.Sound | null = null;
+// NATIVE PATH: react-native-audio-api
+// ---------------------------------------------------------------------------
+
+let audioApiContext: AudioApiContext | null = null;
+let audioApiGain: AudioApiGainNode | null = null;
+let audioApiOsc: AudioApiOscillatorNode | null = null;
+let audioApiToken = 0;
+let audioApiConfigured = false;
+
+async function configureAudioApiSession(audioApi: AudioApiModule) {
+  if (audioApiConfigured) {
+    return;
+  }
+  try {
+    await audioApi.AudioManager.setAudioSessionActivity(true);
+    audioApi.AudioManager.setAudioSessionOptions({
+      iosCategory: 'playback',
+      iosOptions: ['mixWithOthers', 'allowBluetooth', 'allowBluetoothA2DP', 'defaultToSpeaker'],
+    });
+    audioApi.AudioManager.observeAudioInterruptions(true);
+  } catch (error) {
+    // ignore configuration failures
+  }
+  audioApiConfigured = true;
+}
+
+function ensureAudioApiGraph(audioApi: AudioApiModule, hz: number): boolean {
+  if (!audioApiContext) {
+    audioApiContext = new audioApi.AudioContext({ initSuspended: true });
+  }
+  if (!audioApiGain) {
+    audioApiGain = audioApiContext.createGain();
+    audioApiGain.gain.value = 0;
+    audioApiGain.connect(audioApiContext.destination);
+  }
+  if (!audioApiOsc) {
+    audioApiOsc = audioApiContext.createOscillator();
+    audioApiOsc.type = 'sine';
+    audioApiOsc.frequency.setValueAtTime(hz, audioApiContext.currentTime);
+    audioApiOsc.connect(audioApiGain);
+    audioApiOsc.start();
+  } else {
+    audioApiOsc.frequency.setValueAtTime(hz, audioApiContext.currentTime);
+  }
+  return true;
+}
+
+async function playMorseCodeAudioApi(code: string, unitMsArg?: number, opts: PlayOpts = {}) {
+  const audioApi = loadAudioApi();
+  if (!audioApi) {
+    return playMorseCodeExpoNative(code, unitMsArg, opts);
+  }
+
+  const { toneHz } = (useSettingsStore.getState() as any) || { toneHz: 600 };
+  const unitMs = Math.max(10, Math.floor(unitMsArg ?? getMorseUnitMs()));
+  const hz = Math.max(100, Math.min(2000, Math.floor(opts.hz ?? toneHz ?? 600)));
+
+  await configureAudioApiSession(audioApi);
+  if (!ensureAudioApiGraph(audioApi, hz) || !audioApiContext || !audioApiGain) {
+    return playMorseCodeExpoNative(code, unitMsArg, opts);
+  }
+
+  await audioApiContext.resume();
+  const token = ++audioApiToken;
+
+  for (let i = 0; i < code.length; i += 1) {
+    if (token !== audioApiToken) {
+      return;
+    }
+    const sym = code[i] as '.' | '-';
+    if (sym !== '.' && sym !== '-') {
+      const gap = unitMs * 3;
+      opts.onGap?.(gap);
+      await sleep(gap);
+      continue;
+    }
+
+    const duration = sym === '.' ? unitMs : unitMs * 3;
+    opts.onSymbolStart?.(sym, duration);
+    audioApiGain.gain.cancelScheduledValues(audioApiContext.currentTime);
+    audioApiGain.gain.setValueAtTime(0, audioApiContext.currentTime);
+    audioApiGain.gain.linearRampToValueAtTime(1, audioApiContext.currentTime + 0.005);
+
+    await sleep(duration);
+
+    if (token !== audioApiToken) {
+      return;
+    }
+
+    audioApiGain.gain.cancelScheduledValues(audioApiContext.currentTime);
+    audioApiGain.gain.linearRampToValueAtTime(0, audioApiContext.currentTime + 0.003);
+    opts.onSymbolEnd?.(sym, duration);
+
+    if (i < code.length - 1) {
+      const gap = unitMs;
+      opts.onGap?.(gap);
+      await sleep(gap);
+    }
+  }
+}
+
+function stopPlaybackAudioApi() {
+  audioApiToken += 1;
+  if (audioApiContext && audioApiGain) {
+    audioApiGain.gain.cancelScheduledValues(audioApiContext.currentTime);
+    audioApiGain.gain.setValueAtTime(0, audioApiContext.currentTime);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// FALLBACK NATIVE PATH: expo-audio
+// ---------------------------------------------------------------------------
+
+let expoNativeToken = 0;
+let dotA: any = null;
+let dotB: any = null;
+let dashA: any = null;
+let dashB: any = null;
 let cachedFreq = -1;
 let cachedUnit = -1;
 
-export async function configureAudio() {
+async function configureExpoAudio(): Promise<void> {
+  const expo = await ensureExpoAudioModule();
+  if (!expo) {
+    return;
+  }
+
+  const { Audio, InterruptionModeAndroid, InterruptionModeIOS } = expo;
+
   try {
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
       playsInSilentModeIOS: true,
       staysActiveInBackground: false,
       shouldDuckAndroid: false,
-      interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
-      interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+      interruptionModeAndroid: InterruptionModeAndroid?.DoNotMix ?? 0,
+      interruptionModeIOS: InterruptionModeIOS?.DoNotMix ?? 0,
       playThroughEarpieceAndroid: false,
     });
-  } catch {}
+  } catch (error) {
+    // ignore configuration errors from expo-audio fallback
+  }
+}
+
+export async function configureAudio(): Promise<void> {
+  const audioApi = loadAudioApi();
+  if (audioApi) {
+    await configureAudioApiSession(audioApi);
+    return;
+  }
+  await configureExpoAudio();
 }
 
 function genSinePCM(durationMs: number, freqHz: number): Uint8Array {
@@ -182,6 +351,11 @@ function u8ToBase64(u8: Uint8Array): string {
 }
 
 async function ensureNativeTones(freqHz: number, unitMs: number) {
+  const expo = await ensureExpoAudioModule();
+  if (!expo) {
+    return;
+  }
+  const { Audio } = expo;
   if (freqHz === cachedFreq && unitMs === cachedUnit && dotA && dotB && dashA && dashB) return;
 
   const base = `${FileSystem.cacheDirectory}mcm_${freqHz}_${unitMs}_`;
@@ -217,8 +391,8 @@ function pickPair(sym: '.' | '-') {
   return [dashA, dashB] as const;
 }
 
-async function playMorseCodeNative(code: string, unitMsArg?: number, opts: PlayOpts = {}) {
-  const my = ++nativeToken;
+async function playMorseCodeExpoNative(code: string, unitMsArg?: number, opts: PlayOpts = {}) {
+  const my = ++expoNativeToken;
   const { toneHz } = (useSettingsStore.getState() as any) || { toneHz: 600 };
   const unitMs = Math.max(10, Math.floor(unitMsArg ?? getMorseUnitMs()));
   const hz = Math.max(100, Math.min(2000, Math.floor(opts.hz ?? toneHz ?? 600)));
@@ -227,7 +401,7 @@ async function playMorseCodeNative(code: string, unitMsArg?: number, opts: PlayO
   await ensureNativeTones(hz, unitMs);
 
   for (let i = 0; i < code.length; i++) {
-    if (my !== nativeToken) return;
+    if (my !== expoNativeToken) return;
     const sym = code[i] as '.' | '-';
     if (sym !== '.' && sym !== '-') {
       const gap = unitMs * 3;
@@ -257,12 +431,405 @@ async function playMorseCodeNative(code: string, unitMsArg?: number, opts: PlayO
   }
 }
 
+type ToneControllerBackend = 'audio-api' | 'expo' | 'web' | 'noop';
+
+export type ToneController = {
+  prepare(hz: number): Promise<void>;
+  start(hz?: number): Promise<void>;
+  stop(): Promise<void>;
+  teardown(): Promise<void>;
+  getCurrentHz(): number | null;
+  backend: ToneControllerBackend;
+};
+
+function generateLoopingSineWav(
+  frequency: number,
+  opts?: { sampleRate?: number; cycles?: number; amplitude?: number },
+): Uint8Array {
+  const sampleRate = opts?.sampleRate ?? 44100;
+  const amplitude = Math.max(0, Math.min(1, opts?.amplitude ?? 0.28));
+  const periodSamples = Math.max(1, Math.round(sampleRate / frequency));
+  const cycles = opts?.cycles ?? 2000;
+  const totalSamples = periodSamples * cycles;
+
+  const bytesPerSample = 2;
+  const dataSize = totalSamples * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  const writeString = (offset: number, value: string) => {
+    for (let i = 0; i < value.length; i += 1) {
+      view.setUint8(offset + i, value.charCodeAt(i));
+    }
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * bytesPerSample, true);
+  view.setUint16(32, bytesPerSample, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  const rampIn = Math.min(128, Math.floor(totalSamples * 0.002));
+  for (let i = 0; i < totalSamples; i += 1) {
+    const t = i / sampleRate;
+    const s = Math.sin(2 * Math.PI * (sampleRate / periodSamples) * t);
+    const env = i < rampIn ? i / rampIn : 1;
+    const val = (Math.max(-1, Math.min(1, s)) * amplitude * env * 32767) | 0;
+    view.setInt16(offset, val, true);
+    offset += 2;
+  }
+
+  return new Uint8Array(buffer);
+}
+
+function createWebToneController(): ToneController {
+  let ctx: AudioContext | null = null;
+  let gain: GainNode | null = null;
+  let osc: OscillatorNode | null = null;
+  let currentHz: number | null = null;
+
+  const ensureGraph = (hz: number) => {
+    if (!ctx) {
+      const Ctor = (window as any).AudioContext || (window as any).webkitAudioContext;
+      ctx = Ctor ? new Ctor() : null;
+    }
+    if (!ctx) {
+      return;
+    }
+    if (!gain) {
+      gain = ctx.createGain();
+      gain.gain.value = 0;
+      gain.connect(ctx.destination);
+    }
+    if (!osc) {
+      osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.connect(gain);
+      osc.start();
+    }
+    if (osc) {
+      osc.frequency.setValueAtTime(hz, ctx.currentTime);
+    }
+    currentHz = hz;
+  };
+
+  const prepare = async (hz: number) => {
+    ensureGraph(hz);
+  };
+
+  const start = async (hz?: number) => {
+    const target = typeof hz === 'number' ? hz : currentHz ?? 600;
+    ensureGraph(target);
+    if (!ctx || !gain) {
+      return;
+    }
+    try {
+      await ctx.resume();
+    } catch {
+      // ignore
+    }
+    gain.gain.cancelScheduledValues(ctx.currentTime);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.005);
+  };
+
+  const stop = async () => {
+    if (!ctx || !gain) {
+      return;
+    }
+    gain.gain.cancelScheduledValues(ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.003);
+  };
+
+  const teardown = async () => {
+    await stop();
+    try {
+      osc?.stop();
+    } catch {
+      // ignore
+    }
+    ctx = null;
+    gain = null;
+    osc = null;
+    currentHz = null;
+  };
+
+  return {
+    backend: 'web',
+    getCurrentHz: () => currentHz,
+    prepare,
+    start,
+    stop,
+    teardown,
+  };
+}
+
+function createAudioApiToneController(audioApi: AudioApiModule): ToneController {
+  let ctx: AudioApiContext | null = null;
+  let gain: AudioApiGainNode | null = null;
+  let osc: AudioApiOscillatorNode | null = null;
+  let currentHz: number | null = null;
+
+  const ensureGraph = (hz: number) => {
+    if (!ctx) {
+      ctx = new audioApi.AudioContext({ initSuspended: true });
+    }
+    if (!gain && ctx) {
+      gain = ctx.createGain();
+      gain.gain.value = 0;
+      gain.connect(ctx.destination);
+    }
+    if (!osc && ctx) {
+      osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.connect(gain!);
+      osc.start();
+    }
+    if (osc && ctx) {
+      osc.frequency.setValueAtTime(hz, ctx.currentTime);
+    }
+    currentHz = hz;
+  };
+
+  const prepare = async (hz: number) => {
+    await configureAudioApiSession(audioApi);
+    ensureGraph(hz);
+  };
+
+  const start = async (hz?: number) => {
+    const target = typeof hz === 'number' ? hz : currentHz ?? 600;
+    await prepare(target);
+    if (!ctx || !gain) {
+      return;
+    }
+    try {
+      await ctx.resume();
+    } catch {
+      // ignore
+    }
+    gain.gain.cancelScheduledValues(ctx.currentTime);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.005);
+  };
+
+  const stop = async () => {
+    if (!ctx || !gain) {
+      return;
+    }
+    gain.gain.cancelScheduledValues(ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.003);
+  };
+
+  const teardown = async () => {
+    await stop();
+    try {
+      osc?.stop();
+    } catch {
+      // ignore
+    }
+    try {
+      await ctx?.suspend?.();
+    } catch {
+      // ignore
+    }
+    try {
+      await ctx?.close?.();
+    } catch {
+      // ignore
+    }
+    ctx = null;
+    gain = null;
+    osc = null;
+    currentHz = null;
+  };
+
+  return {
+    backend: 'audio-api',
+    getCurrentHz: () => currentHz,
+    prepare,
+    start,
+    stop,
+    teardown,
+  };
+}
+
+function createNoopToneController(): ToneController {
+  const noop = async () => {};
+  return {
+    backend: 'noop',
+    getCurrentHz: () => null,
+    prepare: noop,
+    start: noop,
+    stop: noop,
+    teardown: noop,
+  };
+}
+
+function createExpoToneController(): ToneController {
+  let sound: any = null;
+  let preparedHz: number | null = null;
+  let preparing: Promise<void> | null = null;
+  let expoUnavailable = false;
+
+  const controller: ToneController = {
+    backend: 'expo',
+    getCurrentHz: () => preparedHz,
+    prepare: async (hz: number) => {
+      await ensurePrepared(hz);
+    },
+    start: async (hz?: number) => {
+      if (expoUnavailable) {
+        return;
+      }
+      const target = typeof hz === 'number' ? hz : preparedHz ?? 600;
+      await ensurePrepared(target);
+      if (!sound) {
+        return;
+      }
+      try {
+        await sound.setPositionAsync?.(0);
+      } catch {
+        // ignore
+      }
+      try {
+        await sound.playAsync?.();
+      } catch {
+        try {
+          await sound.replayAsync?.();
+        } catch {
+          // ignore
+        }
+      }
+    },
+    stop: async () => {
+      if (!sound) {
+        return;
+      }
+      try {
+        await sound.stopAsync?.();
+      } catch {
+        // ignore
+      }
+      try {
+        await sound.setPositionAsync?.(0);
+      } catch {
+        // ignore
+      }
+    },
+    teardown: async () => {
+      await controller.stop();
+      try {
+        await sound?.unloadAsync?.();
+      } catch {
+        // ignore
+      }
+      sound = null;
+      preparedHz = null;
+    },
+  };
+
+  async function ensurePrepared(hz: number) {
+    if (expoUnavailable) {
+      return;
+    }
+    if (sound && preparedHz === hz) {
+      return;
+    }
+    if (preparing) {
+      await preparing;
+      if (sound && preparedHz === hz) {
+        return;
+      }
+    }
+    preparing = (async () => {
+      const expo = await ensureExpoAudioModule();
+      if (!expo) {
+        expoUnavailable = true;
+        controller.backend = 'noop';
+        sound = null;
+        preparedHz = null;
+        return;
+      }
+      await configureExpoAudio();
+      if (sound) {
+        try {
+          await sound.unloadAsync?.();
+        } catch {
+          // ignore
+        }
+        sound = null;
+      }
+      const wav = generateLoopingSineWav(hz, { cycles: 2000, amplitude: 0.28 });
+      const base64 = u8ToBase64(wav);
+      const dir = `${FileSystem.cacheDirectory ?? ''}morse-keyer/`;
+      try {
+        await FileSystem.makeDirectoryAsync(dir, { intermediates: true } as any);
+      } catch {
+        // ignore
+      }
+      const uri = `${dir}keyer_${hz}.wav`;
+      await FileSystem.writeAsStringAsync(
+        uri,
+        base64,
+        { encoding: (FileSystem as any).EncodingType?.Base64 ?? ('base64' as any) },
+      );
+      const created = await expo.Audio.Sound.createAsync(
+        { uri },
+        { shouldPlay: false, isLooping: true, volume: 1.0 },
+        false,
+      );
+      sound = created.sound;
+      preparedHz = hz;
+      controller.backend = 'expo';
+      try {
+        await sound.setIsLoopingAsync?.(true);
+      } catch {
+        // ignore
+      }
+    })();
+    try {
+      await preparing;
+    } finally {
+      preparing = null;
+    }
+  }
+
+  return controller;
+}
+
+export function createToneController(): ToneController {
+  if (Platform.OS === 'web') {
+    return createWebToneController();
+  }
+  const audioApi = loadAudioApi();
+  if (audioApi) {
+    return createAudioApiToneController(audioApi);
+  }
+  return createExpoToneController();
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 export async function playMorseCode(code: string, unitMsArg?: number, opts: PlayOpts = {}) {
-  if (Platform.OS === 'web') return playMorseCodeWeb(code, unitMsArg, opts);
-  return playMorseCodeNative(code, unitMsArg, opts);
+  if (Platform.OS === 'web') {
+    return playMorseCodeWeb(code, unitMsArg, opts);
+  }
+
+  if (loadAudioApi()) {
+    return playMorseCodeAudioApi(code, unitMsArg, opts);
+  }
+
+  return playMorseCodeExpoNative(code, unitMsArg, opts);
 }
 
 export async function playTextAsMorse(text: string, opts: PlayOpts = {}) {
@@ -284,13 +851,26 @@ export async function playTextAsMorse(text: string, opts: PlayOpts = {}) {
   }
 }
 
-export function stopPlayback() {
-  if (Platform.OS === 'web') return stopPlaybackWeb();
-  nativeToken++;
-  for (const s of [dotA, dotB, dashA, dashB]) { try { s?.stopAsync(); } catch {} }
+function stopPlaybackExpo(): void {
+  expoNativeToken += 1;
+  for (const s of [dotA, dotB, dashA, dashB]) {
+    try { s?.stopAsync(); } catch {}
+  }
+}
+
+export function stopPlayback(): void {
+  if (Platform.OS === 'web') {
+    stopPlaybackWeb();
+    return;
+  }
+
+  if (loadAudioApi()) {
+    stopPlaybackAudioApi();
+    return;
+  }
+
+  stopPlaybackExpo();
 }
 
 // Utils
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
-
-

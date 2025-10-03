@@ -1,11 +1,12 @@
-import React from 'react';
+﻿import React from 'react';
 import { Animated, Dimensions } from 'react-native';
 
 import type { ActionButtonState } from '@/components/session/ActionButton';
 import type { PromptActionLabels, PromptActionConfig, SessionActionIconName } from '@/hooks/sessionActionTypes';
 import { useSessionFlow } from '@/hooks/useSessionFlow';
 import { useKeyerOutputs } from '@/hooks/useKeyerOutputs';
-import { useOutputsService } from '@/services/outputs/OutputsService';
+import { useOutputsService, type PlaybackSymbolContext } from '@/services/outputs/OutputsService';
+import { createPressTracker } from '@/services/latency/pressTracker';
 import { useProgressStore } from '@/store/useProgressStore';
 import { toMorse } from '@/utils/morse';
 import {
@@ -120,6 +121,8 @@ export function useSendSession({
   const signalTolerance = clamp(signalTolerancePercent / 100, 0, 0.45);
   const gapTolerance = clamp(gapTolerancePercent / 100, 0, 0.7);
 
+  const pressTracker = React.useMemo(() => createPressTracker('session.send'), []);
+
   const {
     started,
     summary,
@@ -144,7 +147,7 @@ export function useSendSession({
     lightEnabled,
     torchEnabled,
     toneHz,
-  }, { source: 'session.send' });
+  }, { source: 'session.send', pressTracker });
 
   const [feedback, setFeedback] = React.useState<FeedbackState>('idle');
   const [showReveal, setShowReveal] = React.useState(false);
@@ -201,19 +204,28 @@ export function useSendSession({
   }, [prepare, teardown, clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout]);
 
   const flashSymbol = React.useCallback(
-    (durationMs: number) => {
+    (durationMs: number, context?: PlaybackSymbolContext) => {
       outputs.flashPulse({
         enabled: lightEnabled,
         durationMs,
         flashValue: flashOpacity,
+        source: context?.source ?? 'session.send.replay',
+        requestedAtMs: context?.requestedAtMs,
+        correlationId: context?.correlationId,
       });
     },
     [outputs, lightEnabled, flashOpacity],
   );
 
   const hapticSymbol = React.useCallback(
-    (symbol: '.' | '-') => {
-      outputs.hapticSymbol({ enabled: hapticsEnabled, symbol, source: 'session.send' });
+    (symbol: '.' | '-', context?: PlaybackSymbolContext) => {
+      outputs.hapticSymbol({
+        enabled: hapticsEnabled,
+        symbol,
+        source: context?.source ?? 'session.send.replay',
+        requestedAtMs: context?.requestedAtMs,
+        correlationId: context?.correlationId,
+      });
     },
     [outputs, hapticsEnabled],
   );
@@ -250,7 +262,7 @@ export function useSendSession({
     ignorePressRef.current = false;
 
     start();
-  }, [pool, clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout, updateInput, isChallenge, start]);
+  }, [pool, clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout, updateInput, isChallenge, start, pressTracker]);
 
   const finishQuestion = React.useCallback(
     (isCorrect: boolean) => {
@@ -328,27 +340,31 @@ export function useSendSession({
     canInteractRef.current = canInteractBase;
   }, [canInteractBase]);
 
-  const onPressIn = React.useCallback((rawTimestamp?: number) => {
-    if (!canInteractBase || isReplaying) return;
-    clearIdleTimeout();
+  const onPressIn = React.useCallback(
+    (rawTimestamp?: number) => {
+      if (!canInteractBase || isReplaying) return;
+      clearIdleTimeout();
 
-    const timestamp = toMonotonicTime(rawTimestamp);
+      const press = pressTracker.begin(rawTimestamp);
+      const timestamp = press.startedAtMs;
 
-    if (inputRef.current.length > 0 && lastReleaseRef.current !== null) {
-      const gapDuration = timestamp - lastReleaseRef.current;
-      const gapType = classifyGapDuration(gapDuration, unitMs, gapTolerance);
-      if (gapType !== 'intra') {
-        ignorePressRef.current = true;
-        lastReleaseRef.current = null;
-        finishQuestion(false);
-        return;
+      if (inputRef.current.length > 0 && lastReleaseRef.current !== null) {
+        const gapDuration = timestamp - lastReleaseRef.current;
+        const gapType = classifyGapDuration(gapDuration, unitMs, gapTolerance);
+        if (gapType !== 'intra') {
+          ignorePressRef.current = true;
+          lastReleaseRef.current = null;
+          finishQuestion(false);
+          return;
+        }
       }
-    }
 
-    ignorePressRef.current = false;
-    pressStartRef.current = timestamp;
-    onDown(timestamp);
-  }, [canInteractBase, isReplaying, unitMs, gapTolerance, finishQuestion, onDown, clearIdleTimeout]);
+      ignorePressRef.current = false;
+      pressStartRef.current = timestamp;
+      onDown(timestamp);
+    },
+    [canInteractBase, isReplaying, unitMs, gapTolerance, finishQuestion, onDown, clearIdleTimeout, pressTracker],
+  );
 
   const appendSymbol = React.useCallback(
     (symbol: '.' | '-') => {
@@ -424,9 +440,10 @@ export function useSendSession({
       await outputs.playMorse({
         morse,
         unitMs,
-        onSymbolStart: (symbol, durationMs) => {
-          hapticSymbol(symbol);
-          flashSymbol(durationMs);
+        source: 'session.send.replay',
+        onSymbolStart: (symbol, durationMs, context) => {
+          hapticSymbol(symbol, context);
+          flashSymbol(durationMs, context);
         },
       });
     } catch (error) {
@@ -514,6 +531,21 @@ export function useSendSession({
     handleSummaryContinue,
   };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

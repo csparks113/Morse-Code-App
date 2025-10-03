@@ -1,6 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 import { Animated } from 'react-native';
 
+import type { PressTracker } from '@/services/latency/pressTracker';
 import { defaultOutputsService } from './defaultOutputsService';
 
 export type MorseSymbol = '.' | '-';
@@ -10,6 +11,9 @@ export type FlashPulseOptions = {
   durationMs: number;
   flashValue: Animated.Value;
   source?: string;
+  requestedAtMs?: number;
+  correlationId?: string;
+  metadata?: Record<string, string | number | boolean>;
 };
 
 export type HapticSymbolOptions = {
@@ -17,12 +21,22 @@ export type HapticSymbolOptions = {
   symbol: MorseSymbol;
   durationMs?: number;
   source?: string;
+  requestedAtMs?: number;
+  correlationId?: string;
+  metadata?: Record<string, string | number | boolean>;
+};
+
+export type PlaybackSymbolContext = {
+  requestedAtMs: number;
+  correlationId: string;
+  source: string;
 };
 
 export type PlayMorseOptions = {
   morse: string;
   unitMs: number;
-  onSymbolStart?: (symbol: MorseSymbol, durationMs: number) => void;
+  source?: string;
+  onSymbolStart?: (symbol: MorseSymbol, durationMs: number, context: PlaybackSymbolContext) => void;
 };
 
 export type KeyerOutputsOptions = {
@@ -35,6 +49,7 @@ export type KeyerOutputsOptions = {
 
 export type KeyerOutputsContext = {
   source?: string;
+  pressTracker?: PressTracker;
 };
 
 export type KeyerOutputsHandle = {
