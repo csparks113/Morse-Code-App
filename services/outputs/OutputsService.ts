@@ -33,6 +33,10 @@ export type KeyerOutputsOptions = {
   toneHz: number;
 };
 
+export type KeyerOutputsContext = {
+  source?: string;
+};
+
 export type KeyerOutputsHandle = {
   flashOpacity: Animated.Value;
   prepare(): Promise<void>;
@@ -48,7 +52,7 @@ export interface OutputsService {
   hapticSymbol(options: HapticSymbolOptions): void;
   playMorse(options: PlayMorseOptions): Promise<void>;
   stopMorse(): void;
-  createKeyerOutputs(options: KeyerOutputsOptions): KeyerOutputsHandle;
+  createKeyerOutputs(options: KeyerOutputsOptions, context?: KeyerOutputsContext): KeyerOutputsHandle;
   isTorchSupported(): boolean;
 }
 

@@ -5,6 +5,7 @@
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
 ## Completed (Today)
+- Added the AudioAPI Gradle override plugin (`plugins/withAudioApiAndroidConfig.js`) and began logging keyer touch-to-output latency (tone/haptic/flash/torch) through the outputs service.
 - Made the developer console action footer scrollable so manual triggers and toggles stay reachable on smaller screens.
 - Gated torch diagnostics to developer mode and mirrored torch telemetry inside the developer console.
 - Surfaced per-channel latency telemetry (tone/haptic/flash/torch) plus reset controls in the developer console.

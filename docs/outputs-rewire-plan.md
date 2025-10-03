@@ -17,7 +17,8 @@
        - Android defaults to compile/target SDK 31 and NDK 21.4.7075529. We will override the `AudioAPI_*` Gradle props so EAS stays on Expo's toolchain (compile/target 34, NDK 26.1+) and confirm the 16 KB native alignment requirement still clears Play Store review. iOS vendors FFmpeg xcframeworks (~30 MB) and links CoreAudio/Accelerate, so budget for the binary increase. The package also requires `react-native-worklets@~0.6.0`.
        - `react-native-nitro-haptics@0.1.0` + `react-native-nitro-modules` (0.24.x) are New Architecture only. Android expects minSdk 23, compile 34, target 35, and NDK 27.1; verify we can match those in `eas.json` or adjust the library ext values. Nitrogen autolinking generates Gradle/PBX stubs but there is no Expo plugin yet, so plan to script the Nitrogen codegen inside prebuild and ensure `newArchEnabled` stays true on both platforms.
        - **Expo managed override plan**
-         - Create a local config plugin (`plugins/withAudioApiAndroidConfig.ts`) that pins Expo-compatible Gradle properties before `expo prebuild` writes `android/gradle.properties`.
+         - Create a local config plugin (`plugins/withAudioApiAndroidConfig.js`) that pins Expo-compatible Gradle properties before `expo prebuild` writes `android/gradle.properties`.
+         - Implement `plugins/withAudioApiAndroidConfig.js` so prebuild always writes the Expo-friendly overrides even before installing react-native-audio-api.
          - Write `AudioAPI_compileSdkVersion=34`, `AudioAPI_targetSdkVersion=34`, and `AudioAPI_ndkVersion=26.1.10909125` so audio builds match Expo's toolchain; keep the helper ready to raise `targetSdkVersion` to 35 alongside Nitro haptics.
          - Let the plugin surface `react-native-audio-api` options so we can start with `iosBackgroundMode=false`, keep the foreground service opt-out, and gate any microphone copy behind our own localization hook.
    - **Install prep**
@@ -31,6 +32,7 @@
      - Capture device/build metadata (model, OS, JS engine, release vs dev client) alongside each sample to map variability.
      - Persist channel samples in a dedicated telemetry buffer (200 most recent per channel) and derive mean/p50/p95/jitter + last sample metadata so the dev console/export hook can consume consistent aggregates.
      - Reference `docs/latency-instrumentation-blueprint.md` for capture topology, buffer schema, and console wiring details to keep implementation and measurement expectations aligned.
+     - Outputs service now records keyer touch-to-tone/haptic/flash/torch latencies via `recordLatencySample`, feeding the developer console latency card.
    - **Orchestrator contract**
      - Draft the `OutputsOrchestrator` interface (`prepareChannels`, `engage`, `release`, `cancel`, `setTimelineOffset`) and document required timeline guarantees.
      - Define telemetry callbacks/events (success/failure, latency samples, warm-up complete) that the orchestrator must emit for downstream tooling.
@@ -71,5 +73,15 @@
 - Refactor backlog entry: ### Outputs Rewire Plan in docs/refactor-notes.md.
 - Developer console tracing updates: docs/developer-console-updates.md.
 - Practice revamp will reuse the new orchestrator once complete.
+
+
+
+
+
+
+
+
+
+
 
 

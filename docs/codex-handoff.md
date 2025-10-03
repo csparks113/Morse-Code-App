@@ -8,19 +8,19 @@ Use this document to capture the single source of truth after each working sessi
 - **Owner:** Codex pairing session (update with your initials if another contributor takes over).
 
 ## Latest Update
-- **When:** 2025-10-02
-- **Summary:** Documented the AudioAPI Gradle override approach, published the latency instrumentation blueprint, and drafted Nitro integration prep so implementation can start without re-running discovery.
-- **State:** Ready to implement config plugins and scaffold the telemetry store before wiring native modules.
+- **When:** 2025-10-03
+- **Summary:** Implemented the AudioAPI Gradle override plugin, instrumented keyer touch-to-output latency (tone/haptic/flash/torch), and made the developer console footer scrollable so all controls stay accessible.
+- **State:** Ready to extend latency capture to replay/OutputsService pulses and stage the Nitro dependencies/codegen tooling.
 
 ## Next Steps
 
-1. Implement `plugins/withAudioApiAndroidConfig.ts` and thread it into the Expo config so prebuild writes AudioAPI compile/target/NDK overrides.
-2. Scaffold `services/latency` plus developer console hooks per the blueprint and start emitting press/output samples.
-3. Add Nitro dependencies (`react-native-nitro-modules`, `react-native-nitro-haptics`, `nitrogen`) and create the `withNitroCodegen` plugin to run codegen during prebuild/EAS.
+1. Extend latency capture beyond keyer presses (replay `playMorse`, flash/haptic pulses, torch) and drop in the shared press tracker helper.
+2. Bring in Nitro dependencies (`react-native-nitro-modules`, `react-native-nitro-haptics`, `nitrogen`) and wire a `withNitroCodegen` plugin so prebuild/EAS run codegen automatically.
+3. Convert `app.json` to `app.config.ts` (or equivalent) so we can parameterize plugin stacks before the Expo prebuild smoke test.
 
 ## Verification
 - **Outstanding checks:** `npx tsc --noEmit` still fails while expo-audio typings remain in the tree; expect to revisit after the rewire swaps the module.
-- **Recent checks:** `npm run verify:handoff` (passes 2025-10-02).
+- **Recent checks:** `npm run verify:handoff` (passes 2025-10-03).
 
 ## Reference Docs
 - `docs/refactor-notes.md` - master backlog and daily log.

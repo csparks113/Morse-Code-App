@@ -8,6 +8,7 @@ import { acquireTorch, releaseTorch, resetTorch, isTorchAvailable } from '@/util
 import { nowMs } from '@/utils/time';
 import { traceOutputs } from './trace';
 import { updateTorchSupport, recordTorchPulse, recordTorchFailure } from '@/store/useOutputsDiagnosticsStore';
+import { recordLatencySample } from '@/store/useOutputsLatencyStore';
 import type {
   OutputsService,
   FlashPulseOptions,
@@ -15,6 +16,7 @@ import type {
   PlayMorseOptions,
   KeyerOutputsOptions,
   KeyerOutputsHandle,
+  KeyerOutputsContext,
 } from './OutputsService';
 
 const DEFAULT_TONE_HZ = 600;
@@ -98,9 +100,14 @@ function generateLoopingSineWav(
   return new Uint8Array(buffer);
 }
 
-function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions): KeyerOutputsHandle {
+function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?: KeyerOutputsContext): KeyerOutputsHandle {
   let options: KeyerOutputsOptions = { ...initialOptions };
+  const contextSource = context?.source ?? 'unspecified';
   const flashOpacity = new Animated.Value(0);
+  const recordChannelLatency = (channel: 'touchToTone' | 'touchToHaptic' | 'touchToFlash' | 'touchToTorch', startedAt: number, latencyMs: number) => {
+    const clamped = Math.max(0, latencyMs);
+    recordLatencySample(channel, clamped, { requestedAt: startedAt, source: contextSource });
+  };
   let sound: Audio.Sound | null = null;
   let preparedToneHz: number | null = null;
   let hapticInterval: ReturnType<typeof setInterval> | null = null;
@@ -175,9 +182,11 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions): KeyerOut
       duration: 0,
       useNativeDriver: true,
     }).start();
+    const latencyMs = nowMs() - startedAt;
     traceOutputs('keyer.flash.start', {
-      latencyMs: nowMs() - startedAt,
+      latencyMs,
     });
+    recordChannelLatency('touchToFlash', startedAt, latencyMs);
   };
 
   const flashOff = (endedAt: number) => {
@@ -208,10 +217,12 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions): KeyerOut
       } catch {
         // ignore
       }
+      const latencyMs = nowMs() - startedAt;
       traceOutputs('keyer.haptics.start', {
         platform: 'android',
-        latencyMs: nowMs() - startedAt,
+        latencyMs,
       });
+      recordChannelLatency('touchToHaptic', startedAt, latencyMs);
       return;
     }
 
@@ -229,10 +240,12 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions): KeyerOut
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }, 80);
 
+    const latencyMs = nowMs() - startedAt;
     traceOutputs('keyer.haptics.start', {
       platform: 'ios',
-      latencyMs: nowMs() - startedAt,
+      latencyMs,
     });
+    recordChannelLatency('touchToHaptic', startedAt, latencyMs);
   };
 
   const stopHaptics = (endedAt: number) => {
@@ -270,10 +283,12 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions): KeyerOut
       await sound?.setPositionAsync(0);
       await sound?.playAsync();
       toneActive = true;
+      const latencyMs = nowMs() - startedAt;
       traceOutputs('keyer.tone.start', {
         hz,
-        latencyMs: nowMs() - startedAt,
+        latencyMs,
       });
+      recordChannelLatency('touchToTone', startedAt, latencyMs);
     } catch {
       toneActive = false;
     }
@@ -304,6 +319,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions): KeyerOut
       traceOutputs('keyer.torch.start', {
         latencyMs,
       });
+      recordChannelLatency('touchToTorch', startedAt, latencyMs);
       recordTorchPulse(latencyMs, 'keyer');
     } catch (error) {
       torchActive = false;
@@ -376,6 +392,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions): KeyerOut
     pressStartedAt = startedAt;
     traceOutputs('keyer.press.start', {
       startedAt,
+      source: contextSource,
       options: {
         audio: options.audioEnabled,
         haptics: options.hapticsEnabled,
@@ -399,6 +416,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions): KeyerOut
     traceOutputs('keyer.press.stop', {
       endedAt,
       holdMs,
+      source: contextSource,
     });
     flashOff(endedAt);
     stopHaptics(endedAt);
@@ -530,8 +548,8 @@ const defaultOutputsService: OutputsService = {
     stopPlayback();
   },
 
-  createKeyerOutputs(options: KeyerOutputsOptions) {
-    return createKeyerOutputsHandle(options);
+  createKeyerOutputs(options: KeyerOutputsOptions, context?: KeyerOutputsContext) {
+    return createKeyerOutputsHandle(options, context);
   },
 
   isTorchSupported() {
@@ -540,5 +558,3 @@ const defaultOutputsService: OutputsService = {
 };
 
 export { defaultOutputsService };
-
-

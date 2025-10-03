@@ -144,7 +144,7 @@ export function useSendSession({
     lightEnabled,
     torchEnabled,
     toneHz,
-  });
+  }, { source: 'session.send' });
 
   const [feedback, setFeedback] = React.useState<FeedbackState>('idle');
   const [showReveal, setShowReveal] = React.useState(false);

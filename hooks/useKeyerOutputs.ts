@@ -11,6 +11,10 @@ type UseKeyerOutputsOptions = {
   toneHz: number;
 };
 
+type UseKeyerOutputsMetadata = {
+  source?: string;
+};
+
 type UseKeyerOutputsResult = {
   onDown: (timestampMs?: number) => void;
   onUp: (timestampMs?: number) => void;
@@ -38,18 +42,24 @@ function useStableOptions(options: UseKeyerOutputsOptions): UseKeyerOutputsOptio
   );
 }
 
-export function useKeyerOutputs(options: UseKeyerOutputsOptions): UseKeyerOutputsResult {
+export function useKeyerOutputs(
+  options: UseKeyerOutputsOptions,
+  metadata?: UseKeyerOutputsMetadata,
+): UseKeyerOutputsResult {
   const outputs = useOutputsService();
   const stableOptions = useStableOptions(options);
+  const source = metadata?.source ?? 'session.keyer';
 
   const serviceRef = React.useRef(outputs);
-  const handleRef = React.useRef(outputs.createKeyerOutputs(stableOptions));
+  const sourceRef = React.useRef(source);
+  const handleRef = React.useRef(outputs.createKeyerOutputs(stableOptions, { source }));
   const prevOptionsRef = React.useRef(stableOptions);
 
-  if (serviceRef.current !== outputs) {
+  if (serviceRef.current !== outputs || sourceRef.current !== source) {
     handleRef.current.teardown().catch(() => {});
     serviceRef.current = outputs;
-    handleRef.current = outputs.createKeyerOutputs(stableOptions);
+    sourceRef.current = source;
+    handleRef.current = outputs.createKeyerOutputs(stableOptions, { source });
     prevOptionsRef.current = stableOptions;
   } else if (prevOptionsRef.current !== stableOptions) {
     handleRef.current.updateOptions(stableOptions);

@@ -214,7 +214,7 @@ export default function DeveloperConsoleScreen() {
   }, [developerMode, router]);
 
   React.useEffect(() => {
-    const handle = outputs.createKeyerOutputs(manualOptions);
+    const handle = outputs.createKeyerOutputs(manualOptions, { source: 'console.manual' });
     const previous = manualHandleRef.current;
     manualHandleRef.current = handle;
     previous?.teardown().catch(() => {});
@@ -709,7 +709,7 @@ export default function DeveloperConsoleScreen() {
             nestedScrollEnabled
             showsVerticalScrollIndicator={false}
           >
-          <View style={styles.manualSection}>
+            <View style={styles.manualSection}>
             <Text style={styles.manualHeading}>Manual output triggers</Text>
 
             <View style={styles.consoleMeta}>

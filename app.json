@@ -36,7 +36,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#000000"
         }
-      ]
+      ],
+      "./plugins/withAudioApiAndroidConfig"
     ],
     "experiments": {
       "typedRoutes": true
