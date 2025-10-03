@@ -25,6 +25,11 @@ import {
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useOutputsService, type KeyerOutputsOptions } from '@/services/outputs/OutputsService';
 import { useOutputsDiagnosticsStore } from '@/store/useOutputsDiagnosticsStore';
+import {
+  useLatencyStats,
+  resetLatencyMetrics,
+  type LatencyChannel,
+} from '@/store/useOutputsLatencyStore';
 import FlashOverlay from '@/components/session/FlashOverlay';
 
 const TIMESTAMP_DECIMALS = 1;
@@ -48,6 +53,20 @@ const QUICK_FILTERS: Array<{ id: string; label: string; filterKey?: FilterKey; s
   { id: 'replays', label: 'Replays', filterKey: 'replay' },
   { id: 'keyer', label: 'Keyer', filterKey: 'keyer' },
 ];
+
+const LATENCY_CHANNELS: Array<{ channel: LatencyChannel; label: string }> = [
+  { channel: 'touchToTone', label: 'Tone' },
+  { channel: 'touchToHaptic', label: 'Haptic' },
+  { channel: 'touchToFlash', label: 'Flash' },
+  { channel: 'touchToTorch', label: 'Torch' },
+];
+
+function formatLatency(value: number | null) {
+  if (value == null) {
+    return 'n/a';
+  }
+  return `${value} ms`;
+}
 
 const devConsoleTheme = {
   panel: surfaces.slate,
@@ -158,28 +177,34 @@ export default function DeveloperConsoleScreen() {
   const manualHandleRef = React.useRef<ReturnType<typeof outputs.createKeyerOutputs> | null>(null);
   const manualTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const torchSupported = outputs.isTorchSupported();
-  const torchPulseCount = useOutputsDiagnosticsStore((state) => state.torchPulseCount);
-  const totalTorchLatencyMs = useOutputsDiagnosticsStore((state) => state.totalLatencyMs);
-  const lastTorchLatencyMs = useOutputsDiagnosticsStore((state) => state.lastLatencyMs);
   const torchFailureCount = useOutputsDiagnosticsStore((state) => state.torchFailureCount);
   const torchFailureReason = useOutputsDiagnosticsStore((state) => state.lastFailureReason);
 
-  const averageTorchLatency = React.useMemo(() => {
-    if (torchPulseCount <= 0) {
-      return null;
-    }
-    const avg = totalTorchLatencyMs / torchPulseCount;
-    return Math.round(avg);
-  }, [torchPulseCount, totalTorchLatencyMs]);
+  const toneLatencyStats = useLatencyStats('touchToTone');
+  const hapticLatencyStats = useLatencyStats('touchToHaptic');
+  const flashLatencyStats = useLatencyStats('touchToFlash');
+  const torchLatencyStats = useLatencyStats('touchToTorch');
 
-  const lastTorchLatency = React.useMemo(() => {
-    if (lastTorchLatencyMs == null) {
-      return null;
-    }
-    return Math.round(lastTorchLatencyMs);
-  }, [lastTorchLatencyMs]);
+  const latencyStatsLookup = React.useMemo<Record<LatencyChannel, ReturnType<typeof useLatencyStats>>>(
+    () => ({
+      touchToTone: toneLatencyStats,
+      touchToHaptic: hapticLatencyStats,
+      touchToFlash: flashLatencyStats,
+      touchToTorch: torchLatencyStats,
+    }),
+    [toneLatencyStats, hapticLatencyStats, flashLatencyStats, torchLatencyStats],
+  );
 
   const trimmedTorchFailureReason = React.useMemo(() => torchFailureReason?.trim() || null, [torchFailureReason]);
+
+  const hasLatencySamples = React.useMemo(
+    () => LATENCY_CHANNELS.some(({ channel }) => latencyStatsLookup[channel].count > 0),
+    [latencyStatsLookup],
+  );
+
+  const handleResetLatency = React.useCallback(() => {
+    resetLatencyMetrics();
+  }, []);
 
   React.useEffect(() => {
     if (!developerMode) {
@@ -582,27 +607,76 @@ export default function DeveloperConsoleScreen() {
                 <Text style={styles.statsChipLabel}>Replays</Text>
                 <Text style={styles.statsChipValue}>{traceStats.replayCount}</Text>
               </View>
-              <View style={styles.statsChip}>
-                <Text style={styles.statsChipLabel}>Torch pulses</Text>
-                <Text style={styles.statsChipValue}>
-                  {torchPulseCount}
-                  {averageTorchLatency != null ? ` (${averageTorchLatency}ms avg)` : ''}
-                  {lastTorchLatency != null ? `, last ${lastTorchLatency}ms` : ''}
-                </Text>
-              </View>
-              <View style={styles.statsChip}>
-                <Text style={styles.statsChipLabel}>Torch failures</Text>
-                <Text
-                  style={[
-                    styles.statsChipValue,
-                    torchFailureCount > 0 && styles.consoleMetaWarning,
+            </View>
+
+            <View style={styles.latencySection}>
+              <View style={styles.latencyHeader}>
+                <Text style={styles.latencyTitle}>Latency telemetry</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !hasLatencySamples }}
+                  disabled={!hasLatencySamples}
+                  onPress={handleResetLatency}
+                  style={({ pressed }) => [
+                    styles.latencyResetButton,
+                    pressed && styles.buttonPressed,
+                    !hasLatencySamples && styles.latencyResetButtonDisabled,
                   ]}
                 >
-                  {torchFailureCount}
-                  {torchFailureCount > 0 && trimmedTorchFailureReason
-                    ? ` (${trimmedTorchFailureReason})`
-                    : ''}
-                </Text>
+                  <Text
+                    style={[
+                      styles.latencyResetText,
+                      !hasLatencySamples && styles.latencyResetTextDisabled,
+                    ]}
+                  >
+                    Reset
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.latencyGrid}>
+                {LATENCY_CHANNELS.map(({ channel, label }) => {
+                  const stats = latencyStatsLookup[channel];
+                  const lastTimestamp =
+                    stats.lastCapturedAt != null ? formatWallClock(stats.lastCapturedAt) : null;
+                  const lastSource = stats.lastSource;
+                  return (
+                    <View key={channel} style={styles.latencyCard}>
+                      <Text style={styles.latencyCardLabel}>{label}</Text>
+                      <Text style={styles.latencyCardCount}>
+                        {stats.count > 0 ? `${stats.count} sample${stats.count === 1 ? '' : 's'}` : 'No samples'}
+                      </Text>
+                      <View style={styles.latencyMetricRow}>
+                        <Text style={styles.latencyMetricKey}>mean</Text>
+                        <Text style={styles.latencyMetricValue}>{formatLatency(stats.meanMs)}</Text>
+                      </View>
+                      <View style={styles.latencyMetricRow}>
+                        <Text style={styles.latencyMetricKey}>p50</Text>
+                        <Text style={styles.latencyMetricValue}>{formatLatency(stats.p50Ms)}</Text>
+                      </View>
+                      <View style={styles.latencyMetricRow}>
+                        <Text style={styles.latencyMetricKey}>p95</Text>
+                        <Text style={styles.latencyMetricValue}>{formatLatency(stats.p95Ms)}</Text>
+                      </View>
+                      <View style={styles.latencyMetricRow}>
+                        <Text style={styles.latencyMetricKey}>jitter</Text>
+                        <Text style={styles.latencyMetricValue}>{formatLatency(stats.jitterMs)}</Text>
+                      </View>
+                      <Text style={styles.latencyLastLine}>
+                        {stats.lastLatencyMs != null
+                          ? `Last ${stats.lastLatencyMs} ms${lastTimestamp ? ` | ${lastTimestamp}` : ''}${lastSource ? ` (${lastSource})` : ''}`
+                          : 'Last sample: n/a'}
+                      </Text>
+                      {channel === 'touchToTorch' && torchFailureCount > 0 ? (
+                        <Text style={styles.latencyIssueText}>
+                          {`Failures: ${torchFailureCount}${
+                            trimmedTorchFailureReason ? ` (${trimmedTorchFailureReason})` : ''
+                          }`}
+                        </Text>
+                      ) : null}
+                    </View>
+                  );
+                })}
               </View>
             </View>
           </View>
@@ -1104,6 +1178,82 @@ const styles = StyleSheet.create({
     color: lessonColors.text,
     fontWeight: '700',
   },
+  latencySection: {
+    marginTop: spacing(2),
+    gap: spacing(1.5),
+  },
+  latencyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  latencyTitle: {
+    color: lessonColors.text,
+    fontWeight: '700',
+  },
+  latencyResetButton: {
+    paddingHorizontal: spacing(1.25),
+    paddingVertical: spacing(0.75),
+    borderRadius: theme.radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    backgroundColor: devConsoleTheme.panel,
+  },
+  latencyResetButtonDisabled: {
+    opacity: 0.5,
+  },
+  latencyResetText: {
+    color: lessonColors.blueNeon,
+    fontWeight: '600',
+  },
+  latencyResetTextDisabled: {
+    color: lessonColors.textDim,
+  },
+  latencyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing(1),
+  },
+  latencyCard: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    backgroundColor: devConsoleTheme.panel,
+    borderRadius: theme.radius.md,
+    paddingVertical: spacing(0.75),
+    paddingHorizontal: spacing(1.25),
+    gap: spacing(0.5),
+  },
+  latencyCardLabel: {
+    color: lessonColors.text,
+    fontWeight: '700',
+  },
+  latencyCardCount: {
+    color: lessonColors.textDim,
+    fontSize: 12,
+  },
+  latencyMetricRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  latencyMetricKey: {
+    color: lessonColors.textDim,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  latencyMetricValue: {
+    color: lessonColors.text,
+    fontWeight: '600',
+  },
+  latencyLastLine: {
+    color: lessonColors.textDim,
+    fontSize: 12,
+  },
+  latencyIssueText: {
+    color: theme.colors.accent,
+    fontSize: 12,
+    fontWeight: '600',
+  },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1156,7 +1306,3 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
-
-
-
-

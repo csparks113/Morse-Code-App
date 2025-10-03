@@ -6,6 +6,7 @@
 
 ## Completed (Today)
 - Gated torch diagnostics to developer mode and mirrored torch telemetry inside the developer console.
+- Surfaced per-channel latency telemetry (tone/haptic/flash/torch) plus reset controls in the developer console.
 - Migrated native audio playback from `expo-av` to `expo-audio` and updated docs to reflect the new package.
 - Extended the session style guard to lint `app/dev` and the practice tab after routing colors through shared theme surfaces.
 - Pulled SessionHeader into the developer console and practice tab, wiring their copy onto header tokens and reusing summary spacing for practice sections.
@@ -44,10 +45,11 @@
 2. Monitor guard coverage across dev/practice and plan the next expansion (settings/home) once the signal stays clean.
 
 ### Hygiene & Guardrails
-1. Extend docs with session UI conventions and outputs service architecture notes so new contributors follow the same patterns.
-2. Prepare an Expo smoke-test checklist (send, receive, summary) to run after major changes and link it in this doc.
-3. Add simple mocks/tests around the outputs service to protect against regressions during future rewrites.
-4. Integrate `npm run check:session-controls` into CI so the spacing guard runs automatically (not just locally).
+1. Update `docs/codex-handoff.md` at the end of every working session and run `npm run verify:handoff` so new chats resume with full context.
+2. Extend docs with session UI conventions and outputs service architecture notes so new contributors follow the same patterns.
+3. Prepare an Expo smoke-test checklist (send, receive, summary) to run after major changes and link it in this doc.
+4. Add simple mocks/tests around the outputs service to protect against regressions during future rewrites.
+5. Integrate `npm run check:session-controls` into CI so the spacing guard runs automatically (not just locally).
 
 ### Output Touchpoint Inventory (Current)\r\n- Status: Pending; monitor alongside Foundations work so UI + telemetry docs stay aligned.\r\n1. Surface torch availability and instrumentation feedback in the UI (fallback messaging + metrics).
 2. Document the offset-tuning workflow and expose the knobs inside the developer console.
@@ -64,8 +66,10 @@
    - Stage package installs + Expo prebuild smoke so we know the JSI modules compile in dev client and EAS profiles.
    - Layer instrumentation on current keyer + OutputsService paths to capture touch-to-output latency (audio, haptics, flash, torch) with p50/p95/jitter aggregates recorded in the developer console.
    - Draft the orchestrator contract (prep/engage/release/cancel/timeline offset + telemetry hooks) ahead of implementation.
-   - Guardrail: `react-native-audio-api@0.8.2` enforces RN >=0.76, so contributors must stay on Expo SDK 54 / RN 0.81+; flag any local envs lagging behind before integration.
-   - Note: module also adds FFmpeg xcframeworks + Android Oboe/foreground-service wiring, and Nitro Haptics pulls in `react-native-nitro-modules`; capture these in the install checklist so Expo prebuild scripts stay deterministic.
+   - Guardrail: `react-native-audio-api@0.8.2` enforces RN >=0.76 and its Expo config plugin enables background audio/foreground-service hooks by default; review and override those options if we do not want to request background media permissions in production.
+   - Capture the Android overrides we need: raise `AudioAPI_compileSdkVersion/targetSdkVersion` to 34 and `AudioAPI_ndkVersion` to Expo's NDK (26.1+) via root project `ext` so builds stay on the supported toolchain. Install `react-native-worklets@~0.6.0` alongside the audio stack.
+   - Note: the iOS pod vendors FFmpeg xcframeworks (~30 MB) and the Android side packages Oboe plus a foreground service; keep an eye on binary size and Play Store foreground-service policies.
+   - Nitro path: `react-native-nitro-haptics@0.1.0` + `react-native-nitro-modules` (0.24.x) require New Architecture, minSdk 23, compile 34/target 35, and NDK 27.1. Plan to run Nitrogen codegen during prebuild and leave `newArchEnabled` true in Expo configs.
 2. Audio + haptics: integrate react-native-audio-api and react-native-nitro-haptics with oscillator warm-up hooks.
 3. Visual channels: rebuild FlashOverlay with Reanimated UI worklets and wire torch control via expo-torch.
 4. Orchestration: add an OutputsOrchestrator service and rewire session/practice hooks plus toggles.
@@ -110,4 +114,7 @@
 3. Extend lesson data (characters, words, sentences) for Latin-based languages with diacritics.
 4. Update settings UI/workflows to add language selection and persistence.
 5. Capture the process in docs/multilanguage-plan.md and add localization QA checklists.
+
+
+
 

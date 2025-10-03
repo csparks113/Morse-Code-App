@@ -13,9 +13,9 @@
      - Validate the packages ship podspecs/Gradle configs that do not conflict with Expo prebuild (no manual `Podfile` edits, supports hermes/metro).
      - Review native dependency requirements (AudioKit/AAE on iOS, Oboe on Android) and note any minimum OS versions or NDK constraints in the backlog.
      - **Current findings**
-       - `react-native-audio-api@0.8.2` hard-blocks React Native <0.76 via its Gradle guard; Expo SDK 51 (RN 0.73) cannot build until we upgrade Expo (>=53) or negotiate a patch upstream. Module ships an Expo config plugin that adds iOS background audio modes plus Android foreground-service + media playback permissions.
-       - iOS bundles FFmpeg-based xcframeworks (~30 MB) and links CoreAudio/Accelerate; confirm our EAS binary size budget and ensure `ENABLE_BITCODE=NO` stays set. Android pulls in `com.google.oboe:oboe:1.9.3`, requires NDK r25+, and enables CMake with 16KB aligned packaging.
-       - `react-native-nitro-haptics@0.1.0` depends on `react-native-nitro-modules@0.29.8`; both assume New Architecture + Nitro toolchain. Expo prebuild must enable `newArchEnabled`, add the Nitro package, and satisfy Kotlin/Swift toolchain requirements. No Expo plugin is provided, so we will author a lightweight config plugin to register Nitro's Gradle/PBX tweaks if Expo demands it.
+       - `react-native-audio-api@0.8.2` enforces React Native >=0.76, so our Expo 54 (RN 0.81) builds remain in range. Its Expo config plugin adds iOS `UIBackgroundModes=["audio"]`, optional microphone copy, and Android foreground-service/media playback permissions; decide whether to keep the defaults or override them before release.
+       - Android defaults to compile/target SDK 31 and NDK 21.4.7075529. We will override the `AudioAPI_*` Gradle props so EAS stays on Expo's toolchain (compile/target 34, NDK 26.1+) and confirm the 16 KB native alignment requirement still clears Play Store review. iOS vendors FFmpeg xcframeworks (~30 MB) and links CoreAudio/Accelerate, so budget for the binary increase. The package also requires `react-native-worklets@~0.6.0`.
+       - `react-native-nitro-haptics@0.1.0` + `react-native-nitro-modules` (0.24.x) are New Architecture only. Android expects minSdk 23, compile 34, target 35, and NDK 27.1; verify we can match those in `eas.json` or adjust the library ext values. Nitrogen autolinking generates Gradle/PBX stubs but there is no Expo plugin yet, so plan to script the Nitrogen codegen inside prebuild and ensure `newArchEnabled` stays true on both platforms.
    - **Install prep**
      - Add both packages plus supporting dev types to `package.json`; update `expo` plugin config if either module provides an Expo config plugin.
      - Run a local `expo prebuild` smoke to ensure autolinking succeeds and capture any manual pod/Gradle steps we must script in EAS.
@@ -24,6 +24,7 @@
      - Add high-resolution timers on the keyer press path (gesture-handler `onBegin`/`onFinalize`) and current OutputsService sinks to measure input-to-output deltas per channel.
      - Emit structured telemetry (`latency.touchToTone`, `latency.touchToHaptic`, etc.) with p50/p95/jitter aggregates into the developer console and log to disk for later regression comparison.
      - Capture device/build metadata (model, OS, JS engine, release vs dev client) alongside each sample to map variability.
+     - Persist channel samples in a dedicated telemetry buffer (200 most recent per channel) and derive mean/p50/p95/jitter + last sample metadata so the dev console/export hook can consume consistent aggregates.
    - **Orchestrator contract**
      - Draft the `OutputsOrchestrator` interface (`prepareChannels`, `engage`, `release`, `cancel`, `setTimelineOffset`) and document required timeline guarantees.
      - Define telemetry callbacks/events (success/failure, latency samples, warm-up complete) that the orchestrator must emit for downstream tooling.
