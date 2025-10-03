@@ -1,4 +1,4 @@
-﻿# Morse Code Master
+# Morse Code Master
 
 A premium dark-themed Expo React Native app for learning, practicing, and mastering Morse code.
 
@@ -17,7 +17,7 @@ A premium dark-themed Expo React Native app for learning, practicing, and master
 - **Expo + React Native + TypeScript**: Fast development, cross-platform
 - **Expo Router**: File-based navigation, tabs for main screens
 - **Zustand + persist (AsyncStorage)**: Global state with persistence
-- **expo-av**: Audio playback for Morse tones (SDK 54 deprecates this; we shim FS writes via `expo-file-system/legacy` and can migrate to `expo-audio` later)
+- **expo-audio**: Audio playback for Morse tones (replaces the deprecated expo-av module; we still shim FS writes via `expo-file-system/legacy`).
 - **Component-based UI**: NeonHeaderCard, coin-style LessonPath, ProgressBar
 - **Theme**: Charcoal/black background, neon blue accents, gold for completion
 
@@ -29,7 +29,7 @@ npx expo start
 
 ## Getting Started
 
-- Prerequisites: Node 18+, npm 9+, Android Studio (Android), Xcode (iOS), and Expo Go on your device if youâ€™re testing on hardware.
+- Prerequisites: Node 18+, npm 9+, Android Studio (Android), Xcode (iOS), and Expo Go on your device if you’re testing on hardware.
 - Install deps: `npm install`
 - Start dev server: `npx expo start` (or `npx expo start -c` to clear cache)
 - Open:
@@ -49,9 +49,9 @@ npx expo start
 ## Troubleshooting
 
 - SDK 54 warnings:
-  - `expo-av` is deprecated; audio playback works but will be migrated to `expo-audio`.
+  - `expo-av` is deprecated; audio playback now uses `expo-audio` so we stay ahead of SDK 54.
   - `expo-file-system` legacy API is used intentionally for tone file writes to avoid runtime errors; migration to the new File/Directory API is planned.
-- Routing issues: keep nonâ€‘screen modules out of `app/` so Expo Router doesnâ€™t treat them as routes.
+- Routing issues: keep non‑screen modules out of `app/` so Expo Router doesn’t treat them as routes.
 - If you see strange bundler errors: stop the server, run `npx expo start -c`, and try again.
 
 ## Project Documentation
@@ -110,4 +110,6 @@ utils/
 assets/
   images/, fonts/ (tones are generated at runtime)
 ```
+
+
 

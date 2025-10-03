@@ -1,10 +1,10 @@
 // utils/audio.ts
 // Ultra-low-latency Morse audio
 // - Web: WebAudio oscillator + gain envelope for near-instant start
-// - Native (iOS/Android): expo-av with preloaded tones, replayAsync(), pre-warm, and ping-pong players
+// - Native (iOS/Android): expo-audio with preloaded tones, replayAsync(), pre-warm, and ping-pong players
 
 import { Platform } from 'react-native';
-import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
+import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 
 // Shared settings
@@ -98,7 +98,7 @@ function stopPlaybackWeb() {
 }
 
 // ---------------------------------------------------------------------------
-// NATIVE PATH: expo-av\r\n// ---------------------------------------------------------------------------\r\n
+// NATIVE PATH: expo-audio\r\n// ---------------------------------------------------------------------------\r\n
 let nativeToken = 0;
 let dotA: Audio.Sound | null = null;
 let dotB: Audio.Sound | null = null;
@@ -292,4 +292,5 @@ export function stopPlayback() {
 
 // Utils
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+
 

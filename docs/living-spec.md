@@ -1,4 +1,4 @@
-Ôªø# Morse Code Master ‚Äî Living Spec
+# Morse Code Master ó Living Spec
 
 This document captures how the app is organized and behaves so changes are intentional and traceable.
 
@@ -21,8 +21,8 @@ This document captures how the app is organized and behaves so changes are inten
 ## State Model
 
 - `store/useSettingsStore`: receiveOnly, audio/light/haptics toggles, `wpm`, `toneHz` with clamping.
-- `store/useProgressStore`: per-lesson `send`/`receive` flags and 0‚Äì100 scores; helper `getCountsGlobal` used on Home.
-- Thresholds for ‚Äúcompleted‚Äù are centralized in `theme/lessonTheme.ts` (`receive`/`send`).
+- `store/useProgressStore`: per-lesson `send`/`receive` flags and 0ñ100 scores; helper `getCountsGlobal` used on Home.
+- Thresholds for ìcompletedî are centralized in `theme/lessonTheme.ts` (`receive`/`send`).
 
 ## Data Model
 
@@ -36,9 +36,9 @@ This document captures how the app is organized and behaves so changes are inten
 
 ## Audio / Visual / Haptics
 
-- Audio: tones generated as 16‚Äëbit PCM mono WAV (sine) at runtime and cached.
+- Audio: tones generated as 16-bit PCM mono WAV (sine) at runtime and cached.
   - File writes go through `expo-file-system/legacy` to avoid SDK 54 deprecation crash.
-  - Playback via `expo-av` (noted as deprecated in SDK 54; plan to migrate to `expo-audio`).
+  - Playback via `expo-audio` (replaces the deprecated `expo-av` module ahead of SDK 54).
 - Visuals: optional flash overlay per symbol on Receive.
 - Haptics: taps on symbol start (Receive) and on key presses (Send).
 
@@ -52,11 +52,11 @@ This document captures how the app is organized and behaves so changes are inten
 
 ## Accessibility
 
-- Buttons have roles/labels; icons used with alt labels; high‚Äëcontrast palette.
+- Buttons have roles/labels; icons used with alt labels; high-contrast palette.
 
 ## Known Work / Roadmap
 
-- Migrate audio generation to `expo-audio` and new File/Directory API.
+- Monitor `expo-audio` adoption and migrate to the new File/Directory API when available.
 - Add free practice drills and speed tests under `/practice`.
 - Expand lesson set and add spaced repetition options.
 - Paywall for premium features (stubbed for future).
@@ -66,3 +66,5 @@ This document captures how the app is organized and behaves so changes are inten
 - Keep non-route modules out of `app/` to avoid Expo Router warnings.
 - Prefer store helpers over recomputing thresholds in screens.
 - Keep side effects out of render paths; use effects triggered by state changes.
+
+

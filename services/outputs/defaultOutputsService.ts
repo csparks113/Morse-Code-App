@@ -1,5 +1,5 @@
 import { Animated, Platform, Vibration } from 'react-native';
-import { Audio } from 'expo-av';
+import { Audio } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 
@@ -540,4 +540,5 @@ const defaultOutputsService: OutputsService = {
 };
 
 export { defaultOutputsService };
+
 

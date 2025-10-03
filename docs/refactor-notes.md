@@ -6,6 +6,7 @@
 
 ## Completed (Today)
 - Gated torch diagnostics to developer mode and mirrored torch telemetry inside the developer console.
+- Migrated native audio playback from `expo-av` to `expo-audio` and updated docs to reflect the new package.
 - Extended the session style guard to lint `app/dev` and the practice tab after routing colors through shared theme surfaces.
 - Pulled SessionHeader into the developer console and practice tab, wiring their copy onto header tokens and reusing summary spacing for practice sections.
 - Routed SessionHeader and SessionSummary layout spacing through `sessionLayoutTheme` header/summary tokens to remove inline overrides.
@@ -60,15 +61,15 @@
 4. Add a Settings � Output card (below Language) linking to an output settings screen covering audio volume, tone frequency, vibration intensity, and screen flash brightness�with room to extend later.
 
 ### Outputs Rewire Plan
-1. Foundations & benchmarks: confirm New Architecture support, benchmark current latency, and lock the orchestrator interface.
-2. Audio + haptics: integrate @siteed/expo-audio-studio and react-native-nitro-haptics with preload/warm-up hooks.
+1. Foundations & benchmarks: confirm New Architecture support, benchmark current latency against a <=10 ms target, and lock the orchestrator interface.
+2. Audio + haptics: integrate react-native-audio-api and react-native-nitro-haptics with oscillator warm-up hooks.
 3. Visual channels: rebuild FlashOverlay with Reanimated UI worklets and wire torch control via expo-torch.
 4. Orchestration: add an OutputsOrchestrator service and rewire session/practice hooks plus toggles.
 5. Keyer precision: move the send keyer onto react-native-gesture-handler with high-res timing and improved diagnostics.
 6. QA & ops: run device smoke tests, add calibration UX, expand tracing, and finish EAS prep.
 
 ### Outputs Rewire Fallbacks
-- Audio: escalate to react-native-audio-api or a scoped Expo module if @siteed/expo-audio-studio misses targets.
+- Audio: fall back to a minimal custom Expo Module if react-native-audio-api cannot sustain the <=10 ms target.
 - Haptics: fall back to expo-haptics on unsupported hardware while keeping Nitro as the preferred path.
 - Screen flash: promote the overlay to a native view if Reanimated animations stutter or layer ordering fails.
 - Torch: detect OEM throttling and gracefully fall back to screen-flash-only feedback when torch pulses fail.
