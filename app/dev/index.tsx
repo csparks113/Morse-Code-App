@@ -9,6 +9,7 @@ import {
   ListRenderItem,
   TextInput,
   Share,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -701,7 +702,13 @@ export default function DeveloperConsoleScreen() {
           )}
         </View>
 
-        <View style={[sessionStyleSheet.bottomGroup, styles.actionGroup]}>
+        <View style={sessionStyleSheet.bottomGroup}>
+          <ScrollView
+            contentContainerStyle={styles.actionGroupContent}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+          >
           <View style={styles.manualSection}>
             <Text style={styles.manualHeading}>Manual output triggers</Text>
 
@@ -927,6 +934,7 @@ export default function DeveloperConsoleScreen() {
             </Pressable>
           </View>
 
+          </ScrollView>
         </View>
       </View>
     </SafeAreaView>
@@ -1049,8 +1057,10 @@ const styles = StyleSheet.create({
     color: lessonColors.textDim,
     textAlign: 'center',
   },
-  actionGroup: {
+  actionGroupContent: {
     gap: spacing(2),
+    paddingBottom: spacing(2),
+    alignItems: 'stretch',
   },
   manualSection: {
     alignSelf: 'stretch',

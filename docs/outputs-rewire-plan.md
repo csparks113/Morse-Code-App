@@ -16,15 +16,21 @@
        - `react-native-audio-api@0.8.2` enforces React Native >=0.76, so our Expo 54 (RN 0.81) builds remain in range. Its Expo config plugin adds iOS `UIBackgroundModes=["audio"]`, optional microphone copy, and Android foreground-service/media playback permissions; decide whether to keep the defaults or override them before release.
        - Android defaults to compile/target SDK 31 and NDK 21.4.7075529. We will override the `AudioAPI_*` Gradle props so EAS stays on Expo's toolchain (compile/target 34, NDK 26.1+) and confirm the 16 KB native alignment requirement still clears Play Store review. iOS vendors FFmpeg xcframeworks (~30 MB) and links CoreAudio/Accelerate, so budget for the binary increase. The package also requires `react-native-worklets@~0.6.0`.
        - `react-native-nitro-haptics@0.1.0` + `react-native-nitro-modules` (0.24.x) are New Architecture only. Android expects minSdk 23, compile 34, target 35, and NDK 27.1; verify we can match those in `eas.json` or adjust the library ext values. Nitrogen autolinking generates Gradle/PBX stubs but there is no Expo plugin yet, so plan to script the Nitrogen codegen inside prebuild and ensure `newArchEnabled` stays true on both platforms.
+       - **Expo managed override plan**
+         - Create a local config plugin (`plugins/withAudioApiAndroidConfig.ts`) that pins Expo-compatible Gradle properties before `expo prebuild` writes `android/gradle.properties`.
+         - Write `AudioAPI_compileSdkVersion=34`, `AudioAPI_targetSdkVersion=34`, and `AudioAPI_ndkVersion=26.1.10909125` so audio builds match Expo's toolchain; keep the helper ready to raise `targetSdkVersion` to 35 alongside Nitro haptics.
+         - Let the plugin surface `react-native-audio-api` options so we can start with `iosBackgroundMode=false`, keep the foreground service opt-out, and gate any microphone copy behind our own localization hook.
    - **Install prep**
      - Add both packages plus supporting dev types to `package.json`; update `expo` plugin config if either module provides an Expo config plugin.
      - Run a local `expo prebuild` smoke to ensure autolinking succeeds and capture any manual pod/Gradle steps we must script in EAS.
      - Prepare EAS build profiles with `EX_DEV_CLIENT` toggles so we can test the audio stack inside dev client without reinstall friction.
+     - Follow `docs/nitro-integration-prep.md` to stage Nitro dependencies, codegen, and new-architecture checks before running `expo prebuild`.
    - **Baseline instrumentation**
      - Add high-resolution timers on the keyer press path (gesture-handler `onBegin`/`onFinalize`) and current OutputsService sinks to measure input-to-output deltas per channel.
      - Emit structured telemetry (`latency.touchToTone`, `latency.touchToHaptic`, etc.) with p50/p95/jitter aggregates into the developer console and log to disk for later regression comparison.
      - Capture device/build metadata (model, OS, JS engine, release vs dev client) alongside each sample to map variability.
      - Persist channel samples in a dedicated telemetry buffer (200 most recent per channel) and derive mean/p50/p95/jitter + last sample metadata so the dev console/export hook can consume consistent aggregates.
+     - Reference `docs/latency-instrumentation-blueprint.md` for capture topology, buffer schema, and console wiring details to keep implementation and measurement expectations aligned.
    - **Orchestrator contract**
      - Draft the `OutputsOrchestrator` interface (`prepareChannels`, `engage`, `release`, `cancel`, `setTimelineOffset`) and document required timeline guarantees.
      - Define telemetry callbacks/events (success/failure, latency samples, warm-up complete) that the orchestrator must emit for downstream tooling.
