@@ -9,18 +9,29 @@ Use this document to capture the single source of truth after each working sessi
 
 ## Latest Update
 - **When:** 2025-10-03
-- **Summary:** Migrated `services/outputs/defaultOutputsService` to the shared tone controller from `utils/audio`, so keyer playback now prefers `react-native-audio-api` with an Expo fallback, and latency telemetry records the active backend. Added the reusable `ToneController` helpers in `utils/audio.ts` and cleared the TypeScript errors.
-- **State:** Morse tone utilities and outputs service now share the audio-api-first flow; pending real-device validation and plugin configuration review before enabling the Nitro specs end-to-end.
+- **Summary:** Relocated the project to `C:\dev\Morse`, regenerated native artifacts, and produced a fresh Android dev client that bundles `react-native-audio-api` and `expo-linear-gradient`; the app now launches on the Galaxy S22+ and is ready for latency smoke testing.
+- **State:** Android dev client installed with the audio-api-first path active; latency validation and optional wake-lock/torch follow-ups remain outstanding before wiring the Nitro orchestrator.
 
 ## Next Steps
 
-1. Run on-device smoke tests (iOS/Android) to confirm the audio API path spins up quickly and latency logs capture backend metadata.
-2. Confirm the audio API Expo plugin settings cover permissions/background needs and document any overrides in `docs/nitro-integration-prep.md`.
-3. Flesh out the Nitro outputs specs (beyond the placeholder) and re-run `npx nitrogen` so generated bindings reflect the new orchestrator.
+1. Run the Android smoke test (Developer Console -> Latency) and capture backend/latency samples for keyer presses and replay playback.
+2. Record the results (pass/fail, latency metrics, backend) in `docs/refactor-notes.md` and update planning docs with any follow-up tasks.
+3. Decide on production wake-lock/torch permissions and document the final override plan in `docs/nitro-integration-prep.md` before enabling Nitro bindings end-to-end.
+
+## Device Smoke Test Checklist
+1. Install dependencies with `npm install` and ensure your Expo CLI is logged in.
+2. Build the dev client with New Architecture enabled:
+   - iOS: `npx expo run:ios --device` (or `--configuration Release` when profiling).
+   - Android: `npx expo run:android --device` (use the short project path to avoid Windows MAX_PATH issues).
+3. Start the bundler with `npx expo start --dev-client --clear` and connect the device via the Expo dev client.
+4. In-app, open the Developer Console -> Latency card and confirm tone samples log `backend=audio-api` after triggering keyer presses.
+5. Hold and release the keyer button several times; watch for immediate sidetone start/stop with latency deltas < 15 ms.
+6. Trigger a replay (practice/session playback) to ensure the native `playMorse` path runs without falling back to Expo.
+7. Capture any anomalies (fallback to Expo, delayed start/stop, console errors) and note results in `docs/refactor-notes.md` under **Completed (Today)** or follow-up tasks.
 
 ## Verification
 - **Outstanding checks:** Device smoke tests for tone playback + latency logging on the audio API path.
-- **Recent checks:** `npx tsc --noEmit` (2025-10-03); `npx nitrogen` (generates stubs, 2025-10-03); `npm run verify:handoff` (passes).
+- **Recent checks:** `npx expo run:android --device` (2025-10-03); `npx tsc --noEmit` (2025-10-03); `npx nitrogen` (generates stubs, 2025-10-03); `npm run verify:handoff` (passes).
 
 ## Reference Docs
 - `docs/refactor-notes.md` - master backlog and daily log.
@@ -37,3 +48,4 @@ Use this document to capture the single source of truth after each working sessi
 - [ ] Run `npm run verify:handoff` and resolve any failures.
 
 _Tip: Keep entries terse but explicit enough that a new chat can resume work immediately._
+

@@ -1,12 +1,12 @@
-﻿import { spawnSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
-import path from 'path';
-import { ConfigPlugin, WarningAggregator, withDangerousMod } from 'expo/config-plugins';
+﻿const { spawnSync } = require('child_process');
+const { existsSync, readFileSync } = require('fs');
+const path = require('path');
+const { WarningAggregator, withDangerousMod } = require('expo/config-plugins');
 
 const CODEGEN_SCRIPT = 'nitro:codegen';
 let codegenInvoked = false;
 
-function ensureScriptExists(projectRoot: string): boolean {
+function ensureScriptExists(projectRoot) {
   const packageJsonPath = path.join(projectRoot, 'package.json');
   if (!existsSync(packageJsonPath)) {
     WarningAggregator.addWarningAndroid(
@@ -16,9 +16,16 @@ function ensureScriptExists(projectRoot: string): boolean {
     return false;
   }
 
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
-    scripts?: Record<string, string>;
-  };
+  let packageJson;
+  try {
+    packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+  } catch (error) {
+    WarningAggregator.addWarningAndroid(
+      'withNitroCodegen',
+      `Failed to parse package.json: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return false;
+  }
 
   if (!packageJson.scripts || !packageJson.scripts[CODEGEN_SCRIPT]) {
     WarningAggregator.addWarningAndroid(
@@ -31,7 +38,7 @@ function ensureScriptExists(projectRoot: string): boolean {
   return true;
 }
 
-function runNitroCodegen(projectRoot: string) {
+function runNitroCodegen(projectRoot) {
   if (codegenInvoked) {
     return;
   }
@@ -50,16 +57,26 @@ function runNitroCodegen(projectRoot: string) {
     },
   });
 
-  if (result.status !== 0) {
-    throw new Error(
-      `Nitro codegen script (${CODEGEN_SCRIPT}) failed with status ${result.status ?? 'unknown'}.`,
+  if (result.error) {
+    WarningAggregator.addWarningAndroid(
+      'withNitroCodegen',
+      `Failed to execute ${CODEGEN_SCRIPT}: ${result.error.message}`,
     );
+    return;
+  }
+
+  if (typeof result.status !== 'number' || result.status !== 0) {
+    WarningAggregator.addWarningAndroid(
+      'withNitroCodegen',
+      `Nitro codegen script (${CODEGEN_SCRIPT}) exited with status ${result.status ?? 'unknown'}. Check logs for details.`,
+    );
+    return;
   }
 
   codegenInvoked = true;
 }
 
-const withNitroCodegen: ConfigPlugin = (config) => {
+const withNitroCodegen = (config) => {
   if (!config.android) {
     config.android = {};
   }
@@ -84,4 +101,4 @@ const withNitroCodegen: ConfigPlugin = (config) => {
   return config;
 };
 
-export default withNitroCodegen;
+module.exports = withNitroCodegen;

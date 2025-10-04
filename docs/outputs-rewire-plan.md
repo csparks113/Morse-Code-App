@@ -39,6 +39,8 @@
      - Define telemetry callbacks/events (success/failure, latency samples, warm-up complete) that the orchestrator must emit for downstream tooling.
 2. **Audio + Haptics**
    - (2025-10-03) Completed: Updated `utils/audio.ts` with a reusable tone controller that prefers `react-native-audio-api`, falls back to Expo, and migrated `services/outputs/defaultOutputsService` to consume it so latency telemetry records the active backend.
+   - (2025-10-03) Completed: Defined the `OutputsAudio` Nitro interface and regenerated bindings so the orchestrator can move onto Nitro once native backends land.
+   - (2025-10-03) Completed: Built a fresh Android dev client from C:\\dev\\Morse so device smoke testing can exercise the audio-api-first path.
    - Install react-native-audio-api and react-native-nitro-haptics (ensure JSI build steps in EAS).
    - Prewarm the tone generators (steady oscillator + gated envelope) and expose a warm-up hook to avoid first-call lag.
    - Map orchestrator calls to native fire-and-forget triggers; capture success/failure events for tracing.
@@ -75,6 +77,8 @@
 - Refactor backlog entry: ### Outputs Rewire Plan in docs/refactor-notes.md.
 - Developer console tracing updates: docs/developer-console-updates.md.
 - Practice revamp will reuse the new orchestrator once complete.
+
+
 
 
 

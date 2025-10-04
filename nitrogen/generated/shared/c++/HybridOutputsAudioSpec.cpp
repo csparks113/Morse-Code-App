@@ -14,7 +14,11 @@ namespace margelo::nitro::morse {
     HybridObject::loadHybridMethods();
     // load custom methods/properties
     registerHybrids(this, [](Prototype& prototype) {
+      prototype.registerHybridMethod("isSupported", &HybridOutputsAudioSpec::isSupported);
       prototype.registerHybridMethod("warmup", &HybridOutputsAudioSpec::warmup);
+      prototype.registerHybridMethod("startTone", &HybridOutputsAudioSpec::startTone);
+      prototype.registerHybridMethod("stopTone", &HybridOutputsAudioSpec::stopTone);
+      prototype.registerHybridMethod("playMorse", &HybridOutputsAudioSpec::playMorse);
       prototype.registerHybridMethod("teardown", &HybridOutputsAudioSpec::teardown);
     });
   }

@@ -1,4 +1,4 @@
-﻿import type { ConfigContext, ExpoConfig } from 'expo/config';
+import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 type PluginToggles = {
   nitroCodegen: boolean;
@@ -13,6 +13,11 @@ function resolvePluginToggles(): PluginToggles {
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const toggles = resolvePluginToggles();
+
+  config.android = {
+    ...(config.android ?? {}),
+    newArchEnabled: true,
+  };
 
   const plugins: ExpoConfig['plugins'] = [
     'expo-router',
@@ -48,6 +53,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config.android,
   };
   (androidConfig as Record<string, unknown>).monochromeImage = './assets/images/icon-foreground.png';
+  (androidConfig as Record<string, unknown>).newArchEnabled = true;
 
   return {
     name: 'Morse Code Master',
@@ -83,3 +89,5 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
   };
 };
+
+

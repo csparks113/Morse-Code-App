@@ -13,9 +13,13 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
+// Forward declaration of `ToneStartOptions` to properly resolve imports.
+namespace margelo::nitro::morse { struct ToneStartOptions; }
+// Forward declaration of `PlaybackRequest` to properly resolve imports.
+namespace margelo::nitro::morse { struct PlaybackRequest; }
 
-
-
+#include "ToneStartOptions.hpp"
+#include "PlaybackRequest.hpp"
 
 namespace margelo::nitro::morse {
 
@@ -48,7 +52,11 @@ namespace margelo::nitro::morse {
 
     public:
       // Methods
-      virtual void warmup() = 0;
+      virtual bool isSupported() = 0;
+      virtual void warmup(const ToneStartOptions& options) = 0;
+      virtual void startTone(const ToneStartOptions& options) = 0;
+      virtual void stopTone() = 0;
+      virtual void playMorse(const PlaybackRequest& request) = 0;
       virtual void teardown() = 0;
 
     protected:

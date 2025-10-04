@@ -5,6 +5,8 @@
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
 ## Completed (Today)
+- Relocated the workspace to `C:\dev\Morse`, reinstalled native dependencies, and rebuilt the Android dev client (with `expo-linear-gradient` + `react-native-audio-api`) so the app launches on device ahead of latency validation.
+- Defined the `OutputsAudio` Nitro interface, regenerated Nitrogen bindings, and documented the audio plugin override defaults in `docs/nitro-integration-prep.md`.
 - Built the shared `ToneController` in `utils/audio.ts` and migrated `services/outputs/defaultOutputsService` to the audio-api-first flow with backend-tagged latency logging.
 - Added the AudioAPI Gradle override plugin (`plugins/withAudioApiAndroidConfig.js`) and began logging keyer touch-to-output latency (tone/haptic/flash/torch) through the outputs service.
 - Integrated `react-native-audio-api` scaffolding: updated `utils/audio.ts` to prefer the Nitro module with an expo fallback, wired the Expo config/plugin, and added the placeholder Nitro spec (`outputs-native/audio.nitro.ts`).
@@ -53,7 +55,7 @@
 ### Audio Orchestrator
 1. Run on-device smoke tests (iOS/Android) to confirm the audio-api-first tone controller spins up quickly and logs backend metadata.
 2. Review the audio API Expo plugin options (background audio, permissions) and document overrides in `docs/nitro-integration-prep.md`.
-3. Define the `OutputsAudio` Nitro interface (replace the placeholder spec) before wiring orchestrator bindings.
+3. Implement the native `OutputsAudio` Nitro module once device validation passes, then wire the orchestrator entry points.
 
 ### Hygiene & Guardrails
 1. Update `docs/codex-handoff.md` at the end of every working session and run `npm run verify:handoff` so new chats resume with full context.
@@ -126,6 +128,15 @@
 3. Extend lesson data (characters, words, sentences) for Latin-based languages with diacritics.
 4. Update settings UI/workflows to add language selection and persistence.
 5. Capture the process in docs/multilanguage-plan.md and add localization QA checklists.
+
+
+
+
+
+
+
+
+
 
 
 
