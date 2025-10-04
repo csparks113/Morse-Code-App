@@ -30,11 +30,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         backgroundColor: '#000000',
       },
     ],
-    ['react-native-audio-api', {
-      iosBackgroundMode: false,
-      androidPermissions: [],
-      androidForegroundService: false,
-    }],
+    [
+      'react-native-audio-api',
+      {
+        iosBackgroundMode: false,
+        androidPermissions: [
+          'android.permission.FOREGROUND_SERVICE',
+          'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+        ],
+        androidForegroundService: true,
+        androidFSTypes: ['mediaPlayback'],
+      },
+    ],
     './plugins/withAudioApiAndroidConfig',
   ];
 

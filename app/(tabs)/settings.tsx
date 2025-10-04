@@ -310,7 +310,9 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
-      </Modal>          <Pressable
+      </Modal>
+
+          <Pressable
             accessibilityRole="button"
             onPress={handleUnlockPress}
             style={({ pressed }) => [styles.buildRow, pressed && styles.pressed]}

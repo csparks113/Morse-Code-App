@@ -8,15 +8,41 @@ Use this document to capture the single source of truth after each working sessi
 - **Owner:** Codex pairing session (update with your initials if another contributor takes over).
 
 ## Latest Update
-- **When:** 2025-10-03
-- **Summary:** Relocated the project to `C:\dev\Morse`, regenerated native artifacts, and produced a fresh Android dev client that bundles `react-native-audio-api` and `expo-linear-gradient`; the app now launches on the Galaxy S22+ and is ready for latency smoke testing.
-- **State:** Android dev client installed with the audio-api-first path active; latency validation and optional wake-lock/torch follow-ups remain outstanding before wiring the Nitro orchestrator.
+- **When:** 2025-10-03 (evening)
+- **Summary:** Validated latency instrumentation on the Galaxy S22+ dev client; flash and haptic paths respond in ~1-6 ms, but `react-native-audio-api` sidetone still shows 70-200 ms start/stop latency even after resuming during warm-up. Nitro loader now handles missing native bindings gracefully, and the Audio API plugin is back on its foreground-service defaults for further profiling.
+- **State:** Device is connected over `adb` with the audio-api backend active; latency results are logged in `docs/refactor-notes.md`. Next work is reducing audio latency or implementing the Nitro native module before flipping the orchestrator.
 
 ## Next Steps
 
-1. Run the Android smoke test (Developer Console -> Latency) and capture backend/latency samples for keyer presses and replay playback.
-2. Record the results (pass/fail, latency metrics, backend) in `docs/refactor-notes.md` and update planning docs with any follow-up tasks.
-3. Decide on production wake-lock/torch permissions and document the final override plan in `docs/nitro-integration-prep.md` before enabling Nitro bindings end-to-end.
+1. Investigate the ~80-120 ms sidetone delay on the Galaxy S22+: instrument Audio API native code if needed and capture additional `[audio-api]` timings for comparison.
+2. Kick off the Android-only Nitro `OutputsAudio` native module (estimate ~20-24 engineering hours): scaffold the spec implementation, integrate with Oboe/AAudio, and add JS fallbacks.
+3. Document recommended torch/wake-lock overrides in `docs/nitro-integration-prep.md` once the Nitro plan is chosen, then wire the full orchestrator.
+
+### Rebuild + Logging Recipe (Galaxy S22+)
+
+1. **Stop Metro** if it is running (`Ctrl+C` in the terminal window that is hosting `npx expo start`).
+2. **Reinstall the dev client** (PowerShell from `C:\dev\Morse`):
+   ```powershell
+   adb uninstall com.csparks113.MorseCodeApp  # optional but keeps things clean
+   setx EXPO_USE_NEW_ARCHITECTURE 1
+   npx expo run:android --device --variant debug
+   ```
+   Wait for Gradle to finish and install the fresh build on the S22+.
+3. **Restart Metro** in a clean shell (PowerShell or bash from `C:\dev\Morse`):
+   ```powershell
+   npx expo start --dev-client --clear
+   ```
+   Leave this session running; use another terminal for log collection.
+4. **Capture warm-up + tone logs** (new PowerShell window):
+   ```powershell
+   adb logcat -c
+   adb logcat ReactNativeJS:D ReactNative:W *:S | findstr /R /C:"keyer.prepare" /C:"keyer.tone"
+   ```
+   Trigger the Developer Console latency tests, then `Ctrl+C` to stop the log stream.
+   To drill into the Audio API stages, run a second tail:
+   ```powershell
+   adb logcat ReactNativeJS:D ReactNative:W *:S | findstr /C:"[audio-api]"
+   ```
 
 ## Device Smoke Test Checklist
 1. Install dependencies with `npm install` and ensure your Expo CLI is logged in.
@@ -30,8 +56,8 @@ Use this document to capture the single source of truth after each working sessi
 7. Capture any anomalies (fallback to Expo, delayed start/stop, console errors) and note results in `docs/refactor-notes.md` under **Completed (Today)** or follow-up tasks.
 
 ## Verification
-- **Outstanding checks:** Device smoke tests for tone playback + latency logging on the audio API path.
-- **Recent checks:** `npx expo run:android --device` (2025-10-03); `npx tsc --noEmit` (2025-10-03); `npx nitrogen` (generates stubs, 2025-10-03); `npm run verify:handoff` (passes).
+- **Outstanding checks:** Resolve high touch-to-tone latency on hardware and validate the Nitro `OutputsAudio` native implementation once built.
+- **Recent checks:** Galaxy S22+ Developer Console latency run (2025-10-03); `npx expo run:android --device` (2025-10-03); `npx tsc --noEmit` (2025-10-03); `npx nitrogen` (generates stubs, 2025-10-03).
 
 ## Reference Docs
 - `docs/refactor-notes.md` - master backlog and daily log.
@@ -48,4 +74,6 @@ Use this document to capture the single source of truth after each working sessi
 - [ ] Run `npm run verify:handoff` and resolve any failures.
 
 _Tip: Keep entries terse but explicit enough that a new chat can resume work immediately._
+
+
 

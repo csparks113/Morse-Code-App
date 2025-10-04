@@ -34,6 +34,7 @@
      - Persist channel samples in a dedicated telemetry buffer (200 most recent per channel) and derive mean/p50/p95/jitter + last sample metadata so the dev console/export hook can consume consistent aggregates.
      - Reference `docs/latency-instrumentation-blueprint.md` for capture topology, buffer schema, and console wiring details to keep implementation and measurement expectations aligned.
      - Outputs service now records keyer touch-to-tone/haptic/flash/torch latencies via `recordLatencySample`, feeding the developer console latency card.
+     - Added `keyer.prepare.complete` traces and `[audio-api] prepare/start` logging; results show the Audio API path still incurs 70-200 ms tone latency, so the next milestone is a Nitro native audio implementation (Android first).
    - **Orchestrator contract**
      - Draft the `OutputsOrchestrator` interface (`prepareChannels`, `engage`, `release`, `cancel`, `setTimelineOffset`) and document required timeline guarantees.
      - Define telemetry callbacks/events (success/failure, latency samples, warm-up complete) that the orchestrator must emit for downstream tooling.

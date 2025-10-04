@@ -252,9 +252,15 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   const prepare = async () => {
     if (!options.audioEnabled) return;
     const hz = resolveToneHz();
+    const startedAt = nowMs();
     traceOutputs('keyer.prepare', { hz });
     try {
       await toneController.prepare(hz);
+      traceOutputs('keyer.prepare.complete', {
+        hz,
+        backend: toneController.backend,
+        latencyMs: nowMs() - startedAt,
+      });
     } catch (error) {
       traceOutputs('keyer.prepare.error', {
         hz,

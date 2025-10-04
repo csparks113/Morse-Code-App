@@ -5,6 +5,11 @@
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
 ## Completed (Today)
+- Instrumented the Audio API tone controller to resume during warm-up and log prepare/resume/ramp timings (`[audio-api] start.*`/`stop.*`) so we can pinpoint where the 70-120 ms sidetone delay originates.
+- Added `keyer.prepare.complete` traces to capture warm-up durations and switched the Audio API plugin back to its foreground-service defaults for further latency profiling.
+- Resolved the Settings screen crash by removing stray whitespace between the reset modal and build row so no bare text nodes render outside `<Text>` components.
+- Captured Galaxy S22+ latency samples (Developer Console manual presses + replay): flash/haptics commit within ~1-6 ms while tone start/stop via `react-native-audio-api` still lags 70-120 ms (up to ~200 ms on short lesson taps); backend consistently reports `audio-api`.
+- Routed `createToneController` through the Nitro `OutputsAudio` hybrid when available, with safe fallbacks to the Audio API/Expo controllers so backend tagging and latency logging stay stable while native implementations are still pending; hardened the Nitro loader so dev builds skip `instanceof` when the `ModuleNotFoundError` export is missing.
 - Relocated the workspace to `C:\dev\Morse`, reinstalled native dependencies, and rebuilt the Android dev client (with `expo-linear-gradient` + `react-native-audio-api`) so the app launches on device ahead of latency validation.
 - Defined the `OutputsAudio` Nitro interface, regenerated Nitrogen bindings, and documented the audio plugin override defaults in `docs/nitro-integration-prep.md`.
 - Built the shared `ToneController` in `utils/audio.ts` and migrated `services/outputs/defaultOutputsService` to the audio-api-first flow with backend-tagged latency logging.
@@ -53,7 +58,7 @@
 2. Monitor guard coverage across dev/practice and plan the next expansion (settings/home) once the signal stays clean.
 
 ### Audio Orchestrator
-1. Run on-device smoke tests (iOS/Android) to confirm the audio-api-first tone controller spins up quickly and logs backend metadata.
+1. Reconnect the Galaxy S22+ so `adb devices` lists it, then run the Android latency smoke test (Developer Console -> Latency) to confirm the Nitro-aware tone controller still logs backend metadata; follow with iOS once the Android sample is captured.
 2. Review the audio API Expo plugin options (background audio, permissions) and document overrides in `docs/nitro-integration-prep.md`.
 3. Implement the native `OutputsAudio` Nitro module once device validation passes, then wire the orchestrator entry points.
 
@@ -71,7 +76,7 @@
 ### Output Architecture Preparation\r\n- Status: Carry forward; schedule after Foundations benchmarks unless console gaps block latency tooling.\r\n1. Persist console filter/search state once developer mode toggles survive reloads.
 2. Prototype segmented trace buffers versus the current 200-event ring before raising history limits.
 3. Explore file-based or streaming exports so long developer sessions are not limited by the Share sheet payload size.
-4. Add a Settings � Output card (below Language) linking to an output settings screen covering audio volume, tone frequency, vibration intensity, and screen flash brightness�with room to extend later.
+4. Add a Settings ??? Output card (below Language) linking to an output settings screen covering audio volume, tone frequency, vibration intensity, and screen flash brightness???with room to extend later.
 
 ### Outputs Rewire Plan
 - Status 2025-10-03: Shared `ToneController` + audio-api-first playback are live; device validation and Nitro outputs bindings remain outstanding.
@@ -128,26 +133,6 @@
 3. Extend lesson data (characters, words, sentences) for Latin-based languages with diacritics.
 4. Update settings UI/workflows to add language selection and persistence.
 5. Capture the process in docs/multilanguage-plan.md and add localization QA checklists.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

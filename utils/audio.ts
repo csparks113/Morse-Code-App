@@ -45,6 +45,74 @@ async function ensureExpoAudioModule(): Promise<any | null> {
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { AudioContext as AudioApiContext, GainNode as AudioApiGainNode, OscillatorNode as AudioApiOscillatorNode } from 'react-native-audio-api';
+import type { OutputsAudio } from '@/outputs-native/audio.nitro';
+
+type NitroModulesExports = typeof import('react-native-nitro-modules');
+
+let nitroModules: NitroModulesExports | null = null;
+let nitroModulesAttempted = false;
+
+function loadNitroModules(): NitroModulesExports | null {
+  if (nitroModulesAttempted) {
+    return nitroModules;
+  }
+  nitroModulesAttempted = true;
+  if (Platform.OS === 'web') {
+    nitroModules = null;
+    return nitroModules;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    nitroModules = require('react-native-nitro-modules') as NitroModulesExports;
+  } catch (error) {
+    if (__DEV__ && !(error instanceof Error && error.name === 'ModuleNotFoundError')) {
+      console.warn('Nitro modules unavailable:', error);
+    }
+    nitroModules = null;
+  }
+  return nitroModules;
+}
+
+let outputsAudioModule: OutputsAudio | null = null;
+let outputsAudioLoaded = false;
+let outputsAudioLoadLogged = false;
+
+function loadOutputsAudio(): OutputsAudio | null {
+  if (outputsAudioLoaded) {
+    return outputsAudioModule;
+  }
+  outputsAudioLoaded = true;
+  if (Platform.OS === 'web') {
+    outputsAudioModule = null;
+    return outputsAudioModule;
+  }
+  const nitro = loadNitroModules();
+  if (!nitro) {
+    outputsAudioModule = null;
+    return outputsAudioModule;
+  }
+  const { NitroModules, ModuleNotFoundError } = nitro;
+  const moduleNotFoundCtor =
+    typeof ModuleNotFoundError === 'function' ? ModuleNotFoundError : null;
+  try {
+    const instance = NitroModules.createHybridObject<OutputsAudio>('OutputsAudio');
+    if (instance?.isSupported?.() === true) {
+      outputsAudioModule = instance;
+    } else {
+      outputsAudioModule = null;
+    }
+  } catch (error) {
+    const isExpectedModuleMissing = moduleNotFoundCtor
+      ? error instanceof moduleNotFoundCtor
+      : false;
+    if (__DEV__ && !isExpectedModuleMissing && !outputsAudioLoadLogged) {
+      outputsAudioLoadLogged = true;
+      console.warn('OutputsAudio Nitro module initialization failed:', error);
+    }
+    outputsAudioModule = null;
+  }
+  return outputsAudioModule;
+}
 
 // Shared settings
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -159,6 +227,9 @@ async function configureAudioApiSession(audioApi: AudioApiModule) {
     audioApi.AudioManager.observeAudioInterruptions(true);
   } catch (error) {
     // ignore configuration failures
+  }
+  if (__DEV__) {
+    console.log('[audio-api] session.configure');
   }
   audioApiConfigured = true;
 }
@@ -431,7 +502,7 @@ async function playMorseCodeExpoNative(code: string, unitMsArg?: number, opts: P
   }
 }
 
-type ToneControllerBackend = 'audio-api' | 'expo' | 'web' | 'noop';
+type ToneControllerBackend = 'nitro' | 'audio-api' | 'expo' | 'web' | 'noop';
 
 export type ToneController = {
   prepare(hz: number): Promise<void>;
@@ -573,11 +644,60 @@ function createWebToneController(): ToneController {
   };
 }
 
+const NITRO_DEFAULT_TONE_HZ = 600;
+
+function createNitroToneController(outputsAudio: OutputsAudio): ToneController {
+  let currentHz: number | null = null;
+
+  const resolveHz = (hz?: number) => {
+    if (typeof hz === 'number' && Number.isFinite(hz)) {
+      currentHz = hz;
+      return hz;
+    }
+    if (currentHz != null) {
+      return currentHz;
+    }
+    currentHz = NITRO_DEFAULT_TONE_HZ;
+    return currentHz;
+  };
+
+  return {
+    backend: 'nitro',
+    getCurrentHz: () => currentHz,
+    prepare: async (hz: number) => {
+      const toneHz = resolveHz(hz);
+      outputsAudio.warmup({ toneHz });
+    },
+    start: async (hz?: number) => {
+      const toneHz = resolveHz(hz);
+      outputsAudio.startTone({ toneHz });
+    },
+    stop: async () => {
+      outputsAudio.stopTone();
+    },
+    teardown: async () => {
+      outputsAudio.teardown();
+      currentHz = null;
+    },
+  };
+}
+
 function createAudioApiToneController(audioApi: AudioApiModule): ToneController {
   let ctx: AudioApiContext | null = null;
   let gain: AudioApiGainNode | null = null;
   let osc: AudioApiOscillatorNode | null = null;
   let currentHz: number | null = null;
+
+  const now = () => {
+    const perf = (globalThis as any)?.performance;
+    return typeof perf?.now === 'function' ? perf.now() : Date.now();
+  };
+
+  const logAudioApi = (event: string, payload: Record<string, unknown> = {}) => {
+    if (__DEV__) {
+      console.log(`[audio-api] ${event}`, payload);
+    }
+  };
 
   const ensureGraph = (hz: number) => {
     if (!ctx) {
@@ -603,30 +723,69 @@ function createAudioApiToneController(audioApi: AudioApiModule): ToneController 
   const prepare = async (hz: number) => {
     await configureAudioApiSession(audioApi);
     ensureGraph(hz);
+    if (__DEV__) {
+      logAudioApi('prepare.graph', { hz, hasContext: !!ctx, hasOsc: !!osc });
+    }
+    if (ctx) {
+      const resumeStartedAt = now();
+      try {
+        await ctx.resume();
+      } catch {
+        // ignore
+      }
+      if (__DEV__) {
+        logAudioApi('prepare.resume', {
+          hz,
+          latencyMs: now() - resumeStartedAt,
+        });
+      }
+    }
   };
 
   const start = async (hz?: number) => {
     const target = typeof hz === 'number' ? hz : currentHz ?? 600;
+    const requestedAt = now();
+    const prepareStartedAt = now();
     await prepare(target);
+    const preparedAt = now();
+    logAudioApi('start.prepare', {
+      hz: target,
+      latencyMs: preparedAt - prepareStartedAt,
+    });
     if (!ctx || !gain) {
       return;
     }
+    const resumeStartedAt = now();
     try {
       await ctx.resume();
     } catch {
       // ignore
     }
+    const resumedAt = now();
+    logAudioApi('start.resume', {
+      hz: target,
+      latencyMs: resumedAt - resumeStartedAt,
+    });
     gain.gain.cancelScheduledValues(ctx.currentTime);
     gain.gain.setValueAtTime(0, ctx.currentTime);
     gain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.005);
+    logAudioApi('start.ramp', {
+      hz: target,
+      totalMs: now() - requestedAt,
+    });
   };
 
   const stop = async () => {
     if (!ctx || !gain) {
       return;
     }
+    const stopStartedAt = now();
     gain.gain.cancelScheduledValues(ctx.currentTime);
     gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.003);
+    logAudioApi('stop.ramp', {
+      hz: currentHz,
+      totalMs: now() - stopStartedAt,
+    });
   };
 
   const teardown = async () => {
@@ -809,6 +968,10 @@ function createExpoToneController(): ToneController {
 export function createToneController(): ToneController {
   if (Platform.OS === 'web') {
     return createWebToneController();
+  }
+  const outputsAudio = loadOutputsAudio();
+  if (outputsAudio) {
+    return createNitroToneController(outputsAudio);
   }
   const audioApi = loadAudioApi();
   if (audioApi) {
