@@ -26,20 +26,54 @@ export default function RootLayout() {
   const [ready, setReady] = React.useState(false);
 
   React.useEffect(() => {
-    configureAudio();
+    let cancelled = false;
+    const started = Date.now();
+    console.log('[RootLayout] configureAudio start');
+
+    (async () => {
+      try {
+        await configureAudio();
+        if (!cancelled) {
+          console.log('[RootLayout] configureAudio success', {
+            elapsedMs: Date.now() - started,
+          });
+        }
+      } catch (error) {
+        console.error('[RootLayout] configureAudio failed', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   React.useEffect(() => {
-    let mounted = true;
+    let cancelled = false;
+    const started = Date.now();
+    console.log('[RootLayout] initI18n start');
 
-    initI18n()
-      .catch(() => setReady(true))
-      .finally(() => {
-        if (mounted) setReady(true);
-      });
+    (async () => {
+      try {
+        await initI18n();
+        if (!cancelled) {
+          console.log('[RootLayout] initI18n success', {
+            elapsedMs: Date.now() - started,
+          });
+        }
+      } catch (error) {
+        console.error('[RootLayout] initI18n failed', error);
+      } finally {
+        if (!cancelled) {
+          setReady(true);
+        } else {
+          console.log('[RootLayout] initI18n aborted');
+        }
+      }
+    })();
 
     return () => {
-      mounted = false;
+      cancelled = true;
     };
   }, []);
 

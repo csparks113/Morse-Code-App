@@ -1,10 +1,10 @@
-### Using This Log
+﻿### Using This Log
 - Capture each day's finished work in **Completed (Today)** so anyone skimming the file can see what moved recently.
 - Treat **Next Steps** as the living backlog: rewrite items when priorities shift and remove them only after the work ships.
 - When you pick up a task, copy the relevant bullet into your working notes and expand it with acceptance criteria, links, or test plans.
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
-## Completed (Today)
+- Implemented the Android Nitro `OutputsAudio` backend: added the C++ hybrid (`nitrogen/generated/android/c++/OutputsAudio.{hpp,cpp}`) with Oboe stream warm-up/start/stop/play logic, a Kotlin loader for eager library init, and a dedicated CMake target under `android/app/src/main/cpp` so the module ships with the dev client; JS now prefers Nitro via `shouldPreferNitroOutputs()` (env toggles `EXPO_FORCE_NITRO_OUTPUTS` / `EXPO_DISABLE_NITRO_OUTPUTS`) and routes tone/replay through `playMorseCodeNitro` while falling back to the Audio API/Expo controllers when Nitro is unavailable.
 - Instrumented the Audio API tone controller to resume during warm-up and log prepare/resume/ramp timings (`[audio-api] start.*`/`stop.*`) so we can pinpoint where the 70-120 ms sidetone delay originates.
 - Added `keyer.prepare.complete` traces to capture warm-up durations and switched the Audio API plugin back to its foreground-service defaults for further latency profiling.
 - Resolved the Settings screen crash by removing stray whitespace between the reset modal and build row so no bare text nodes render outside `<Text>` components.
@@ -58,9 +58,9 @@
 2. Monitor guard coverage across dev/practice and plan the next expansion (settings/home) once the signal stays clean.
 
 ### Audio Orchestrator
-1. Reconnect the Galaxy S22+ so `adb devices` lists it, then run the Android latency smoke test (Developer Console -> Latency) to confirm the Nitro-aware tone controller still logs backend metadata; follow with iOS once the Android sample is captured.
-2. Review the audio API Expo plugin options (background audio, permissions) and document overrides in `docs/nitro-integration-prep.md`.
-3. Implement the native `OutputsAudio` Nitro module once device validation passes, then wire the orchestrator entry points.
+1. Rebuild the Android dev client with the Nitro module, rerun the Galaxy S22+ latency tests (Developer Console -> Latency), and capture both `[outputs-audio]` and `keyer.*` logs to compare Nitro start/stop timings against the existing Audio API baseline.
+2. Exercise `EXPO_FORCE_NITRO_OUTPUTS` / `EXPO_DISABLE_NITRO_OUTPUTS` toggles to confirm Nitro <-> Audio API fallbacks work end-to-end (keyer + replay) and document the expected behavior in the handoff notes.
+3. Revisit the Audio API Expo plugin overrides (background audio, permissions) now that Nitro is active, decide on the production defaults, and record the outcome in `docs/nitro-integration-prep.md`.
 
 ### Hygiene & Guardrails
 1. Update `docs/codex-handoff.md` at the end of every working session and run `npm run verify:handoff` so new chats resume with full context.
@@ -69,11 +69,15 @@
 4. Add simple mocks/tests around the outputs service to protect against regressions during future rewrites.
 5. Integrate `npm run check:session-controls` into CI so the spacing guard runs automatically (not just locally).
 
-### Output Touchpoint Inventory (Current)\r\n- Status: Pending; monitor alongside Foundations work so UI + telemetry docs stay aligned.\r\n1. Surface torch availability and instrumentation feedback in the UI (fallback messaging + metrics).
+### Output Touchpoint Inventory (Current)
+- Status: Pending; monitor alongside Foundations work so UI + telemetry docs stay aligned.
+1. Surface torch availability and instrumentation feedback in the UI (fallback messaging + metrics).
 2. Document the offset-tuning workflow and expose the knobs inside the developer console.
 3. Publish a short guide summarising the new `outputs.*` trace metrics (latency, source counts) so offset tuning is data-driven.
 
-### Output Architecture Preparation\r\n- Status: Carry forward; schedule after Foundations benchmarks unless console gaps block latency tooling.\r\n1. Persist console filter/search state once developer mode toggles survive reloads.
+### Output Architecture Preparation
+- Status: Carry forward; schedule after Foundations benchmarks unless console gaps block latency tooling.
+1. Persist console filter/search state once developer mode toggles survive reloads.
 2. Prototype segmented trace buffers versus the current 200-event ring before raising history limits.
 3. Explore file-based or streaming exports so long developer sessions are not limited by the Share sheet payload size.
 4. Add a Settings ??? Output card (below Language) linking to an output settings screen covering audio volume, tone frequency, vibration intensity, and screen flash brightness???with room to extend later.
@@ -133,6 +137,14 @@
 3. Extend lesson data (characters, words, sentences) for Latin-based languages with diacritics.
 4. Update settings UI/workflows to add language selection and persistence.
 5. Capture the process in docs/multilanguage-plan.md and add localization QA checklists.
+
+
+
+
+
+
+
+
 
 
 

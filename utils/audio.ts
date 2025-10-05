@@ -1,4 +1,4 @@
-type AudioApiModule = typeof import('react-native-audio-api');
+﻿type AudioApiModule = typeof import('react-native-audio-api');
 
 let audioApiModule: AudioApiModule | null = null;
 let audioApiModuleLoaded = false;
@@ -45,7 +45,7 @@ async function ensureExpoAudioModule(): Promise<any | null> {
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { AudioContext as AudioApiContext, GainNode as AudioApiGainNode, OscillatorNode as AudioApiOscillatorNode } from 'react-native-audio-api';
-import type { OutputsAudio } from '@/outputs-native/audio.nitro';
+import type { OutputsAudio, PlaybackSymbol } from '@/outputs-native/audio.nitro';
 
 type NitroModulesExports = typeof import('react-native-nitro-modules');
 
@@ -76,18 +76,93 @@ function loadNitroModules(): NitroModulesExports | null {
 let outputsAudioModule: OutputsAudio | null = null;
 let outputsAudioLoaded = false;
 let outputsAudioLoadLogged = false;
+let outputsAudioPreferenceLogged = false;
+
+const nitroProcessEnv = ((globalThis as any)?.process?.env ?? {}) as Record<string, string | undefined>;
+const disableNitroOutputsEnv = nitroProcessEnv?.EXPO_DISABLE_NITRO_OUTPUTS;
+const forceNitroOutputsEnv = nitroProcessEnv?.EXPO_FORCE_NITRO_OUTPUTS;
+
+const runtimeNitroOutputsFlag = (() => {
+  const flags = (globalThis as any)?.__morseFeatureFlags;
+  const value = flags?.nitroOutputs;
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (value && typeof value === 'object') {
+    if (typeof value.enabled === 'boolean') {
+      return value.enabled;
+    }
+    if (typeof value.prefer === 'boolean') {
+      return value.prefer;
+    }
+  }
+  return null;
+})();
+
+type NitroPreference = {
+  enabled: boolean;
+  reason: 'platform' | 'forced' | 'env-disabled' | 'runtime' | 'default';
+};
+
+let cachedNitroPreference: NitroPreference | null = null;
+
+const isTruthy = (value?: string) => {
+  if (!value) {
+    return false;
+  }
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+};
+
+function evaluateNitroPreference(): NitroPreference {
+  if (Platform.OS !== 'android') {
+    return { enabled: false, reason: 'platform' };
+  }
+  if (isTruthy(forceNitroOutputsEnv)) {
+    return { enabled: true, reason: 'forced' };
+  }
+  if (isTruthy(disableNitroOutputsEnv)) {
+    return { enabled: false, reason: 'env-disabled' };
+  }
+  if (runtimeNitroOutputsFlag != null) {
+    return { enabled: runtimeNitroOutputsFlag, reason: 'runtime' };
+  }
+  return { enabled: true, reason: 'default' };
+}
+
+function getNitroPreference(): NitroPreference {
+  if (!cachedNitroPreference) {
+    cachedNitroPreference = evaluateNitroPreference();
+  }
+  return cachedNitroPreference;
+}
+
+function shouldPreferNitroOutputs(): boolean {
+  return getNitroPreference().enabled;
+}
 
 function loadOutputsAudio(): OutputsAudio | null {
   if (outputsAudioLoaded) {
     return outputsAudioModule;
   }
   outputsAudioLoaded = true;
-  if (Platform.OS === 'web') {
+
+  const preference = getNitroPreference();
+  if (!preference.enabled) {
     outputsAudioModule = null;
+    if (__DEV__ && !outputsAudioPreferenceLogged) {
+      outputsAudioPreferenceLogged = true;
+      console.log('[outputs-audio] nitro.disabled', { reason: preference.reason });
+    }
     return outputsAudioModule;
   }
+
   const nitro = loadNitroModules();
   if (!nitro) {
+    if (__DEV__ && !outputsAudioLoadLogged) {
+      outputsAudioLoadLogged = true;
+      console.warn('OutputsAudio Nitro module unavailable: base Nitrogen loader missing');
+    }
     outputsAudioModule = null;
     return outputsAudioModule;
   }
@@ -99,6 +174,10 @@ function loadOutputsAudio(): OutputsAudio | null {
     if (instance?.isSupported?.() === true) {
       outputsAudioModule = instance;
     } else {
+      if (__DEV__ && !outputsAudioLoadLogged) {
+        outputsAudioLoadLogged = true;
+        console.warn('OutputsAudio Nitro module reported unsupported hardware; falling back.');
+      }
       outputsAudioModule = null;
     }
   } catch (error) {
@@ -353,6 +432,18 @@ async function configureExpoAudio(): Promise<void> {
 }
 
 export async function configureAudio(): Promise<void> {
+  if (shouldPreferNitroOutputs()) {
+    const outputsAudio = loadOutputsAudio();
+    if (outputsAudio) {
+      const { toneHz } = (useSettingsStore.getState() as any) || { toneHz: NITRO_DEFAULT_TONE_HZ };
+      const resolvedHz = Number.isFinite(toneHz)
+        ? Math.max(100, Math.min(2000, Math.floor(toneHz)))
+        : NITRO_DEFAULT_TONE_HZ;
+      outputsAudio.warmup({ toneHz: resolvedHz });
+      return;
+    }
+  }
+
   const audioApi = loadAudioApi();
   if (audioApi) {
     await configureAudioApiSession(audioApi);
@@ -646,6 +737,8 @@ function createWebToneController(): ToneController {
 
 const NITRO_DEFAULT_TONE_HZ = 600;
 
+let nitroPlaybackToken = 0;
+
 function createNitroToneController(outputsAudio: OutputsAudio): ToneController {
   let currentHz: number | null = null;
 
@@ -682,6 +775,72 @@ function createNitroToneController(outputsAudio: OutputsAudio): ToneController {
   };
 }
 
+async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unitMsArg?: number, opts: PlayOpts = {}) {
+  const { toneHz } = (useSettingsStore.getState() as any) || { toneHz: NITRO_DEFAULT_TONE_HZ };
+  const unitMs = Math.max(10, Math.floor(unitMsArg ?? getMorseUnitMs()));
+  const hz = Math.max(100, Math.min(2000, Math.floor(opts.hz ?? toneHz ?? NITRO_DEFAULT_TONE_HZ)));
+
+  const pattern: PlaybackSymbol[] = [];
+  const durations: number[] = [];
+  const token = ++nitroPlaybackToken;
+
+  for (let i = 0; i < code.length; i += 1) {
+    const symbol = code[i] as PlaybackSymbol | ' ';
+    if (symbol === '.' || symbol === '-') {
+      const duration = symbol === '.' ? unitMs : unitMs * 3;
+      pattern.push(symbol);
+      durations.push(duration);
+    } else {
+      const gap = unitMs * 3;
+      opts.onGap?.(gap);
+      await sleep(gap);
+      if (token !== nitroPlaybackToken) {
+        return;
+      }
+    }
+  }
+
+  if (pattern.length === 0) {
+    return;
+  }
+
+  try {
+    outputsAudio.warmup({ toneHz: hz });
+    outputsAudio.playMorse({ toneHz: hz, unitMs, pattern });
+  } catch (error) {
+    if (__DEV__) {
+      console.warn('OutputsAudio.playMorse failed, falling back to Audio API:', error);
+    }
+    await playMorseCodeAudioApi(code, unitMs, opts);
+    return;
+  }
+
+  for (let i = 0; i < pattern.length; i += 1) {
+    if (token !== nitroPlaybackToken) {
+      return;
+    }
+
+    const symbol = pattern[i];
+    const duration = durations[i];
+    opts.onSymbolStart?.(symbol, duration);
+    await sleep(duration);
+
+    if (token !== nitroPlaybackToken) {
+      return;
+    }
+
+    opts.onSymbolEnd?.(symbol, duration);
+
+    if (i < pattern.length - 1) {
+      const gap = unitMs;
+      opts.onGap?.(gap);
+      await sleep(gap);
+      if (token !== nitroPlaybackToken) {
+        return;
+      }
+    }
+  }
+}
 function createAudioApiToneController(audioApi: AudioApiModule): ToneController {
   let ctx: AudioApiContext | null = null;
   let gain: AudioApiGainNode | null = null;
@@ -988,6 +1147,11 @@ export async function playMorseCode(code: string, unitMsArg?: number, opts: Play
     return playMorseCodeWeb(code, unitMsArg, opts);
   }
 
+  const outputsAudio = shouldPreferNitroOutputs() ? loadOutputsAudio() : null;
+  if (outputsAudio) {
+    return playMorseCodeNitro(outputsAudio, code, unitMsArg, opts);
+  }
+
   if (loadAudioApi()) {
     return playMorseCodeAudioApi(code, unitMsArg, opts);
   }
@@ -1027,6 +1191,16 @@ export function stopPlayback(): void {
     return;
   }
 
+  const outputsAudio = shouldPreferNitroOutputs() ? loadOutputsAudio() : null;
+  if (outputsAudio) {
+    nitroPlaybackToken += 1;
+    try {
+      outputsAudio.stopTone();
+    } catch {
+      // ignore
+    }
+  }
+
   if (loadAudioApi()) {
     stopPlaybackAudioApi();
     return;
@@ -1037,3 +1211,23 @@ export function stopPlayback(): void {
 
 // Utils
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

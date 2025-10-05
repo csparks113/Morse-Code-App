@@ -1,0 +1,63 @@
+diff --git a/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts b/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
+index 69814d8..67b8ab3 100644
+--- a/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
++++ b/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
+@@ -91,6 +91,7 @@ val prefabHeadersDir = File("$buildDir/prefab-headers")
+ 
+ // We inject the JSI directory used inside the Hermes build with the -DJSI_DIR config.
+ val jsiDir = File(reactNativeRootDir, "ReactCommon/jsi")
++val jsiDirInput = jsiDir.absolutePath.replace("\\", "/")
+ 
+ val downloadHermesDest = File(downloadsDir, "hermes.tar.gz")
+ val downloadHermes by
+@@ -148,10 +149,39 @@ val configureBuildForHermes by
+               ".",
+               "-B",
+               hermesBuildDir.toString(),
+-              "-DJSI_DIR=" + jsiDir.absolutePath,
++              "-DJSI_DIR=" + jsiDirInput,
+           )
++      var cmakeMakeProgram: String? = null
+       if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+-        cmakeCommandLine = cmakeCommandLine + "-GNMake Makefiles"
++        val vcInstallDir = System.getenv("VCINSTALLDIR")
++        logger.lifecycle("[Hermes] vcInstallDir=${vcInstallDir}")
++        if (!vcInstallDir.isNullOrBlank()) {
++          val hostBin = File(vcInstallDir, "Tools/MSVC")
++            .listFiles()
++            ?.sortedByDescending { it.name }
++            ?.mapNotNull { candidate ->
++              val hostDir = File(candidate, "bin/Hostx64/x64")
++              if (File(hostDir, "nmake.exe").exists()) hostDir else null
++            }
++            ?.firstOrNull()
++          if (hostBin != null) {
++            val originalPath = System.getenv("PATH") ?: ""
++            environment("PATH", hostBin.absolutePath + File.pathSeparator + originalPath)
++            val nmakePath = File(hostBin, "nmake.exe").absolutePath
++            environment("CMAKE_MAKE_PROGRAM", nmakePath)
++            cmakeMakeProgram = nmakePath
++            logger.lifecycle("[Hermes] hostBin=${hostBin.absolutePath}")
++          }
++        }
++        cmakeCommandLine = if (cmakeMakeProgram != null) {
++          cmakeCommandLine + listOf("-GNMake Makefiles", "-DCMAKE_MAKE_PROGRAM=${cmakeMakeProgram}")
++        } else {
++          cmakeCommandLine + "-GNMake Makefiles"
++        }
++      } else {
++        if (cmakeMakeProgram != null) {
++          cmakeCommandLine = cmakeCommandLine + "-DCMAKE_MAKE_PROGRAM=${cmakeMakeProgram}"
++        }
+       }
+       commandLine(cmakeCommandLine)
+       standardOutputFile.set(project.file("$buildDir/configure-hermesc.log"))
+@@ -258,7 +288,7 @@ android {
+             "-DANDROID_PIE=True",
+             "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+             "-DIMPORT_HERMESC=${File(hermesBuildDir, "ImportHermesc.cmake").toString()}",
+-            "-DJSI_DIR=${jsiDir}",
++            "-DJSI_DIR=${jsiDirInput}",
+             "-DHERMES_BUILD_SHARED_JSI=True",
+             "-DHERMES_RELEASE_VERSION=for RN ${version}",
+             "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True",

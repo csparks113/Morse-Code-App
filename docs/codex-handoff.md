@@ -1,4 +1,4 @@
-# Codex Handoff Log
+﻿# Codex Handoff Log
 
 Use this document to capture the single source of truth after each working session. Update the sections below before ending work so future chats can resume without reconstructing context.
 
@@ -14,9 +14,9 @@ Use this document to capture the single source of truth after each working sessi
 
 ## Next Steps
 
-1. Investigate the ~80-120 ms sidetone delay on the Galaxy S22+: instrument Audio API native code if needed and capture additional `[audio-api]` timings for comparison.
-2. Kick off the Android-only Nitro `OutputsAudio` native module (estimate ~20-24 engineering hours): scaffold the spec implementation, integrate with Oboe/AAudio, and add JS fallbacks.
-3. Document recommended torch/wake-lock overrides in `docs/nitro-integration-prep.md` once the Nitro plan is chosen, then wire the full orchestrator.
+1. Rebuild the Android dev client with the Nitro `OutputsAudio` module, rerun the Galaxy S22+ latency tests (Developer Console -> Latency), and capture both `[outputs-audio]` and `keyer.*` logs to quantify Nitro start/stop timings against the previous Audio API baseline.
+2. Toggle `EXPO_FORCE_NITRO_OUTPUTS` / `EXPO_DISABLE_NITRO_OUTPUTS` to confirm Nitro <-> Audio API fallbacks behave end-to-end (keyer + replay) and note the expected behavior in the handoff log.
+3. Document the final torch/wake-lock + audio-permission recommendations in `docs/nitro-integration-prep.md`, then schedule the orchestrator flip once latency targets (<15 ms touch-to-tone) are met on hardware.
 
 ### Rebuild + Logging Recipe (Galaxy S22+)
 
@@ -74,6 +74,8 @@ Use this document to capture the single source of truth after each working sessi
 - [ ] Run `npm run verify:handoff` and resolve any failures.
 
 _Tip: Keep entries terse but explicit enough that a new chat can resume work immediately._
+
+
 
 
 

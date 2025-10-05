@@ -1,0 +1,1472 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:shared:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileJava NO-SOURCE
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:processResources NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:classes UP-TO-DATE
+> Task :gradle-plugin:shared:classes UP-TO-DATE
+> Task :gradle-plugin:shared:jar UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:jar UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:jar UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:jar UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-module-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-module-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-module-gradle-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
+> Task :expo-module-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :expo-module-gradle-plugin:compileJava NO-SOURCE
+> Task :expo-module-gradle-plugin:classes UP-TO-DATE
+> Task :expo-module-gradle-plugin:jar UP-TO-DATE
+
+> Configure project :
+[32m[ExpoRootProject][0m Using the following versions:
+  - buildTools:  [32m36.0.0[0m
+  - minSdk:      [32m24[0m
+  - compileSdk:  [32m36[0m
+  - targetSdk:   [32m36[0m
+  - ndk:         [32m27.1.12297006[0m
+  - kotlin:      [32m2.1.20[0m
+  - ksp:         [32m2.1.20-2.0.1[0m
+
+> Configure project :app
+[NitroModules] morseNitro is boosted by nitro!
+
+> Configure project :expo
+
+Using expo modules
+  - [32mexpo-constants[0m (18.0.8)
+  - [32mexpo-modules-core[0m (3.0.15)
+  - [32mexpo-torch[0m (0.1.0)
+  - [33m[?][0m [32mexpo-asset[0m (12.0.8)
+  - [33m[?][0m [32mexpo-audio[0m (1.0.13)
+  - [33m[?][0m [32mexpo-blur[0m (15.0.7)
+  - [33m[?][0m [32mexpo-file-system[0m (19.0.14)
+  - [33m[?][0m [32mexpo-font[0m (14.0.8)
+  - [33m[?][0m [32mexpo-haptics[0m (15.0.7)
+  - [33m[?][0m [32mexpo-image[0m (3.0.8)
+  - [33m[?][0m [32mexpo-keep-awake[0m (15.0.7)
+  - [33m[?][0m [32mexpo-linear-gradient[0m (15.0.7)
+  - [33m[?][0m [32mexpo-linking[0m (8.0.8)
+  - [33m[?][0m [32mexpo-localization[0m (17.0.7)
+  - [33m[?][0m [32mexpo-splash-screen[0m (31.0.10)
+  - [33m[?][0m [32mexpo-system-ui[0m (6.0.7)
+  - [33m[?][0m [32mexpo-web-browser[0m (15.0.7)
+
+
+> Configure project :react-native-nitro-haptics
+[NitroModules] ? NitroHaptics is boosted by nitro!
+
+> Configure project :react-native-nitro-modules
+[NitroModules] ? Your app is boosted by nitro modules!
+
+> Configure project :react-native:packages:react-native:ReactAndroid:hermes-engine
+[Hermes] vcInstallDir=C:\Program Files\Microsoft Visual Studio\18\Insiders\VC\
+[Hermes] hostBin=C:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Tools\MSVC\14.50.35503\bin\Hostx64\x64
+
+> Task :expo-torch:preBuild UP-TO-DATE
+> Task :react-native-audio-api:assertMinimalReactNativeVersionTask SKIPPED
+> Task :react-native-masked-view_masked-view:preBuild UP-TO-DATE
+> Task :expo-modules-core:preBuild UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:installCMake
+> Task :expo-modules-core:preDebugBuild UP-TO-DATE
+> Task :expo:generatePackagesList UP-TO-DATE
+> Task :expo:preBuild UP-TO-DATE
+> Task :expo:preDebugBuild UP-TO-DATE
+> Task :expo-modules-core:writeDebugAarMetadata UP-TO-DATE
+> Task :app:generateAutolinkingNewArchitectureFiles UP-TO-DATE
+> Task :expo-torch:preDebugBuild UP-TO-DATE
+> Task :expo:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-masked-view_masked-view:preDebugBuild UP-TO-DATE
+> Task :react-native-gesture-handler:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-audio-api:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :expo-torch:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-masked-view_masked-view:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-safe-area-context:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-webview:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-nitro-modules:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-screens:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-community_slider:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :expo:generateDebugResValues UP-TO-DATE
+> Task :expo-modules-core:generateDebugResValues UP-TO-DATE
+> Task :expo:generateDebugResources UP-TO-DATE
+> Task :expo-modules-core:generateDebugResources UP-TO-DATE
+> Task :react-native-gesture-handler:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-gesture-handler:preBuild UP-TO-DATE
+> Task :react-native-gesture-handler:preDebugBuild UP-TO-DATE
+> Task :react-native-gesture-handler:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-torch:generateDebugResValues UP-TO-DATE
+> Task :react-native-safe-area-context:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-audio-api:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-safe-area-context:preBuild UP-TO-DATE
+> Task :react-native-audio-api:preBuild UP-TO-DATE
+> Task :react-native-safe-area-context:preDebugBuild UP-TO-DATE
+> Task :react-native-nitro-modules:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preBuild UP-TO-DATE
+> Task :react-native-community_slider:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :expo-modules-core:packageDebugResources UP-TO-DATE
+> Task :expo:packageDebugResources UP-TO-DATE
+> Task :expo-torch:generateDebugResources UP-TO-DATE
+> Task :react-native-webview:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preDebugBuild UP-TO-DATE
+> Task :react-native-community_slider:preBuild UP-TO-DATE
+> Task :react-native-audio-api:preDebugBuild UP-TO-DATE
+> Task :react-native-webview:preBuild UP-TO-DATE
+> Task :react-native-community_slider:preDebugBuild UP-TO-DATE
+> Task :react-native-screens:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-screens:preBuild UP-TO-DATE
+> Task :react-native-webview:preDebugBuild UP-TO-DATE
+> Task :react-native-safe-area-context:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-screens:preDebugBuild UP-TO-DATE
+> Task :react-native-gesture-handler:generateDebugResValues UP-TO-DATE
+> Task :react-native-community_slider:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-audio-api:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-async-storage_async-storage:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-masked-view_masked-view:generateDebugResValues UP-TO-DATE
+> Task :react-native-webview:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-gesture-handler:generateDebugResources UP-TO-DATE
+> Task :react-native-screens:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-webview:generateDebugResValues UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateDebugResValues UP-TO-DATE
+> Task :react-native-safe-area-context:generateDebugResValues UP-TO-DATE
+> Task :react-native-community_slider:generateDebugResValues UP-TO-DATE
+> Task :react-native-audio-api:generateDebugResValues UP-TO-DATE
+> Task :react-native-masked-view_masked-view:generateDebugResources UP-TO-DATE
+> Task :react-native-screens:generateDebugResValues UP-TO-DATE
+> Task :expo-torch:packageDebugResources UP-TO-DATE
+> Task :react-native-safe-area-context:generateDebugResources UP-TO-DATE
+> Task :react-native-webview:generateDebugResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateDebugResources UP-TO-DATE
+> Task :react-native-community_slider:generateDebugResources UP-TO-DATE
+> Task :react-native-audio-api:generateDebugResources UP-TO-DATE
+> Task :react-native-gesture-handler:packageDebugResources UP-TO-DATE
+> Task :expo:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-screens:generateDebugResources UP-TO-DATE
+> Task :expo-modules-core:extractDeepLinksDebug UP-TO-DATE
+> Task :app:generateAutolinkingPackageList UP-TO-DATE
+> Task :react-native-masked-view_masked-view:packageDebugResources UP-TO-DATE
+> Task :expo:processDebugManifest UP-TO-DATE
+> Task :react-native-webview:packageDebugResources UP-TO-DATE
+> Task :app:generateCodegenSchemaFromJavaScript SKIPPED
+> Task :expo-torch:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-safe-area-context:packageDebugResources UP-TO-DATE
+> Task :react-native-community_slider:packageDebugResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:packageDebugResources UP-TO-DATE
+> Task :react-native-audio-api:packageDebugResources UP-TO-DATE
+> Task :react-native-masked-view_masked-view:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-gesture-handler:extractDeepLinksDebug UP-TO-DATE
+> Task :app:generateCodegenArtifactsFromSchema SKIPPED
+> Task :react-native-safe-area-context:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-community_slider:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-audio-api:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-async-storage_async-storage:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-screens:packageDebugResources UP-TO-DATE
+> Task :expo-modules-core:processDebugManifest UP-TO-DATE
+> Task :react-native-screens:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-masked-view_masked-view:processDebugManifest UP-TO-DATE
+> Task :expo-torch:processDebugManifest UP-TO-DATE
+> Task :react-native-webview:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-community_slider:processDebugManifest UP-TO-DATE
+> Task :react-native-gesture-handler:processDebugManifest UP-TO-DATE
+> Task :app:generateReactNativeEntryPoint UP-TO-DATE
+> Task :react-native-safe-area-context:processDebugManifest UP-TO-DATE
+> Task :expo-torch:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-community_slider:compileDebugLibraryResources UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-modules-core:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:processDebugManifest UP-TO-DATE
+> Task :react-native-screens:processDebugManifest UP-TO-DATE
+> Task :react-native-webview:processDebugManifest UP-TO-DATE
+> Task :react-native-gesture-handler:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-masked-view_masked-view:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-modules-core:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-masked-view_masked-view:parseDebugLocalResources UP-TO-DATE
+> Task :expo-torch:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:parseDebugLocalResources UP-TO-DATE
+> Task :expo:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-screens:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-gesture-handler:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-safe-area-context:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-svg:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-nitro-haptics:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-audio-api:processDebugManifest UP-TO-DATE
+> Task :expo-torch:generateDebugRFile UP-TO-DATE
+> Task :expo-modules-core:generateDebugRFile UP-TO-DATE
+> Task :expo-modules-core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-screens:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-gesture-handler:generateDebugRFile UP-TO-DATE
+> Task :react-native-masked-view_masked-view:generateDebugRFile UP-TO-DATE
+> Task :react-native-audio-api:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-torch:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-webview:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-gesture-handler:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-async-storage_async-storage:generateDebugRFile UP-TO-DATE
+> Task :react-native-safe-area-context:generateDebugRFile UP-TO-DATE
+> Task :react-native-webview:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-screens:generateDebugRFile UP-TO-DATE
+> Task :expo:generateDebugRFile UP-TO-DATE
+> Task :expo-torch:generateDebugBuildConfig UP-TO-DATE
+> Task :expo:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-safe-area-context:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-masked-view_masked-view:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-modules-core:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-gesture-handler:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-torch:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-safe-area-context:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-gesture-handler:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-webview:generateDebugRFile UP-TO-DATE
+> Task :react-native-screens:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-async-storage_async-storage:javaPreCompileDebug UP-TO-DATE
+> Task :expo-modules-core:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-webview:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-masked-view_masked-view:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-nitro-haptics:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-audio-api:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-nitro-haptics:preBuild UP-TO-DATE
+> Task :expo:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-safe-area-context:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-nitro-haptics:preDebugBuild UP-TO-DATE
+> Task :react-native-screens:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-torch:mergeDebugShaders UP-TO-DATE
+> Task :react-native-webview:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-svg:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :expo-modules-core:mergeDebugShaders UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeDebugShaders UP-TO-DATE
+> Task :react-native-svg:preBuild UP-TO-DATE
+> Task :expo:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-screens:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-gesture-handler:mergeDebugShaders UP-TO-DATE
+> Task :react-native-nitro-haptics:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-torch:compileDebugShaders NO-SOURCE
+> Task :react-native-webview:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-svg:preDebugBuild UP-TO-DATE
+> Task :expo-modules-core:compileDebugShaders NO-SOURCE
+> Task :react-native-masked-view_masked-view:mergeDebugShaders UP-TO-DATE
+> Task :react-native-audio-api:generateDebugRFile UP-TO-DATE
+> Task :expo-modules-core:generateDebugAssets UP-TO-DATE
+> Task :expo-torch:generateDebugAssets UP-TO-DATE
+> Task :react-native-gesture-handler:compileDebugShaders NO-SOURCE
+> Task :react-native-audio-api:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-nitro-haptics:generateDebugResValues UP-TO-DATE
+> Task :react-native-masked-view_masked-view:compileDebugShaders NO-SOURCE
+> Task :react-native-gesture-handler:generateDebugAssets UP-TO-DATE
+> Task :react-native-async-storage_async-storage:compileDebugShaders NO-SOURCE
+> Task :react-native-masked-view_masked-view:generateDebugAssets UP-TO-DATE
+> Task :react-native-safe-area-context:mergeDebugShaders UP-TO-DATE
+> Task :react-native-svg:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateDebugAssets UP-TO-DATE
+> Task :react-native-screens:mergeDebugShaders UP-TO-DATE
+> Task :expo-torch:mergeDebugAssets UP-TO-DATE
+> Task :expo:mergeDebugShaders UP-TO-DATE
+> Task :expo-modules-core:mergeDebugAssets UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugShaders NO-SOURCE
+> Task :react-native-screens:compileDebugShaders NO-SOURCE
+> Task :react-native-audio-api:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-safe-area-context:generateDebugAssets UP-TO-DATE
+> Task :react-native-screens:generateDebugAssets UP-TO-DATE
+> Task :react-native-svg:generateDebugResValues UP-TO-DATE
+> Task :expo:compileDebugShaders NO-SOURCE
+> Task :react-native-nitro-haptics:generateDebugResources UP-TO-DATE
+> Task :expo:generateDebugAssets UP-TO-DATE
+> Task :react-native-masked-view_masked-view:mergeDebugAssets UP-TO-DATE
+> Task :react-native-gesture-handler:mergeDebugAssets UP-TO-DATE
+> Task :react-native-webview:mergeDebugShaders UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeDebugAssets UP-TO-DATE
+> Task :react-native-audio-api:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-webview:compileDebugShaders NO-SOURCE
+> Task :react-native-svg:generateDebugResources UP-TO-DATE
+> Task :react-native-screens:mergeDebugAssets UP-TO-DATE
+> Task :expo-modules-core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-masked-view_masked-view:processDebugJavaRes NO-SOURCE
+> Task :react-native-safe-area-context:mergeDebugAssets UP-TO-DATE
+> Task :expo:mergeDebugAssets UP-TO-DATE
+> Task :expo-torch:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-webview:generateDebugAssets UP-TO-DATE
+> Task :react-native-audio-api:mergeDebugShaders UP-TO-DATE
+> Task :react-native-gesture-handler:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-audio-api:compileDebugShaders NO-SOURCE
+> Task :expo-torch:mergeDebugNativeLibs NO-SOURCE
+> Task :react-native-screens:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-async-storage_async-storage:processDebugJavaRes NO-SOURCE
+> Task :react-native-audio-api:generateDebugAssets UP-TO-DATE
+> Task :react-native-masked-view_masked-view:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-safe-area-context:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-masked-view_masked-view:mergeDebugNativeLibs NO-SOURCE
+> Task :react-native-community_slider:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-nitro-haptics:packageDebugResources UP-TO-DATE
+> Task :expo-torch:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-safe-area-context:mergeDebugNativeLibs NO-SOURCE
+> Task :expo:mergeDebugNativeLibs NO-SOURCE
+> Task :react-native-audio-api:mergeDebugAssets UP-TO-DATE
+> Task :react-native-masked-view_masked-view:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-webview:mergeDebugAssets UP-TO-DATE
+> Task :react-native-svg:packageDebugResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeDebugNativeLibs NO-SOURCE
+> Task :react-native-nitro-haptics:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-svg:extractDeepLinksDebug UP-TO-DATE
+> Task :expo:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-safe-area-context:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-webview:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-community_slider:generateDebugRFile UP-TO-DATE
+> Task :react-native-async-storage_async-storage:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-audio-api:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-webview:mergeDebugNativeLibs NO-SOURCE
+> Task :react-native-community_slider:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-webview:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-svg:processDebugManifest UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:buildCodegenCLI
+> Task :react-native-nitro-haptics:processDebugManifest UP-TO-DATE
+> Task :react-native-community_slider:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-svg:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-nitro-haptics:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-community_slider:mergeDebugShaders UP-TO-DATE
+> Task :react-native-community_slider:compileDebugShaders NO-SOURCE
+> Task :react-native-community_slider:generateDebugAssets UP-TO-DATE
+> Task :react-native-nitro-haptics:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-svg:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-community_slider:mergeDebugAssets UP-TO-DATE
+> Task :react-native-reanimated:assertMinimalReactNativeVersionTask
+> Task :react-native-svg:generateDebugRFile UP-TO-DATE
+> Task :react-native-nitro-haptics:generateDebugRFile UP-TO-DATE
+> Task :react-native-reanimated:assertNewArchitectureEnabledTask SKIPPED
+> Task :react-native-community_slider:processDebugJavaRes NO-SOURCE
+> Task :react-native-nitro-haptics:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-svg:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-worklets:assertMinimalReactNativeVersionTask
+> Task :react-native-community_slider:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-worklets:assertNewArchitectureEnabledTask SKIPPED
+> Task :react-native-nitro-haptics:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-svg:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-community_slider:mergeDebugNativeLibs NO-SOURCE
+> Task :react-native-nitro-haptics:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-community_slider:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-svg:mergeDebugShaders UP-TO-DATE
+> Task :react-native-worklets:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-svg:compileDebugShaders NO-SOURCE
+> Task :react-native-svg:generateDebugAssets UP-TO-DATE
+> Task :react-native-nitro-haptics:mergeDebugShaders UP-TO-DATE
+> Task :react-native-nitro-haptics:compileDebugShaders NO-SOURCE
+> Task :react-native-svg:mergeDebugAssets UP-TO-DATE
+> Task :react-native-nitro-haptics:generateDebugAssets UP-TO-DATE
+> Task :react-native-svg:processDebugJavaRes NO-SOURCE
+> Task :react-native-nitro-haptics:mergeDebugAssets UP-TO-DATE
+> Task :react-native-svg:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-nitro-modules:prepareHeaders UP-TO-DATE
+> Task :react-native-worklets:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-nitro-modules:preBuild UP-TO-DATE
+> Task :react-native-nitro-modules:preDebugBuild UP-TO-DATE
+> Task :react-native-svg:mergeDebugNativeLibs NO-SOURCE
+> Task :react-native-nitro-haptics:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-nitro-modules:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-svg:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-nitro-modules:generateDebugResValues UP-TO-DATE
+> Task :react-native-nitro-modules:generateDebugResources UP-TO-DATE
+> Task :react-native-nitro-modules:packageDebugResources UP-TO-DATE
+> Task :react-native-worklets:prepareWorkletsHeadersForPrefabs UP-TO-DATE
+> Task :react-native-worklets:preBuild
+> Task :react-native-worklets:preDebugBuild
+> Task :react-native-nitro-modules:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-worklets:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-worklets:generateDebugResValues UP-TO-DATE
+> Task :react-native-nitro-modules:processDebugManifest UP-TO-DATE
+> Task :react-native-nitro-modules:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-worklets:generateDebugResources UP-TO-DATE
+> Task :react-native-nitro-modules:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-worklets:packageDebugResources UP-TO-DATE
+> Task :react-native-worklets:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-nitro-modules:generateDebugRFile UP-TO-DATE
+> Task :react-native-nitro-modules:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-nitro-modules:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-nitro-modules:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-nitro-modules:mergeDebugShaders UP-TO-DATE
+> Task :react-native-nitro-modules:compileDebugShaders NO-SOURCE
+> Task :react-native-nitro-modules:generateDebugAssets UP-TO-DATE
+> Task :react-native-nitro-modules:mergeDebugAssets UP-TO-DATE
+> Task :react-native-nitro-modules:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-reanimated:assertWorkletsVersionTask
+> Task :react-native-reanimated:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-reanimated:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-reanimated:prepareReanimatedHeadersForPrefabs UP-TO-DATE
+> Task :react-native-reanimated:preBuild
+> Task :react-native-reanimated:preDebugBuild
+> Task :react-native-reanimated:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-reanimated:generateDebugResValues UP-TO-DATE
+> Task :react-native-reanimated:generateDebugResources UP-TO-DATE
+> Task :react-native-reanimated:packageDebugResources UP-TO-DATE
+> Task :react-native-reanimated:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-reanimated:processDebugManifest UP-TO-DATE
+> Task :react-native-reanimated:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-reanimated:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-reanimated:generateDebugRFile UP-TO-DATE
+> Task :react-native-reanimated:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-reanimated:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-reanimated:mergeDebugShaders UP-TO-DATE
+> Task :react-native-reanimated:compileDebugShaders NO-SOURCE
+> Task :react-native-reanimated:generateDebugAssets UP-TO-DATE
+> Task :react-native-reanimated:mergeDebugAssets UP-TO-DATE
+> Task :react-native-reanimated:processDebugJavaRes NO-SOURCE
+> Task :react-native-reanimated:mergeDebugJniLibFolders UP-TO-DATE
+
+> Task :expo-constants:createExpoConfig
+The NODE_ENV environment variable is required but was not specified. Ensure the project is bundled with Expo CLI or NODE_ENV is set. Using only .env.local and .env
+
+> Task :expo-constants:preBuild
+> Task :expo-constants:preDebugBuild
+> Task :app:preBuild
+> Task :app:preDebugBuild
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :expo-constants:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-constants:generateDebugResValues UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-constants:generateDebugResources UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :expo-constants:packageDebugResources UP-TO-DATE
+> Task :react-native-worklets:processDebugManifest UP-TO-DATE
+> Task :expo-constants:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-worklets:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-constants:processDebugManifest UP-TO-DATE
+> Task :react-native-worklets:parseDebugLocalResources UP-TO-DATE
+> Task :expo-constants:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-constants:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-worklets:generateDebugRFile UP-TO-DATE
+> Task :react-native-worklets:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-worklets:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-worklets:mergeDebugShaders UP-TO-DATE
+> Task :expo-constants:generateDebugRFile UP-TO-DATE
+> Task :react-native-worklets:compileDebugShaders NO-SOURCE
+> Task :react-native-worklets:generateDebugAssets UP-TO-DATE
+> Task :expo-constants:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-worklets:mergeDebugAssets UP-TO-DATE
+> Task :expo-constants:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-worklets:processDebugJavaRes NO-SOURCE
+> Task :expo-constants:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-worklets:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-constants:mergeDebugShaders UP-TO-DATE
+> Task :expo-constants:compileDebugShaders NO-SOURCE
+> Task :expo-constants:generateDebugAssets UP-TO-DATE
+> Task :expo-constants:mergeDebugAssets UP-TO-DATE
+> Task :expo-constants:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-constants:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-constants:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:generateCodegenSchemaFromJavaScript
+> Task :react-native:packages:react-native:ReactAndroid:generateCodegenArtifactsFromSchema
+> Task :react-native:packages:react-native:ReactAndroid:createNativeDepsDirectories UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native:packages:react-native:ReactAndroid:downloadFastFloat
+> Task :react-native:packages:react-native:ReactAndroid:downloadFmt
+> Task :react-native:packages:react-native:ReactAndroid:downloadGlog
+> Task :react-native:packages:react-native:ReactAndroid:prepareFastFloat
+> Task :react-native:packages:react-native:ReactAndroid:prepareFmt
+> Task :react-native:packages:react-native:ReactAndroid:downloadDoubleConversion
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:downloadHermes
+> Task :react-native:packages:react-native:ReactAndroid:downloadFolly
+> Task :react-native:packages:react-native:ReactAndroid:prepareGlog
+> Task :react-native:packages:react-native:ReactAndroid:prepareDoubleConversion
+> Task :react-native:packages:react-native:ReactAndroid:downloadBoost
+> Task :react-native:packages:react-native:ReactAndroid:prepareFolly
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:unzipHermes
+> Task :react-native:packages:react-native:ReactAndroid:prepareBoost
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:configureBuildForHermes
+> Task :react-native:packages:react-native:ReactAndroid:prepareNative3pDependencies
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:buildHermesC
+> Task :react-native:packages:react-native:ReactAndroid:preparePrefab
+> Task :react-native:packages:react-native:ReactAndroid:preBuild
+> Task :react-native:packages:react-native:ReactAndroid:preDebugBuild
+> Task :react-native:packages:react-native:ReactAndroid:writeDebugAarMetadata
+> Task :react-native:packages:react-native:ReactAndroid:generateDebugResValues
+> Task :react-native:packages:react-native:ReactAndroid:generateDebugResources
+> Task :react-native:packages:react-native:ReactAndroid:packageDebugResources
+> Task :react-native:packages:react-native:ReactAndroid:extractDeepLinksDebug
+> Task :react-native:packages:react-native:ReactAndroid:generateDebugBuildConfig
+> Task :react-native:packages:react-native:ReactAndroid:javaPreCompileDebug
+> Task :react-native:packages:react-native:ReactAndroid:parseDebugLocalResources
+> Task :react-native:packages:react-native:ReactAndroid:mergeDebugShaders
+> Task :react-native:packages:react-native:ReactAndroid:compileDebugShaders NO-SOURCE
+> Task :react-native:packages:react-native:ReactAndroid:generateDebugAssets UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:mergeDebugAssets
+
+> Task :react-native:packages:react-native:ReactAndroid:processDebugManifest
+C:\dev\Morse\node_modules\react-native\ReactAndroid\src\main\AndroidManifest.xml:10:3-13:9 Warning:
+	uses-sdk:targetSdkVersion value (36) specified in the manifest file is ignored. It is overridden by the value declared in the DSL or the variant API, or 1 if not declared/present. Current value is (24).
+
+> Task :react-native:packages:react-native:ReactAndroid:mergeDebugJniLibFolders
+> Task :react-native:packages:react-native:ReactAndroid:generateDebugRFile
+> Task :react-native:packages:react-native:ReactAndroid:compileDebugLibraryResources
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:prepareHeadersForPrefab
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:preBuild
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:preDebugBuild
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:writeDebugAarMetadata
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:generateDebugResValues
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:generateDebugResources
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:packageDebugResources
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:extractDeepLinksDebug
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:compileDebugLibraryResources
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:generateDebugBuildConfig
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:parseDebugLocalResources
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:javaPreCompileDebug
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:processDebugManifest
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:mergeDebugShaders
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:compileDebugShaders NO-SOURCE
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:generateDebugAssets UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:mergeDebugAssets
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:processDebugJavaRes NO-SOURCE
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:preDebugOptimizedBuild
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:generateDebugRFile
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:configureCMakeRelease[arm64-v8a]
+> Task :app:processDebugResources UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:compileDebugJavaWithJavac
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:bundleLibRuntimeToJarDebug
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:bundleLibCompileToJarDebug
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:bundleLibRuntimeToDirDebug
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:configureCMakeRelease[armeabi-v7a]
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:configureCMakeRelease[x86]
+> Task :react-native:packages:react-native:ReactAndroid:compileDebugKotlin
+
+> Task :react-native:packages:react-native:ReactAndroid:compileDebugJavaWithJavac
+C:\dev\Morse\node_modules\react-native\ReactAndroid\src\main\java\com\facebook\react\ReactActivityDelegate.java:120: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+  public ReactInstanceManager getReactInstanceManager() {
+                              ^
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+1 warning
+
+> Task :react-native:packages:react-native:ReactAndroid:processDebugJavaRes
+> Task :react-native:packages:react-native:ReactAndroid:bundleLibCompileToJarDebug
+> Task :react-native:packages:react-native:ReactAndroid:bundleLibRuntimeToJarDebug
+> Task :react-native-masked-view_masked-view:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-masked-view_masked-view:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-async-storage_async-storage:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-worklets:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-community_slider:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-worklets:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-community_slider:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-worklets:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-community_slider:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-worklets:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-community_slider:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-masked-view_masked-view:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-svg:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-svg:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-masked-view_masked-view:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-reanimated:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-reanimated:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-reanimated:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-svg:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-reanimated:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-svg:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-audio-api:compileDebugKotlin UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugKotlin UP-TO-DATE
+> Task :react-native-nitro-modules:compileDebugKotlin UP-TO-DATE
+> Task :react-native-webview:compileDebugKotlin UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-nitro-modules:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-nitro-modules:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-audio-api:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-nitro-modules:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-audio-api:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-safe-area-context:processDebugJavaRes UP-TO-DATE
+> Task :react-native-audio-api:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-nitro-modules:processDebugJavaRes UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-nitro-modules:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-audio-api:processDebugJavaRes UP-TO-DATE
+> Task :react-native-audio-api:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-nitro-haptics:compileDebugKotlin UP-TO-DATE
+> Task :react-native-nitro-haptics:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-nitro-haptics:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-nitro-haptics:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-nitro-haptics:processDebugJavaRes UP-TO-DATE
+> Task :react-native-webview:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-webview:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-webview:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-screens:compileDebugKotlin UP-TO-DATE
+> Task :react-native-webview:processDebugJavaRes UP-TO-DATE
+> Task :react-native-nitro-haptics:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-gesture-handler:compileDebugKotlin UP-TO-DATE
+> Task :react-native-webview:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-screens:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-screens:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-screens:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-screens:processDebugJavaRes UP-TO-DATE
+> Task :react-native-gesture-handler:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-gesture-handler:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-gesture-handler:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-gesture-handler:processDebugJavaRes UP-TO-DATE
+> Task :react-native-gesture-handler:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-screens:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-modules-core:compileDebugKotlin UP-TO-DATE
+> Task :expo-modules-core:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-modules-core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-modules-core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-modules-core:processDebugJavaRes UP-TO-DATE
+> Task :expo-constants:compileDebugKotlin UP-TO-DATE
+> Task :expo-torch:compileDebugKotlin UP-TO-DATE
+> Task :expo-constants:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-constants:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-torch:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-constants:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-torch:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-constants:processDebugJavaRes UP-TO-DATE
+> Task :expo-torch:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-constants:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-torch:processDebugJavaRes UP-TO-DATE
+> Task :expo-torch:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-modules-core:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo:compileDebugKotlin UP-TO-DATE
+> Task :expo:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo:processDebugJavaRes UP-TO-DATE
+> Task :expo:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:dexBuilderDebug UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:mergeProjectDexDebug UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:bundleLibRuntimeToDirDebug
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:configureCMakeRelease[x86_64]
+> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:generateJsonModelDebug
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:prefabDebugConfigurePackage
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :react-native:packages:react-native:ReactAndroid:configureCMakeDebug[arm64-v8a]
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:buildCMakeRelease[arm64-v8a][libhermes]
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:buildCMakeRelease[armeabi-v7a][libhermes]
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:buildCMakeRelease[x86][libhermes]
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:buildCMakeRelease[x86_64][libhermes]
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:externalNativeBuildDebug
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:prefabDebugPackage
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:mergeDebugJniLibFolders
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:mergeDebugNativeLibs
+> Task :react-native:packages:react-native:ReactAndroid:hermes-engine:copyDebugJniLibsProjectOnly
+
+> Task :react-native:packages:react-native:ReactAndroid:configureCMakeDebug[armeabi-v7a]
+C/C++: CMake Warning in C:/dev/Morse/node_modules/react-native/ReactCommon/react/renderer/components/legacyviewmanagerinterop/CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/dev/Morse/node_modules/react-native/ReactAndroid/.cxx/Debug/286s4b4l/armeabi-v7a/ReactCommon/react/renderer/components/legacyviewmanagerinterop/CMakeFiles/rrc_legacyviewmanagerinterop.dir/./
+C/C++:   has 193 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     UnstableLegacyViewManagerAutomaticComponentDescriptor.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+
+> Task :react-native:packages:react-native:ReactAndroid:configureCMakeDebug[x86]
+> Task :react-native:packages:react-native:ReactAndroid:configureCMakeDebug[x86_64]
+> Task :react-native:packages:react-native:ReactAndroid:generateJsonModelDebug
+> Task :react-native:packages:react-native:ReactAndroid:prefabDebugConfigurePackage
+> Task :react-native-nitro-modules:configureCMakeDebug[arm64-v8a]
+> Task :react-native-worklets:configureCMakeDebug[arm64-v8a]
+> Task :react-native-screens:configureCMakeDebug[arm64-v8a]
+> Task :react-native:packages:react-native:ReactAndroid:buildCMakeDebug[arm64-v8a][hermestooling,jsi,etc]
+> Task :react-native-audio-api:configureCMakeDebug[arm64-v8a]
+> Task :expo-modules-core:configureCMakeDebug[arm64-v8a]
+> Task :react-native:packages:react-native:ReactAndroid:buildCMakeDebug[armeabi-v7a][hermestooling,jsi,etc]
+> Task :react-native:packages:react-native:ReactAndroid:buildCMakeDebug[x86][hermestooling,jsi,etc]
+> Task :react-native:packages:react-native:ReactAndroid:buildCMakeDebug[x86_64][hermestooling,jsi,etc]
+> Task :react-native:packages:react-native:ReactAndroid:externalNativeBuildDebug
+> Task :react-native:packages:react-native:ReactAndroid:prefabDebugPackage
+> Task :react-native:packages:react-native:ReactAndroid:mergeDebugNativeLibs
+> Task :react-native-worklets:configureCMakeDebug[armeabi-v7a]
+> Task :react-native:packages:react-native:ReactAndroid:copyDebugJniLibsProjectOnly
+> Task :react-native-screens:buildCMakeDebug[arm64-v8a]
+> Task :react-native-screens:configureCMakeDebug[armeabi-v7a]
+> Task :react-native-worklets:configureCMakeDebug[x86]
+> Task :react-native-nitro-modules:buildCMakeDebug[arm64-v8a]
+> Task :react-native-worklets:configureCMakeDebug[x86_64]
+> Task :react-native-worklets:generateJsonModelDebug
+> Task :react-native-worklets:prefabDebugConfigurePackage
+> Task :react-native-audio-api:buildCMakeDebug[arm64-v8a]
+> Task :expo-modules-core:buildCMakeDebug[arm64-v8a]
+> Task :react-native-nitro-modules:configureCMakeDebug[armeabi-v7a]
+> Task :react-native-screens:buildCMakeDebug[armeabi-v7a]
+> Task :react-native-screens:configureCMakeDebug[x86]
+C/C++: ninja: Entering directory `C:\dev\Morse\node_modules\react-native-audio-api\android\.cxx\Debug\6f4a5q6b\arm64-v8a'
+C/C++: clang: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [2/50] Building C object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/1cd8884b460c30b331ced85c7984d757/audioapi/libs/miniaudio/decoders/libvorbis/miniaudio_libvorbis.c.o
+C/C++: clang: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [3/50] Building C object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/e3c2ba47760e55bef4f1d1d4cccda5a7/cpp/audioapi/libs/miniaudio/decoders/libopus/miniaudio_libopus.c.o
+C/C++: clang: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [4/50] Building C object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/libs/pffft/pffft.c.o
+C/C++: clang: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [5/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/utils/CircularAudioArray.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [6/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/utils/AudioArray.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [7/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/utils/CircularOverflowableAudioArray.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [8/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/AudioParamEventQueue.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [9/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/utils/AudioBus.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [10/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/jsi/RuntimeLifecycleMonitor.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [11/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/libs/ffmpeg/FFmpegDecoding.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [12/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/HostObjects/AudioNodeHostObject.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [13/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/AudioNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [14/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/AudioParam.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [15/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/android/core/AndroidAudioRecorder.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [16/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/effects/BiquadFilterNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [17/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/HostObjects/BaseAudioContextHostObject.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [18/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/AudioContext.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [19/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/android/core/AudioPlayer.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [20/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/destinations/AudioDestinationNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [21/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/effects/GainNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [22/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/analysis/AnalyserNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [23/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/OfflineAudioContext.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [24/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/effects/PeriodicWave.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [25/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/sources/AudioBuffer.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [26/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/android/OnLoad.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [27/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/BaseAudioContext.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [28/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/effects/StereoPannerNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [29/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/inputs/AudioRecorder.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [30/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/jsi/AudioArrayBuffer.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [31/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/AudioBufferBaseSourceNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [32/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/dsp/Windows.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [33/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/dsp/VectorMath.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [34/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/AudioScheduledSourceNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [35/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/jsi/JsiHostObject.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [36/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/dsp/AudioUtils.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [37/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/AudioBufferSourceNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [38/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/AudioBufferQueueSourceNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [39/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/android/AudioAPIModule.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [40/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/utils/ParamChangeEvent.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [41/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/RecorderAdapterNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [42/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/dsp/FFT.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [43/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/utils/AudioNodeDestructor.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [44/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/jsi/JsiPromise.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [45/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/OscillatorNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [46/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/android/core/AudioDecoder.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [47/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/sources/StreamerNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [48/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/events/AudioEventHandlerRegistry.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [49/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/utils/AudioNodeManager.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [50/50] Linking CXX shared library ..\..\..\..\build\intermediates\cxx\Debug\6f4a5q6b\obj\arm64-v8a\libreact-native-audio-api.so
+> Task :expo-modules-core:configureCMakeDebug[armeabi-v7a]
+
+> Task :react-native-audio-api:configureCMakeDebug[armeabi-v7a]
+C/C++: CMake Warning:
+C/C++:   Manually-specified variables were not used by the project:
+C/C++:     REACT_NATIVE_MINOR_VERSION
+
+> Task :react-native-nitro-modules:buildCMakeDebug[armeabi-v7a]
+> Task :react-native-nitro-modules:configureCMakeDebug[x86]
+> Task :react-native-screens:buildCMakeDebug[x86]
+> Task :react-native-screens:configureCMakeDebug[x86_64]
+> Task :react-native-worklets:buildCMakeDebug[arm64-v8a][worklets]
+> Task :react-native-reanimated:configureCMakeDebug[arm64-v8a]
+
+> Task :react-native-worklets:buildCMakeDebug[arm64-v8a][worklets] FAILED
+C/C++: ninja: Entering directory `C:\dev\Morse\node_modules\react-native-worklets\android\.cxx\Debug\5u403m53\arm64-v8a'
+C/C++: cmd.exe /C "cd . && C:\Users\cspar\AppData\Local\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=aarch64-none-linux-android24 --sysroot=C:/Users/cspar/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot -fPIC -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -DREACT_NATIVE_MINOR_VERSION=81         -DWORKLETS_VERSION=0.5.1         -DWORKLETS_FEATURE_FLAGS="[RUNTIME_TEST_FLAG:false][IOS_DYNAMIC_FRAMERATE_ENABLED:true]" -fno-omit-frame-pointer -fstack-protector-all -DJS_RUNTIME_HERMES=1 -DHERMES_ENABLE_DEBUGGER=1 -fno-limit-debug-info  -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments -shared -Wl,-soname,libworklets.so -o ..\..\..\..\build\intermediates\cxx\Debug\5u403m53\obj\arm64-v8a\libworklets.so CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/AnimationFrameQueue/AnimationFrameBatchinator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/JSIWorkletsModuleProxy.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/WorkletsModuleProxy.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/EventHandlerRegistry.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/WorkletRuntimeRegistry.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/SynchronizableUnpacker.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/ValueUnpacker.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/EventLoop.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Serializable.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Synchronizable.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/SynchronizableAccess.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/FeatureFlags.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSISerializer.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSLogger.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSScheduler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/UIScheduler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/VersionUtils.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletEventHandler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsJSIUtils.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsVersion.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RNRuntimeWorkletDecorator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeData.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeManager.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/UIRuntimeDecorator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntimeDecorator.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/AndroidUIScheduler.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/PlatformLogger.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsModule.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsOnLoad.cpp.o  -llog  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libjsi.so  C:/Users/cspar/.gradle/caches/8.14.3/transforms/68b1b6ce4cb78fa6c18c52997e269259/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libreactnative.so  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libhermestooling.so  -latomic -lm && cd ."
+C/C++: ld.lld: error: undefined symbol: facebook::hermes::makeHermesRuntime(hermes::vm::RuntimeConfig const&)
+C/C++: >>> referenced by WorkletRuntime.cpp:61 (C:/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp:61)
+C/C++: >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(worklets::makeRuntime(std::__ndk1::shared_ptr<facebook::react::MessageQueueThread> const&, std::__ndk1::basic_string<char, std::__ndk1::char_traits<char>, std::__ndk1::allocator<char>> const&, std::__ndk1::shared_ptr<std::__ndk1::recursive_mutex> const&))
+C/C++: ld.lld: error: undefined symbol: vtable for hermes::vm::NopCrashManager
+C/C++: >>> referenced by CrashManager.h:88 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:88)
+C/C++: >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::NopCrashManager::NopCrashManager())
+C/C++: >>> referenced by CrashManager.h:88 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:88)
+C/C++: >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::NopCrashManager::NopCrashManager())
+C/C++: >>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+C/C++: ld.lld: error: undefined symbol: vtable for hermes::vm::CrashManager
+C/C++: >>> referenced by CrashManager.h:21 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:21)
+C/C++: >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::CrashManager::CrashManager())
+C/C++: >>> referenced by CrashManager.h:21 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:21)
+C/C++: >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::CrashManager::CrashManager())
+C/C++: >>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+C/C++: ld.lld: error: undefined symbol: hermes::vm::NopCrashManager::~NopCrashManager()
+C/C++: >>> referenced by unique_ptr.h:66 (C:/Users/cspar/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1/__memory/unique_ptr.h:66)
+C/C++: >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(std::__ndk1::default_delete<hermes::vm::NopCrashManager>::operator()[abi:ne180000](hermes::vm::NopCrashManager*) const)
+C/C++: ld.lld: error: undefined symbol: vtable for facebook::hermes::inspector_modern::RuntimeAdapter
+C/C++: >>> referenced by RuntimeAdapter.h:35 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/inspector/RuntimeAdapter.h:35)
+C/C++: >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(facebook::hermes::inspector_modern::RuntimeAdapter::RuntimeAdapter())
+C/C++: >>> referenced by RuntimeAdapter.h:35 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/inspector/RuntimeAdapter.h:35)
+C/C++: >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(facebook::hermes::inspector_modern::RuntimeAdapter::RuntimeAdapter())
+C/C++: >>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+C/C++: ld.lld: error: undefined symbol: facebook::hermes::inspector_modern::RuntimeAdapter::~RuntimeAdapter()
+C/C++: >>> referenced by WorkletHermesRuntime.cpp:36 (C:/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp:36)
+C/C++: >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(worklets::HermesExecutorRuntimeAdapter::~HermesExecutorRuntimeAdapter())
+C/C++: ld.lld: error: undefined symbol: typeinfo for facebook::hermes::inspector_modern::RuntimeAdapter
+C/C++: >>> referenced by WorkletHermesRuntime.cpp
+C/C++: >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(typeinfo for worklets::HermesExecutorRuntimeAdapter)
+C/C++: clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+C/C++: ninja: build stopped: subcommand failed.
+
+> Task :expo-modules-core:buildCMakeDebug[armeabi-v7a]
+> Task :react-native-nitro-modules:buildCMakeDebug[x86]
+> Task :react-native-audio-api:buildCMakeDebug[armeabi-v7a]
+
+C/C++: ninja: Entering directory `C:\dev\Morse\node_modules\react-native-audio-api\android\.cxx\Debug\6f4a5q6b\armeabi-v7a'
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [2/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/effects/PeriodicWave.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [3/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/effects/StereoPannerNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [4/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/effects/GainNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [5/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/destinations/AudioDestinationNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [6/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/analysis/AnalyserNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [7/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/effects/BiquadFilterNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [8/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/HostObjects/AudioNodeHostObject.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [9/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/AudioNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [10/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/OfflineAudioContext.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [11/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/AudioParam.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [12/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/BaseAudioContext.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [13/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/HostObjects/BaseAudioContextHostObject.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [14/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/dsp/AudioUtils.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [15/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/android/core/AudioPlayer.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [16/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/AudioContext.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [17/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/android/OnLoad.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [18/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/core/sources/AudioBuffer.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [19/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/RecorderAdapterNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [20/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/dsp/VectorMath.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [21/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/OscillatorNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [22/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/inputs/AudioRecorder.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [23/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/dsp/Windows.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [24/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/AudioScheduledSourceNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [25/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/StreamerNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [26/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/utils/ParamChangeEvent.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [27/50] Building C object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/1cd8884b460c30b331ced85c7984d757/audioapi/libs/miniaudio/decoders/libvorbis/miniaudio_libvorbis.c.o
+C/C++: clang: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [28/50] Building C object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/e3c2ba47760e55bef4f1d1d4cccda5a7/cpp/audioapi/libs/miniaudio/decoders/libopus/miniaudio_libopus.c.o
+C/C++: clang: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [29/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/dsp/FFT.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [30/50] Building C object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/libs/pffft/pffft.c.o
+C/C++: clang: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [31/50] Building C object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/libs/audio-stretch/stretch.c.o
+C/C++: clang: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [32/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/AudioBufferBaseSourceNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [33/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/android/AudioAPIModule.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [34/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/utils/AudioNodeDestructor.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [35/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/AudioBufferSourceNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [36/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/utils/AudioNodeManager.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [37/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/core/sources/AudioBufferQueueSourceNode.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [38/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/jsi/AudioArrayBuffer.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [39/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/utils/AudioArray.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [40/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/android/core/AudioDecoder.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [41/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/libs/ffmpeg/FFmpegDecoding.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [42/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/events/AudioEventHandlerRegistry.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [43/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/jsi/JsiPromise.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [44/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/utils/CircularAudioArray.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [45/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/jsi/JsiHostObject.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [46/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/utils/CircularOverflowableAudioArray.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [47/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/2a92dca442c88d97407b45fb246c1903/common/cpp/audioapi/jsi/RuntimeLifecycleMonitor.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [48/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/C_/dev/Morse/node_modules/react-native-audio-api/common/cpp/audioapi/utils/AudioBus.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [49/50] Building CXX object src/main/cpp/audioapi/CMakeFiles/react-native-audio-api.dir/android/core/AndroidAudioRecorder.cpp.o
+C/C++: clang++: warning: -Wl,-Bsymbolic: 'linker' input unused [-Wunused-command-line-argument]
+C/C++: [50/50] Linking CXX shared library ..\..\..\..\build\intermediates\cxx\Debug\6f4a5q6b\obj\armeabi-v7a\libreact-native-audio-api.so
+
+> Task :react-native-screens:buildCMakeDebug[x86_64]
+
+[Incubating] Problems report is available at: file:///C:/dev/Morse/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':react-native-worklets:buildCMakeDebug[arm64-v8a][worklets]'.
+> com.android.ide.common.process.ProcessException: ninja: Entering directory `C:\dev\Morse\node_modules\react-native-worklets\android\.cxx\Debug\5u403m53\arm64-v8a'
+  [0/2] Re-checking globbed directories...
+  [1/2] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/dev/Morse/node_modules/react-native-worklets/android/.cxx/Debug/5u403m53/arm64-v8a
+  [0/2] Re-checking globbed directories...
+  [1/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeData.cpp.o
+  [2/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/PlatformLogger.cpp.o
+  [3/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/SynchronizableAccess.cpp.o
+  [4/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/FeatureFlags.cpp.o
+  [5/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSScheduler.cpp.o
+  [6/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSLogger.cpp.o
+  [7/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/UIScheduler.cpp.o
+  [8/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsVersion.cpp.o
+  [9/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/ValueUnpacker.cpp.o
+  [10/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSISerializer.cpp.o
+  [11/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsJSIUtils.cpp.o
+  [12/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/SynchronizableUnpacker.cpp.o
+  [13/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/AndroidUIScheduler.cpp.o
+  [14/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o
+  [15/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/VersionUtils.cpp.o
+  [16/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletEventHandler.cpp.o
+  [17/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Synchronizable.cpp.o
+  [18/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/WorkletRuntimeRegistry.cpp.o
+  [19/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/UIRuntimeDecorator.cpp.o
+  [20/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp.o
+  [21/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/AnimationFrameQueue/AnimationFrameBatchinator.cpp.o
+  [22/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/EventLoop.cpp.o
+  [23/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeManager.cpp.o
+  [24/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RNRuntimeWorkletDecorator.cpp.o
+  [25/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Serializable.cpp.o
+  [26/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsModule.cpp.o
+  [27/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntimeDecorator.cpp.o
+  [28/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/EventHandlerRegistry.cpp.o
+  [29/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsOnLoad.cpp.o
+  [30/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o
+  [31/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/WorkletsModuleProxy.cpp.o
+  [32/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/JSIWorkletsModuleProxy.cpp.o
+  [33/33] Linking CXX shared library ..\..\..\..\build\intermediates\cxx\Debug\5u403m53\obj\arm64-v8a\libworklets.so
+  FAILED: ../../../../build/intermediates/cxx/Debug/5u403m53/obj/arm64-v8a/libworklets.so 
+  cmd.exe /C "cd . && C:\Users\cspar\AppData\Local\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=aarch64-none-linux-android24 --sysroot=C:/Users/cspar/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot -fPIC -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -DREACT_NATIVE_MINOR_VERSION=81         -DWORKLETS_VERSION=0.5.1         -DWORKLETS_FEATURE_FLAGS="[RUNTIME_TEST_FLAG:false][IOS_DYNAMIC_FRAMERATE_ENABLED:true]" -fno-omit-frame-pointer -fstack-protector-all -DJS_RUNTIME_HERMES=1 -DHERMES_ENABLE_DEBUGGER=1 -fno-limit-debug-info  -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments -shared -Wl,-soname,libworklets.so -o ..\..\..\..\build\intermediates\cxx\Debug\5u403m53\obj\arm64-v8a\libworklets.so CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/AnimationFrameQueue/AnimationFrameBatchinator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/JSIWorkletsModuleProxy.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/WorkletsModuleProxy.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/EventHandlerRegistry.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/WorkletRuntimeRegistry.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/SynchronizableUnpacker.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/ValueUnpacker.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/EventLoop.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Serializable.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Synchronizable.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/SynchronizableAccess.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/FeatureFlags.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSISerializer.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSLogger.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSScheduler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/UIScheduler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/VersionUtils.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletEventHandler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsJSIUtils.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsVersion.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RNRuntimeWorkletDecorator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeData.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeManager.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/UIRuntimeDecorator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntimeDecorator.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/AndroidUIScheduler.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/PlatformLogger.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsModule.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsOnLoad.cpp.o  -llog  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libjsi.so  C:/Users/cspar/.gradle/caches/8.14.3/transforms/68b1b6ce4cb78fa6c18c52997e269259/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libreactnative.so  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libhermestooling.so  -latomic -lm && cd ."
+  ld.lld: error: undefined symbol: facebook::hermes::makeHermesRuntime(hermes::vm::RuntimeConfig const&)
+  >>> referenced by WorkletRuntime.cpp:61 (C:/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp:61)
+  >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(worklets::makeRuntime(std::__ndk1::shared_ptr<facebook::react::MessageQueueThread> const&, std::__ndk1::basic_string<char, std::__ndk1::char_traits<char>, std::__ndk1::allocator<char>> const&, std::__ndk1::shared_ptr<std::__ndk1::recursive_mutex> const&))
+  
+  ld.lld: error: undefined symbol: vtable for hermes::vm::NopCrashManager
+  >>> referenced by CrashManager.h:88 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:88)
+  >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::NopCrashManager::NopCrashManager())
+  >>> referenced by CrashManager.h:88 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:88)
+  >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::NopCrashManager::NopCrashManager())
+  >>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+  
+  ld.lld: error: undefined symbol: vtable for hermes::vm::CrashManager
+  >>> referenced by CrashManager.h:21 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:21)
+  >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::CrashManager::CrashManager())
+  >>> referenced by CrashManager.h:21 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:21)
+  >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::CrashManager::CrashManager())
+  >>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+  
+  ld.lld: error: undefined symbol: hermes::vm::NopCrashManager::~NopCrashManager()
+  >>> referenced by unique_ptr.h:66 (C:/Users/cspar/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1/__memory/unique_ptr.h:66)
+  >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(std::__ndk1::default_delete<hermes::vm::NopCrashManager>::operator()[abi:ne180000](hermes::vm::NopCrashManager*) const)
+  
+  ld.lld: error: undefined symbol: vtable for facebook::hermes::inspector_modern::RuntimeAdapter
+  >>> referenced by RuntimeAdapter.h:35 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/inspector/RuntimeAdapter.h:35)
+  >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(facebook::hermes::inspector_modern::RuntimeAdapter::RuntimeAdapter())
+  >>> referenced by RuntimeAdapter.h:35 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/inspector/RuntimeAdapter.h:35)
+  >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(facebook::hermes::inspector_modern::RuntimeAdapter::RuntimeAdapter())
+  >>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+  
+  ld.lld: error: undefined symbol: facebook::hermes::inspector_modern::RuntimeAdapter::~RuntimeAdapter()
+  >>> referenced by WorkletHermesRuntime.cpp:36 (C:/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp:36)
+  >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(worklets::HermesExecutorRuntimeAdapter::~HermesExecutorRuntimeAdapter())
+  
+  ld.lld: error: undefined symbol: typeinfo for facebook::hermes::inspector_modern::RuntimeAdapter
+  >>> referenced by WorkletHermesRuntime.cpp
+  >>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(typeinfo for worklets::HermesExecutorRuntimeAdapter)
+  clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+  ninja: build stopped: subcommand failed.
+  
+  C++ build system [build] failed while executing:
+      @echo off
+      "C:\\Users\\cspar\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe" ^
+        -C ^
+        "C:\\dev\\Morse\\node_modules\\react-native-worklets\\android\\.cxx\\Debug\\5u403m53\\arm64-v8a" ^
+        worklets
+    from C:\dev\Morse\node_modules\react-native-worklets\android
+
+* Try:
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+* Exception is:
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':react-native-worklets:buildCMakeDebug[arm64-v8a][worklets]'.
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
+	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:128)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+	at org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskExecuter.java:41)
+	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+Caused by: org.gradle.internal.UncheckedException: com.android.ide.common.process.ProcessException: ninja: Entering directory `C:\dev\Morse\node_modules\react-native-worklets\android\.cxx\Debug\5u403m53\arm64-v8a'
+[0/2] Re-checking globbed directories...
+[1/2] Re-running CMake...
+-- Configuring done
+-- Generating done
+-- Build files have been written to: C:/dev/Morse/node_modules/react-native-worklets/android/.cxx/Debug/5u403m53/arm64-v8a
+[0/2] Re-checking globbed directories...
+[1/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeData.cpp.o
+[2/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/PlatformLogger.cpp.o
+[3/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/SynchronizableAccess.cpp.o
+[4/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/FeatureFlags.cpp.o
+[5/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSScheduler.cpp.o
+[6/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSLogger.cpp.o
+[7/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/UIScheduler.cpp.o
+[8/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsVersion.cpp.o
+[9/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/ValueUnpacker.cpp.o
+[10/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSISerializer.cpp.o
+[11/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsJSIUtils.cpp.o
+[12/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/SynchronizableUnpacker.cpp.o
+[13/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/AndroidUIScheduler.cpp.o
+[14/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o
+[15/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/VersionUtils.cpp.o
+[16/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletEventHandler.cpp.o
+[17/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Synchronizable.cpp.o
+[18/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/WorkletRuntimeRegistry.cpp.o
+[19/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/UIRuntimeDecorator.cpp.o
+[20/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp.o
+[21/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/AnimationFrameQueue/AnimationFrameBatchinator.cpp.o
+[22/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/EventLoop.cpp.o
+[23/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeManager.cpp.o
+[24/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RNRuntimeWorkletDecorator.cpp.o
+[25/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Serializable.cpp.o
+[26/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsModule.cpp.o
+[27/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntimeDecorator.cpp.o
+[28/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/EventHandlerRegistry.cpp.o
+[29/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsOnLoad.cpp.o
+[30/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o
+[31/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/WorkletsModuleProxy.cpp.o
+[32/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/JSIWorkletsModuleProxy.cpp.o
+[33/33] Linking CXX shared library ..\..\..\..\build\intermediates\cxx\Debug\5u403m53\obj\arm64-v8a\libworklets.so
+FAILED: ../../../../build/intermediates/cxx/Debug/5u403m53/obj/arm64-v8a/libworklets.so 
+cmd.exe /C "cd . && C:\Users\cspar\AppData\Local\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=aarch64-none-linux-android24 --sysroot=C:/Users/cspar/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot -fPIC -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -DREACT_NATIVE_MINOR_VERSION=81         -DWORKLETS_VERSION=0.5.1         -DWORKLETS_FEATURE_FLAGS="[RUNTIME_TEST_FLAG:false][IOS_DYNAMIC_FRAMERATE_ENABLED:true]" -fno-omit-frame-pointer -fstack-protector-all -DJS_RUNTIME_HERMES=1 -DHERMES_ENABLE_DEBUGGER=1 -fno-limit-debug-info  -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments -shared -Wl,-soname,libworklets.so -o ..\..\..\..\build\intermediates\cxx\Debug\5u403m53\obj\arm64-v8a\libworklets.so CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/AnimationFrameQueue/AnimationFrameBatchinator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/JSIWorkletsModuleProxy.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/WorkletsModuleProxy.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/EventHandlerRegistry.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/WorkletRuntimeRegistry.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/SynchronizableUnpacker.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/ValueUnpacker.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/EventLoop.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Serializable.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Synchronizable.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/SynchronizableAccess.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/FeatureFlags.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSISerializer.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSLogger.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSScheduler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/UIScheduler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/VersionUtils.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletEventHandler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsJSIUtils.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsVersion.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RNRuntimeWorkletDecorator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeData.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeManager.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/UIRuntimeDecorator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntimeDecorator.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/AndroidUIScheduler.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/PlatformLogger.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsModule.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsOnLoad.cpp.o  -llog  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libjsi.so  C:/Users/cspar/.gradle/caches/8.14.3/transforms/68b1b6ce4cb78fa6c18c52997e269259/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libreactnative.so  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libhermestooling.so  -latomic -lm && cd ."
+ld.lld: error: undefined symbol: facebook::hermes::makeHermesRuntime(hermes::vm::RuntimeConfig const&)
+>>> referenced by WorkletRuntime.cpp:61 (C:/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp:61)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(worklets::makeRuntime(std::__ndk1::shared_ptr<facebook::react::MessageQueueThread> const&, std::__ndk1::basic_string<char, std::__ndk1::char_traits<char>, std::__ndk1::allocator<char>> const&, std::__ndk1::shared_ptr<std::__ndk1::recursive_mutex> const&))
+
+ld.lld: error: undefined symbol: vtable for hermes::vm::NopCrashManager
+>>> referenced by CrashManager.h:88 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:88)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::NopCrashManager::NopCrashManager())
+>>> referenced by CrashManager.h:88 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:88)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::NopCrashManager::NopCrashManager())
+>>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+
+ld.lld: error: undefined symbol: vtable for hermes::vm::CrashManager
+>>> referenced by CrashManager.h:21 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:21)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::CrashManager::CrashManager())
+>>> referenced by CrashManager.h:21 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:21)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::CrashManager::CrashManager())
+>>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+
+ld.lld: error: undefined symbol: hermes::vm::NopCrashManager::~NopCrashManager()
+>>> referenced by unique_ptr.h:66 (C:/Users/cspar/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1/__memory/unique_ptr.h:66)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(std::__ndk1::default_delete<hermes::vm::NopCrashManager>::operator()[abi:ne180000](hermes::vm::NopCrashManager*) const)
+
+ld.lld: error: undefined symbol: vtable for facebook::hermes::inspector_modern::RuntimeAdapter
+>>> referenced by RuntimeAdapter.h:35 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/inspector/RuntimeAdapter.h:35)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(facebook::hermes::inspector_modern::RuntimeAdapter::RuntimeAdapter())
+>>> referenced by RuntimeAdapter.h:35 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/inspector/RuntimeAdapter.h:35)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(facebook::hermes::inspector_modern::RuntimeAdapter::RuntimeAdapter())
+>>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+
+ld.lld: error: undefined symbol: facebook::hermes::inspector_modern::RuntimeAdapter::~RuntimeAdapter()
+>>> referenced by WorkletHermesRuntime.cpp:36 (C:/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp:36)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(worklets::HermesExecutorRuntimeAdapter::~HermesExecutorRuntimeAdapter())
+
+ld.lld: error: undefined symbol: typeinfo for facebook::hermes::inspector_modern::RuntimeAdapter
+>>> referenced by WorkletHermesRuntime.cpp
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(typeinfo for worklets::HermesExecutorRuntimeAdapter)
+clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+ninja: build stopped: subcommand failed.
+
+C++ build system [build] failed while executing:
+    @echo off
+    "C:\\Users\\cspar\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe" ^
+      -C ^
+      "C:\\dev\\Morse\\node_modules\\react-native-worklets\\android\\.cxx\\Debug\\5u403m53\\arm64-v8a" ^
+      worklets
+  from C:\dev\Morse\node_modules\react-native-worklets\android
+	at org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:69)
+	at org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:42)
+	at org.gradle.internal.reflect.JavaMethod.invoke(JavaMethod.java:128)
+	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.doExecute(StandardTaskAction.java:58)
+	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:51)
+	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:29)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:244)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:30)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:27)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:48)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:229)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:212)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:195)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:162)
+	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:105)
+	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:44)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:59)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:56)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:56)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:44)
+	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:50)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:28)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:67)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:37)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:61)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:26)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:40)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:29)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$1(BuildCacheStep.java:75)
+	at org.gradle.internal.Either$Right.fold(Either.java:175)
+	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:73)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:48)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:46)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:35)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:65)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:36)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:107)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:56)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:64)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:43)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:125)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:56)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:36)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:75)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:41)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:289)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:48)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:35)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:64)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:127)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+	at org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskExecuter.java:41)
+	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+Caused by: com.android.ide.common.process.ProcessException: ninja: Entering directory `C:\dev\Morse\node_modules\react-native-worklets\android\.cxx\Debug\5u403m53\arm64-v8a'
+[0/2] Re-checking globbed directories...
+[1/2] Re-running CMake...
+-- Configuring done
+-- Generating done
+-- Build files have been written to: C:/dev/Morse/node_modules/react-native-worklets/android/.cxx/Debug/5u403m53/arm64-v8a
+[0/2] Re-checking globbed directories...
+[1/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeData.cpp.o
+[2/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/PlatformLogger.cpp.o
+[3/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/SynchronizableAccess.cpp.o
+[4/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/FeatureFlags.cpp.o
+[5/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSScheduler.cpp.o
+[6/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSLogger.cpp.o
+[7/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/UIScheduler.cpp.o
+[8/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsVersion.cpp.o
+[9/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/ValueUnpacker.cpp.o
+[10/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSISerializer.cpp.o
+[11/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsJSIUtils.cpp.o
+[12/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/SynchronizableUnpacker.cpp.o
+[13/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/AndroidUIScheduler.cpp.o
+[14/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o
+[15/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/VersionUtils.cpp.o
+[16/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletEventHandler.cpp.o
+[17/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Synchronizable.cpp.o
+[18/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/WorkletRuntimeRegistry.cpp.o
+[19/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/UIRuntimeDecorator.cpp.o
+[20/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp.o
+[21/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/AnimationFrameQueue/AnimationFrameBatchinator.cpp.o
+[22/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/EventLoop.cpp.o
+[23/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeManager.cpp.o
+[24/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RNRuntimeWorkletDecorator.cpp.o
+[25/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Serializable.cpp.o
+[26/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsModule.cpp.o
+[27/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntimeDecorator.cpp.o
+[28/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/EventHandlerRegistry.cpp.o
+[29/33] Building CXX object CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsOnLoad.cpp.o
+[30/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o
+[31/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/WorkletsModuleProxy.cpp.o
+[32/33] Building CXX object CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/JSIWorkletsModuleProxy.cpp.o
+[33/33] Linking CXX shared library ..\..\..\..\build\intermediates\cxx\Debug\5u403m53\obj\arm64-v8a\libworklets.so
+FAILED: ../../../../build/intermediates/cxx/Debug/5u403m53/obj/arm64-v8a/libworklets.so 
+cmd.exe /C "cd . && C:\Users\cspar\AppData\Local\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=aarch64-none-linux-android24 --sysroot=C:/Users/cspar/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot -fPIC -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -DREACT_NATIVE_MINOR_VERSION=81         -DWORKLETS_VERSION=0.5.1         -DWORKLETS_FEATURE_FLAGS="[RUNTIME_TEST_FLAG:false][IOS_DYNAMIC_FRAMERATE_ENABLED:true]" -fno-omit-frame-pointer -fstack-protector-all -DJS_RUNTIME_HERMES=1 -DHERMES_ENABLE_DEBUGGER=1 -fno-limit-debug-info  -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments -shared -Wl,-soname,libworklets.so -o ..\..\..\..\build\intermediates\cxx\Debug\5u403m53\obj\arm64-v8a\libworklets.so CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/AnimationFrameQueue/AnimationFrameBatchinator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/JSIWorkletsModuleProxy.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/NativeModules/WorkletsModuleProxy.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/EventHandlerRegistry.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Registries/WorkletRuntimeRegistry.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/SynchronizableUnpacker.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Resources/ValueUnpacker.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/EventLoop.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Serializable.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/Synchronizable.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/SharedItems/SynchronizableAccess.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/FeatureFlags.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSISerializer.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSLogger.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/JSScheduler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/UIScheduler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/VersionUtils.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletEventHandler.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsJSIUtils.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/Tools/WorkletsVersion.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RNRuntimeWorkletDecorator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeData.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/RuntimeManager.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/UIRuntimeDecorator.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntimeDecorator.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/AndroidUIScheduler.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/PlatformLogger.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsModule.cpp.o CMakeFiles/worklets.dir/src/main/cpp/worklets/android/WorkletsOnLoad.cpp.o  -llog  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libjsi.so  C:/Users/cspar/.gradle/caches/8.14.3/transforms/68b1b6ce4cb78fa6c18c52997e269259/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libreactnative.so  C:/dev/Morse/node_modules/react-native/ReactAndroid/build/intermediates/cxx/Debug/286s4b4l/obj/arm64-v8a/libhermestooling.so  -latomic -lm && cd ."
+ld.lld: error: undefined symbol: facebook::hermes::makeHermesRuntime(hermes::vm::RuntimeConfig const&)
+>>> referenced by WorkletRuntime.cpp:61 (C:/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp:61)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(worklets::makeRuntime(std::__ndk1::shared_ptr<facebook::react::MessageQueueThread> const&, std::__ndk1::basic_string<char, std::__ndk1::char_traits<char>, std::__ndk1::allocator<char>> const&, std::__ndk1::shared_ptr<std::__ndk1::recursive_mutex> const&))
+
+ld.lld: error: undefined symbol: vtable for hermes::vm::NopCrashManager
+>>> referenced by CrashManager.h:88 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:88)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::NopCrashManager::NopCrashManager())
+>>> referenced by CrashManager.h:88 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:88)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::NopCrashManager::NopCrashManager())
+>>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+
+ld.lld: error: undefined symbol: vtable for hermes::vm::CrashManager
+>>> referenced by CrashManager.h:21 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:21)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::CrashManager::CrashManager())
+>>> referenced by CrashManager.h:21 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/Public/CrashManager.h:21)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(hermes::vm::CrashManager::CrashManager())
+>>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+
+ld.lld: error: undefined symbol: hermes::vm::NopCrashManager::~NopCrashManager()
+>>> referenced by unique_ptr.h:66 (C:/Users/cspar/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1/__memory/unique_ptr.h:66)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletRuntime.cpp.o:(std::__ndk1::default_delete<hermes::vm::NopCrashManager>::operator()[abi:ne180000](hermes::vm::NopCrashManager*) const)
+
+ld.lld: error: undefined symbol: vtable for facebook::hermes::inspector_modern::RuntimeAdapter
+>>> referenced by RuntimeAdapter.h:35 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/inspector/RuntimeAdapter.h:35)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(facebook::hermes::inspector_modern::RuntimeAdapter::RuntimeAdapter())
+>>> referenced by RuntimeAdapter.h:35 (C:/dev/Morse/node_modules/react-native/ReactAndroid/hermes-engine/build/prefab-headers/hermes/inspector/RuntimeAdapter.h:35)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(facebook::hermes::inspector_modern::RuntimeAdapter::RuntimeAdapter())
+>>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+
+ld.lld: error: undefined symbol: facebook::hermes::inspector_modern::RuntimeAdapter::~RuntimeAdapter()
+>>> referenced by WorkletHermesRuntime.cpp:36 (C:/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp:36)
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(worklets::HermesExecutorRuntimeAdapter::~HermesExecutorRuntimeAdapter())
+
+ld.lld: error: undefined symbol: typeinfo for facebook::hermes::inspector_modern::RuntimeAdapter
+>>> referenced by WorkletHermesRuntime.cpp
+>>>               CMakeFiles/worklets.dir/C_/dev/Morse/node_modules/react-native-worklets/Common/cpp/worklets/WorkletRuntime/WorkletHermesRuntime.cpp.o:(typeinfo for worklets::HermesExecutorRuntimeAdapter)
+clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+ninja: build stopped: subcommand failed.
+
+C++ build system [build] failed while executing:
+    @echo off
+    "C:\\Users\\cspar\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe" ^
+      -C ^
+      "C:\\dev\\Morse\\node_modules\\react-native-worklets\\android\\.cxx\\Debug\\5u403m53\\arm64-v8a" ^
+      worklets
+  from C:\dev\Morse\node_modules\react-native-worklets\android
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.execute(ExecuteProcess.kt:288)
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt$executeProcess$1.invoke(ExecuteProcess.kt:108)
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt$executeProcess$1.invoke(ExecuteProcess.kt:106)
+	at com.android.build.gradle.internal.cxx.timing.TimingEnvironmentKt.time(TimingEnvironment.kt:32)
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.executeProcess(ExecuteProcess.kt:106)
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.executeProcess$default(ExecuteProcess.kt:85)
+	at com.android.build.gradle.internal.cxx.build.CxxRegularBuilder.executeProcessBatch(CxxRegularBuilder.kt:332)
+	at com.android.build.gradle.internal.cxx.build.CxxRegularBuilder.build(CxxRegularBuilder.kt:129)
+	at com.android.build.gradle.tasks.ExternalNativeBuildTask.doTaskAction(ExternalNativeBuildTask.kt:72)
+	at com.android.build.gradle.internal.tasks.UnsafeOutputsTask$taskAction$$inlined$recordTaskAction$1.invoke(BaseTask.kt:59)
+	at com.android.build.gradle.internal.tasks.Blocks.recordSpan(Blocks.java:51)
+	at com.android.build.gradle.internal.tasks.UnsafeOutputsTask.taskAction(UnsafeOutputsTask.kt:81)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at org.gradle.internal.reflect.JavaMethod.invoke(JavaMethod.java:125)
+	... 117 more
+Caused by: com.android.ide.common.process.ProcessException: Error while executing process C:\Users\cspar\AppData\Local\Android\Sdk\cmake\3.22.1\bin\ninja.exe with arguments {-C C:\dev\Morse\node_modules\react-native-worklets\android\.cxx\Debug\5u403m53\arm64-v8a worklets}
+	at com.android.build.gradle.internal.process.GradleProcessResult.buildProcessException(GradleProcessResult.java:73)
+	at com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:48)
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.execute(ExecuteProcess.kt:277)
+	... 132 more
+Caused by: org.gradle.process.internal.ExecException: Process 'command 'C:\Users\cspar\AppData\Local\Android\Sdk\cmake\3.22.1\bin\ninja.exe'' finished with non-zero exit value 1
+	at org.gradle.process.internal.DefaultExecHandle$ExecResultImpl.assertNormalExitValue(DefaultExecHandle.java:442)
+	at com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:46)
+	... 133 more
+
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 26m 32s
+544 actionable tasks: 119 executed, 425 up-to-date

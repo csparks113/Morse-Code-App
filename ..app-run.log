@@ -1,0 +1,546 @@
+--------- beginning of main
+10-04 12:44:01.632 I/13.MorseCodeApp( 8864): Late-enabling -Xcheck:jni
+10-04 12:44:01.655 I/13.MorseCodeApp( 8864): Using CollectorTypeCMC GC.
+10-04 12:44:01.665 D/nativeloader( 8864): Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+10-04 12:44:01.668 D/ActivityThread( 8864): setConscryptValidator
+10-04 12:44:01.669 D/ActivityThread( 8864): setConscryptValidator - put
+10-04 12:44:01.685 D/CompatibilityChangeReporter( 8864): Compat change id reported: 171979766; UID 10463; state: ENABLED
+10-04 12:44:01.686 D/CompatibilityChangeReporter( 8864): Compat change id reported: 242716250; UID 10463; state: ENABLED
+10-04 12:44:01.917 D/nativeloader( 8864): Configuring clns-4 for other apk /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64:/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/com.csparks113.MorseCodeApp
+10-04 12:44:01.921 D/nativeloader( 8864): Load libframework-connectivity-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity.jar: ok
+10-04 12:44:01.922 V/GraphicsEnvironment( 8864): Currently set values for:
+10-04 12:44:01.922 V/GraphicsEnvironment( 8864):   angle_gl_driver_selection_pkgs=[]
+10-04 12:44:01.922 V/GraphicsEnvironment( 8864):   angle_gl_driver_selection_values=[]
+10-04 12:44:01.923 V/GraphicsEnvironment( 8864): ANGLE GameManagerService for com.csparks113.MorseCodeApp: false
+10-04 12:44:01.923 V/GraphicsEnvironment( 8864): com.csparks113.MorseCodeApp is not listed in per-application setting
+10-04 12:44:01.923 V/GraphicsEnvironment( 8864): App is not on the allowlist for updatable production driver.
+10-04 12:44:01.976 I/morseNitroOnLoad( 8864): Loading morseNitro C++ library...
+10-04 12:44:01.998 D/nativeloader( 8864): Load /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a/libmorseNitro.so using class loader ns clns-4 (caller=/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!classes19.dex): ok
+10-04 12:44:01.998 I/Nitro.HybridObjectRegistry( 8864): Registering HybridObject "OutputsAudio"...
+10-04 12:44:01.998 I/Nitro.HybridObjectRegistry( 8864): Successfully registered HybridObject "OutputsAudio"!
+10-04 12:44:01.998 I/morseNitroOnLoad( 8864): Successfully loaded morseNitro C++ library!
+10-04 12:44:02.000 W/SoLoader( 8864): Initializing SoLoader: 0
+10-04 12:44:02.000 W/SoLoader( 8864): Recording new base apk path: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk
+10-04 12:44:02.000 W/SoLoader( 8864): Previously recorded 0 base apk paths.
+10-04 12:44:02.001 I/SoLoader( 8864): Preparing SO source: DirectorySoSource[root = /vendor/lib64 flags = 2]
+10-04 12:44:02.001 I/SoLoader( 8864): Preparing SO source: DirectorySoSource[root = /system/lib64 flags = 2]
+10-04 12:44:02.001 I/SoLoader( 8864): Preparing SO source: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.042 I/SoLoader( 8864): Preparing SO source: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.042 I/SoLoader( 8864): init finish: 4 SO sources prepared
+10-04 12:44:02.042 W/SoLoader( 8864): SoLoader initialized: 8
+10-04 12:44:02.042 W/MainApplication( 8864): Missing required New Architecture library libreact_featureflagsjni.so in /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.042 W/MainApplication( 8864): New Architecture requested but required native libraries were not packaged; falling back.
+10-04 12:44:02.042 W/SoLoader( 8864): SoLoader already initialized
+10-04 12:44:02.054 D/nativeloader( 8864): Load /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a/libc++_shared.so using class loader ns clns-4 (caller=/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!classes21.dex): ok
+10-04 12:44:02.058 D/nativeloader( 8864): Load /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a/libjsi.so using class loader ns clns-4 (caller=/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!classes21.dex): ok
+10-04 12:44:02.062 D/nativeloader( 8864): Load /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a/libfbjni.so using class loader ns clns-4 (caller=/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!classes21.dex): ok
+10-04 12:44:02.063 D/nativeloader( 8864): Load /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a/libreactnative.so using class loader ns clns-4 (caller=/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!classes21.dex): ok
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Entering merged library JNI_OnLoad.
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing 12 pre-merged libs (including stub)
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing to register libfabricjni_so.  onload_func: 0x714706dce0
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing to register libreact_devsupportjni_so.  onload_func: 0x7147267fc8
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing to register libreact_featureflagsjni_so.  onload_func: 0x7147276518
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing to register libreact_newarchdefaults_so.  onload_func: 0x71472de6a8
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing to register libreactnativeblob_so.  onload_func: 0x71474cecb4
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing to register libreactnativejni_so.  onload_func: 0x714751c6bc
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing to register libreactnativejni_common_so.  onload_func: 0x714752d044
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing to register librninstance_so.  onload_func: 0x7147574764
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing to register libturbomodulejsijni_so.  onload_func: 0x714768cfa8
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing to register libuimanagerjni_so.  onload_func: 0x71476a5ff8
+10-04 12:44:02.063 D/jni_lib_merge( 8864): Preparing to register libyoga_so.  onload_func: 0x71476b5a7c
+10-04 12:44:02.063 D/jni_lib_merge( 8864): About to register 11 actual methods.
+10-04 12:44:02.063 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.063 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.063 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.063 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.063 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 2]
+10-04 12:44:02.063 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 2]
+10-04 12:44:02.063 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.064 W/soloader.recovery.CheckBaseApkExists( 8864): Base apk exists: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk
+10-04 12:44:02.064 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.064 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 2]
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 2]
+10-04 12:44:02.064 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.064 E/SoLoader( 8864): Checking /data/app missing libraries.
+10-04 12:44:02.064 E/SoLoader( 8864): Successfully recovered from /data/app disk failure.
+10-04 12:44:02.064 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.064 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 3]
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 3]
+10-04 12:44:02.064 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.064 E/SoLoader( 8864): Checking /data/data missing libraries.
+10-04 12:44:02.064 E/SoLoader( 8864): No libraries missing from unpacking so paths while recovering /data/data failure
+10-04 12:44:02.064 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.064 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 3]
+10-04 12:44:02.064 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 3]
+10-04 12:44:02.064 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.065 W/SoLoader( 8864): Failed to recover
+10-04 12:44:02.067 D/OpenGLRenderer( 8864): HWUI - treat SMPTE_170M as sRGB
+10-04 12:44:02.068 I/AdrenoGLES-0( 8864): QUALCOMM build                   : 770ea4bdb9, Ief8f71bb1e
+10-04 12:44:02.068 I/AdrenoGLES-0( 8864): Build Date                       : 02/01/24
+10-04 12:44:02.068 I/AdrenoGLES-0( 8864): OpenGL ES Shader Compiler Version: EV031.36.08.25
+10-04 12:44:02.068 I/AdrenoGLES-0( 8864): Local Branch                     : 
+10-04 12:44:02.068 I/AdrenoGLES-0( 8864): Remote Branch                    : 
+10-04 12:44:02.068 I/AdrenoGLES-0( 8864): Remote Branch                    : 
+10-04 12:44:02.068 I/AdrenoGLES-0( 8864): Reconstruct Branch               : 
+10-04 12:44:02.068 I/AdrenoGLES-0( 8864): Build Config                     : S P 12.1.1 AArch64
+10-04 12:44:02.068 I/AdrenoGLES-0( 8864): Driver Path                      : /vendor/lib64/egl/libGLESv2_adreno.so
+10-04 12:44:02.068 I/AdrenoGLES-0( 8864): Driver Version                   : 0615.0
+10-04 12:44:02.071 I/AdrenoGLES-0( 8864): PFP: 0x01730155, ME: 0x00000000
+10-04 12:44:02.073 W/Adreno-AppProfiles( 8864): Could not find QSPM HAL service. Skipping adreno profile processing.
+10-04 12:44:02.082 D/AppCompatDelegate( 8864): Checking for metadata for AppLocalesMetadataHolderService : Service not found
+10-04 12:44:02.094 I/DecorView( 8864): setWindowBackground: isPopOver=false color=fffafafa d=android.graphics.drawable.ColorDrawable@6a1d3b4
+10-04 12:44:02.096 I/13.MorseCodeApp( 8864): hiddenapi: Accessing hidden method Landroid/view/ViewGroup;->makeOptionalFitsSystemWindows()V (runtime_flags=0, domain=platform, api=unsupported) from Landroidx/appcompat/widget/ViewUtils; (domain=app) using reflection: allowed
+10-04 12:44:02.107 D/PhoneWindow( 8864): forceLight changed to false [] from com.android.internal.policy.PhoneWindow.updateForceLightNavigationBar:4376 com.android.internal.policy.PhoneWindow.setNavigationBarColor:4067 com.facebook.react.views.view.WindowUtilKt.enableEdgeToEdge:116 java.lang.reflect.Method.invoke:-2 expo.modules.ReactActivityDelegateWrapper$onCreate$1.invokeSuspend:573 
+10-04 12:44:02.110 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.110 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 3]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 3]
+10-04 12:44:02.110 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.110 W/soloader.recovery.CheckBaseApkExists( 8864): Base apk exists: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk
+10-04 12:44:02.110 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.110 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 3]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 3]
+10-04 12:44:02.110 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.110 E/SoLoader( 8864): Checking /data/app missing libraries.
+10-04 12:44:02.110 E/SoLoader( 8864): Successfully recovered from /data/app disk failure.
+10-04 12:44:02.110 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.110 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 3]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 3]
+10-04 12:44:02.110 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.110 E/SoLoader( 8864): Checking /data/data missing libraries.
+10-04 12:44:02.110 E/SoLoader( 8864): No libraries missing from unpacking so paths while recovering /data/data failure
+10-04 12:44:02.110 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.110 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 3]
+10-04 12:44:02.110 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 3]
+10-04 12:44:02.110 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.111 W/SoLoader( 8864): Failed to recover
+10-04 12:44:02.135 D/SensorManager( 8864): registerListener :: 11, lsm6dso LSM6DSO Accelerometer Non-wakeup, 66667, 0, 
+10-04 12:44:02.139 W/unknown:BridgelessReact( 8864): ReactHost{0}.startSurface(surfaceId = 0): Schedule
+10-04 12:44:02.139 W/unknown:BridgelessReact( 8864): ReactHost{0}.attachSurface(surfaceId = 0)
+10-04 12:44:02.140 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateReactInstanceTask()
+10-04 12:44:02.140 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateReactInstanceTask(): Start
+10-04 12:44:02.140 W/unknown:BridgelessReact( 8864): ReactHost{0}.getJSBundleLoader()
+10-04 12:44:02.140 W/unknown:BridgelessReact( 8864): ReactHost{0}.isMetroRunning()
+10-04 12:44:02.143 W/unknown:BridgelessReact( 8864): ReactHost{0}.onHostResume(activity)
+10-04 12:44:02.146 D/CompatibilityChangeReporter( 8864): Compat change id reported: 237531167; UID 10463; state: DISABLED
+10-04 12:44:02.148 D/NativeCustomFrequencyManager( 8864): [NativeCFMS] BpCustomFrequencyManager::BpCustomFrequencyManager()
+10-04 12:44:02.154 I/InsetsController( 8864): onStateChanged: host=com.csparks113.MorseCodeApp/com.csparks113.MorseCodeApp.MainActivity, from=android.view.ViewRootImpl.setView:1797, state=InsetsState: {mDisplayFrame=Rect(0, 0 - 1080, 2340), mDisplayCutout=DisplayCutout{insets=Rect(0, 74 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(514, 0 - 566, 74), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 displayHeight=2340 physicalDisplayWidth=1080 physicalDisplayHeight=2340 density={2.8125} cutoutSpec={M 0,0 H -9.244444444444444 V 26.31111111111111 H 9.244444444444444 V 0 H 0 Z @dp} rotation={0} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}}}, mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=101, center=Point(101, 101)}, RoundedCorner{position=TopRight, radius=101, center=Point(979, 101)}, RoundedCorner{position=BottomRight, radius=101, center=Point(979, 2239)}, RoundedCorner{position=BottomLeft, radius=101, center=Point(101, 2239)}]}  mRoundedCornerFrame=Rect(0, 0 - 1080, 2340), mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(956, 0 - 1080, 74) rotation=0}, mDisplayShape=DisplayShape{ spec=-311912193 displayWidth=1080 displayHeight=2340 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}, mSources= { InsetsSource: {d7ac0001 mType=navigationBars mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0004 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags=[]}, InsetsSource: {d7ac0005 mType=mandatorySystemGestures mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0006 mType=tappableElement mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0024 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags=[]}, InsetsSource: {f8e40000 mType=statusBars mFrame=[0,0][1080,74] mVisible=true mFlags=[]}, InsetsSource: {f8e40005 mType=mandatorySystemGestures mFrame=[0,0][1080,108] mVisible=true mFlags=[]}, InsetsSource: {f8e40006 mType=tappableElement mFrame=[0,0][1080,74] mVisible=true mFlags=[]}, InsetsSource: {27 mType=displayCutout mFrame=[0,0][1080,74] mVisible=true mFlags=[]} }
+10-04 12:44:02.154 I/ViewRootImpl@9e31501[MainActivity]( 8864): synced displayState. AttachInfo displayState=2
+10-04 12:44:02.155 I/ViewRootImpl@9e31501[MainActivity]( 8864): setView = com.android.internal.policy.DecorView@17cd7e TM=true
+10-04 12:44:02.155 I/IDS_TAG ( 8864): Starting IDS observe window
+10-04 12:44:02.155 I/IDS_TAG ( 8864): Getting Shared Preference for com.csparks113.MorseCodeApp.MainApplication@eb64007 uid = 10463
+10-04 12:44:02.158 I/IDS_TAG ( 8864): App com.csparks113.MorseCodeApp.MainApplication@eb64007 has not finished training
+10-04 12:44:02.159 I/IDS_TAG ( 8864): Closing IDS observe window
+10-04 12:44:02.159 I/IDS_TAG ( 8864): Getting Shared Preference for com.csparks113.MorseCodeApp.MainApplication@eb64007 uid = 10463
+10-04 12:44:02.159 I/IDS_TAG ( 8864): IDS count updated to 2 for com.csparks113.MorseCodeApp.MainApplication@eb64007
+10-04 12:44:02.164 W/unknown:BridgelessReact( 8864): ReactHost{0}.isMetroRunning(): Async result = true
+10-04 12:44:02.165 W/unknown:BridgelessReact( 8864): ReactHost{0}.loadJSBundleFromMetro()
+10-04 12:44:02.169 I/BufferQueueProducer( 8864): [](id:22a000000000,api:0,p:0,c:8864) setDequeueTimeout:2077252342
+10-04 12:44:02.169 I/BLASTBufferQueue_Java( 8864): new BLASTBufferQueue, mName= ViewRootImpl@9e31501[MainActivity] mNativeObject= 0xb4000071e0c6ca90 sc.mNativeObject= 0xb400007350c54850 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3085 android.view.ViewRootImpl.relayoutWindow:10224 android.view.ViewRootImpl.performTraversals:4167 android.view.ViewRootImpl.doTraversal:3345 android.view.ViewRootImpl$TraversalRunnable.run:11437 android.view.Choreographer$CallbackRecord.run:1690 android.view.Choreographer$CallbackRecord.run:1699 android.view.Choreographer.doCallbacks:1154 android.view.Choreographer.doFrame:1080 android.view.Choreographer$FrameDisplayEventReceiver.run:1647 
+10-04 12:44:02.169 I/BLASTBufferQueue_Java( 8864): update, w= 1080 h= 2340 mName = ViewRootImpl@9e31501[MainActivity] mNativeObject= 0xb4000071e0c6ca90 sc.mNativeObject= 0xb400007350c54850 format= -1 caller= android.graphics.BLASTBufferQueue.<init>:89 android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3085 android.view.ViewRootImpl.relayoutWindow:10224 android.view.ViewRootImpl.performTraversals:4167 android.view.ViewRootImpl.doTraversal:3345 android.view.ViewRootImpl$TraversalRunnable.run:11437 
+10-04 12:44:02.170 I/ViewRootImpl@9e31501[MainActivity]( 8864): Relayout returned: old=(0,0,1080,2340) new=(0,0,1080,2340) relayoutAsync=false req=(1080,2340)0 dur=4 res=0x403 s={true 0xb400007410c6eae0} ch=true seqId=0
+10-04 12:44:02.170 I/ViewRootImpl@9e31501[MainActivity]( 8864): performConfigurationChange setNightDimText nightDimLevel=0
+10-04 12:44:02.170 D/ViewRootImpl@9e31501[MainActivity]( 8864): mThreadedRenderer.initialize() mSurface={isValid=true 0xb400007410c6eae0} hwInitialized=true
+10-04 12:44:02.171 D/ViewRootImpl@9e31501[MainActivity]( 8864): reportNextDraw android.view.ViewRootImpl.performTraversals:4781 android.view.ViewRootImpl.doTraversal:3345 android.view.ViewRootImpl$TraversalRunnable.run:11437 android.view.Choreographer$CallbackRecord.run:1690 android.view.Choreographer$CallbackRecord.run:1699 
+10-04 12:44:02.171 D/OpenGLRenderer( 8864): HWUI - treat SMPTE_170M as sRGB
+10-04 12:44:02.175 D/CompatibilityChangeReporter( 8864): Compat change id reported: 210923482; UID 10463; state: ENABLED
+10-04 12:44:02.177 I/WindowManager( 8864): WindowManagerGlobal#addView, ty=1000, view=android.widget.PopupWindow$PopupDecorView{e6b27e1 V.E...... R.....I. 0,0-0,0}, caller=android.view.WindowManagerImpl.addView:150 android.widget.PopupWindow.invokePopup:1721 android.widget.PopupWindow.showAtLocation:1421 
+10-04 12:44:02.178 D/NativeCustomFrequencyManager( 8864): [NativeCFMS] BpCustomFrequencyManager::BpCustomFrequencyManager()
+10-04 12:44:02.180 I/InsetsController( 8864): onStateChanged: host=PopupWindow:9f2ed48, from=android.view.ViewRootImpl.setView:1797, state=InsetsState: {mDisplayFrame=Rect(0, 0 - 1080, 2340), mDisplayCutout=DisplayCutout{insets=Rect(0, 74 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(514, 0 - 566, 74), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 displayHeight=2340 physicalDisplayWidth=1080 physicalDisplayHeight=2340 density={2.8125} cutoutSpec={M 0,0 H -9.244444444444444 V 26.31111111111111 H 9.244444444444444 V 0 H 0 Z @dp} rotation={0} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}}}, mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=101, center=Point(101, 101)}, RoundedCorner{position=TopRight, radius=101, center=Point(979, 101)}, RoundedCorner{position=BottomRight, radius=101, center=Point(979, 2239)}, RoundedCorner{position=BottomLeft, radius=101, center=Point(101, 2239)}]}  mRoundedCornerFrame=Rect(0, 0 - 1080, 2340), mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(956, 0 - 1080, 74) rotation=0}, mDisplayShape=DisplayShape{ spec=-311912193 displayWidth=1080 displayHeight=2340 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}, mSources= { InsetsSource: {d7ac0001 mType=navigationBars mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0004 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags=[]}, InsetsSource: {d7ac0005 mType=mandatorySystemGestures mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0006 mType=tappableElement mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0024 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags=[]}, InsetsSource: {f8e40000 mType=statusBars mFrame=[0,0][1080,74] mVisible=true mFlags=[]}, InsetsSource: {f8e40005 mType=mandatorySystemGestures mFrame=[0,0][1080,108] mVisible=true mFlags=[]}, InsetsSource: {f8e40006 mType=tappableElement mFrame=[0,0][1080,74] mVisible=true mFlags=[]}, InsetsSource: {27 mType=displayCutout mFrame=[0,0][1080,74] mVisible=true mFlags=[]} }
+10-04 12:44:02.180 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): synced displayState. AttachInfo displayState=2
+10-04 12:44:02.181 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): setView = android.widget.PopupWindow$PopupDecorView@e6b27e1 TM=true
+10-04 12:44:02.181 I/InsetsSourceConsumer( 8864): applyRequestedVisibilityToControl: visible=true, type=statusBars, host=com.csparks113.MorseCodeApp/com.csparks113.MorseCodeApp.MainActivity
+10-04 12:44:02.181 I/InsetsSourceConsumer( 8864): applyRequestedVisibilityToControl: visible=true, type=navigationBars, host=com.csparks113.MorseCodeApp/com.csparks113.MorseCodeApp.MainActivity
+10-04 12:44:02.186 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Resizing android.view.ViewRootImpl@b425d63: frame = [0,74][1080,148] reportDraw = true forceLayout = false syncSeqId = -1
+10-04 12:44:02.186 I/BufferQueueProducer( 8864): [](id:22a000000001,api:0,p:0,c:8864) setDequeueTimeout:2077252342
+10-04 12:44:02.187 I/BLASTBufferQueue_Java( 8864): new BLASTBufferQueue, mName= ViewRootImpl@2ccb906[PopupWindow:9f2ed48] mNativeObject= 0xb4000071e0c6d710 sc.mNativeObject= 0xb400007350c5d910 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3085 android.view.ViewRootImpl.relayoutWindow:10224 android.view.ViewRootImpl.performTraversals:4167 android.view.ViewRootImpl.doTraversal:3345 android.view.ViewRootImpl$TraversalRunnable.run:11437 android.view.Choreographer$CallbackRecord.run:1690 android.view.Choreographer$CallbackRecord.run:1699 android.view.Choreographer.doCallbacks:1154 android.view.Choreographer.doFrame:1080 android.view.Choreographer$FrameDisplayEventReceiver.run:1647 
+10-04 12:44:02.187 I/BLASTBufferQueue_Java( 8864): update, w= 1080 h= 74 mName = ViewRootImpl@2ccb906[PopupWindow:9f2ed48] mNativeObject= 0xb4000071e0c6d710 sc.mNativeObject= 0xb400007350c5d910 format= -3 caller= android.graphics.BLASTBufferQueue.<init>:89 android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3085 android.view.ViewRootImpl.relayoutWindow:10224 android.view.ViewRootImpl.performTraversals:4167 android.view.ViewRootImpl.doTraversal:3345 android.view.ViewRootImpl$TraversalRunnable.run:11437 
+10-04 12:44:02.187 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Relayout returned: old=(0,74,1080,2205) new=(0,74,1080,148) relayoutAsync=false req=(1080,74)0 dur=2 res=0x403 s={true 0xb400007410c7b740} ch=true seqId=0
+10-04 12:44:02.187 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): performConfigurationChange setNightDimText nightDimLevel=0
+10-04 12:44:02.187 D/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): mThreadedRenderer.initialize() mSurface={isValid=true 0xb400007410c7b740} hwInitialized=true
+10-04 12:44:02.188 D/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): reportNextDraw android.view.ViewRootImpl.performTraversals:4781 android.view.ViewRootImpl.doTraversal:3345 android.view.ViewRootImpl$TraversalRunnable.run:11437 android.view.Choreographer$CallbackRecord.run:1690 android.view.Choreographer$CallbackRecord.run:1699 
+10-04 12:44:02.188 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Setup new sync=wmsSync-ViewRootImpl@2ccb906[PopupWindow:9f2ed48]#0
+10-04 12:44:02.188 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Creating new active sync group ViewRootImpl@2ccb906[PopupWindow:9f2ed48]#1
+--------- beginning of system
+10-04 12:44:02.188 I/SurfaceSyncGroup( 8864): addLocalSync=ViewRootImpl@2ccb906[PopupWindow:9f2ed48]#1 to name=wmsSync-ViewRootImpl@2ccb906[PopupWindow:9f2ed48]#0, callers=android.window.SurfaceSyncGroup.add:431 android.window.SurfaceSyncGroup.add:392 android.window.SurfaceSyncGroup.add:340 android.view.ViewRootImpl.createSyncIfNeeded:4912 android.view.ViewRootImpl.performTraversals:4796 android.view.ViewRootImpl.doTraversal:3345 
+10-04 12:44:02.189 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): registerCallbacksForSync syncBuffer=false
+10-04 12:44:02.190 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Received frameDrawingCallback syncResult=0 frameNum=1.
+10-04 12:44:02.190 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): mWNT: t=0xb400007240c5bfb0 mBlastBufferQueue=0xb4000071e0c6d710 fn= 1 mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$8.onFrameDraw:13946 android.view.ThreadedRenderer$1.onFrameDraw:792 <bottom of call stack> 
+10-04 12:44:02.190 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Setting up sync and frameCommitCallback
+10-04 12:44:02.197 I/BLASTBufferQueue( 8864): [ViewRootImpl@2ccb906[PopupWindow:9f2ed48]#1](f:0,a:0,s:0) onFrameAvailable the first frame is available
+10-04 12:44:02.198 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Received frameCommittedCallback lastAttemptedDrawFrameNum=1 didProduceBuffer=true
+10-04 12:44:02.198 I/SurfaceSyncGroup( 8864): onTransactionReady mName=wmsSync-ViewRootImpl@2ccb906[PopupWindow:9f2ed48]#0 callback=21503328
+10-04 12:44:02.199 D/OpenGLRenderer( 8864): CFMS:: SetUp Pid : 8864    Tid : 8891
+10-04 12:44:02.199 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): reportDrawFinished seqId=0
+10-04 12:44:02.199 D/OpenGLRenderer( 8864): HWUI - treat SMPTE_170M as sRGB
+10-04 12:44:02.200 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): handleResized, msg = 5 frames=ClientWindowFrames{frame=[0,74][1080,148] display=[0,74][1080,2205] parentFrame=[0,0][0,0] attachedFrame=[0,0][1080,2340]} forceNextWindowRelayout=false displayId=0 dragResizing=false compatScale=1.0 frameChanged=false attachedFrameChanged=false configChanged=false displayChanged=false compatScaleChanged=false
+10-04 12:44:02.200 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): handleResized mSyncSeqId = 0
+10-04 12:44:02.200 D/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): reportNextDraw android.view.ViewRootImpl.handleResized:2574 android.view.ViewRootImpl.-$$Nest$mhandleResized:0 android.view.ViewRootImpl$ViewRootHandler.handleMessageImpl:7267 android.view.ViewRootImpl$ViewRootHandler.handleMessage:7236 android.os.Handler.dispatchMessage:106 
+10-04 12:44:02.206 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Setup new sync=wmsSync-ViewRootImpl@2ccb906[PopupWindow:9f2ed48]#2
+10-04 12:44:02.206 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Creating new active sync group ViewRootImpl@2ccb906[PopupWindow:9f2ed48]#3
+10-04 12:44:02.206 I/SurfaceSyncGroup( 8864): addLocalSync=ViewRootImpl@2ccb906[PopupWindow:9f2ed48]#3 to name=wmsSync-ViewRootImpl@2ccb906[PopupWindow:9f2ed48]#2, callers=android.window.SurfaceSyncGroup.add:431 android.window.SurfaceSyncGroup.add:392 android.window.SurfaceSyncGroup.add:340 android.view.ViewRootImpl.createSyncIfNeeded:4912 android.view.ViewRootImpl.performTraversals:4796 android.view.ViewRootImpl.doTraversal:3345 
+10-04 12:44:02.206 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): registerCallbacksForSync syncBuffer=false
+10-04 12:44:02.207 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Received frameDrawingCallback syncResult=0 frameNum=2.
+10-04 12:44:02.207 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): mWNT: t=0xb400007240c8a8f0 mBlastBufferQueue=0xb4000071e0c6d710 fn= 2 mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$8.onFrameDraw:13946 android.view.ThreadedRenderer$1.onFrameDraw:792 <bottom of call stack> 
+10-04 12:44:02.207 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Setting up sync and frameCommitCallback
+10-04 12:44:02.207 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): Received frameCommittedCallback lastAttemptedDrawFrameNum=2 didProduceBuffer=false
+10-04 12:44:02.207 I/BLASTBufferQueue_Java( 8864): gatherPendingTransactions, mName= ViewRootImpl@2ccb906[PopupWindow:9f2ed48] mNativeObject= 0xb4000071e0c6d710 frameNumber= 2 caller= android.view.ViewRootImpl$8.lambda$onFrameDraw$1:14019 android.view.ViewRootImpl$8.$r8$lambda$6frSHsGsDhUEo8Wl9hChpniTVZ0:0 android.view.ViewRootImpl$8$$ExternalSyntheticLambda1.onFrameCommit:9 android.view.ThreadedRenderer$1.lambda$onFrameDraw$0:804 android.view.ThreadedRenderer$1$$ExternalSyntheticLambda0.onFrameCommit:2 <bottom of call stack> 
+10-04 12:44:02.207 I/SurfaceSyncGroup( 8864): onTransactionReady mName=wmsSync-ViewRootImpl@2ccb906[PopupWindow:9f2ed48]#2 callback=208891071
+10-04 12:44:02.207 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): reportDrawFinished seqId=0
+10-04 12:44:02.358 I/13.MorseCodeApp( 8864): Compiler allocated 6800KB to compile void android.view.ViewRootImpl.performTraversals()
+10-04 12:44:02.582 W/unknown:BridgelessReact( 8864): ReactHost{0}.loadJSBundleFromMetro(): Creating BundleLoader
+10-04 12:44:02.582 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateReactContext(): Creating BridgelessReactContext
+10-04 12:44:02.583 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateReactInstanceTask(): Creating ReactInstance
+10-04 12:44:02.590 I/WindowManager( 8864): WindowManagerGlobal#removeView, ty=1000, view=android.widget.PopupWindow$PopupDecorView{e6b27e1 V.E...... R....... 0,0-1080,74}, caller=android.view.WindowManagerGlobal.removeView:648 android.view.WindowManagerImpl.removeViewImmediate:208 android.widget.PopupWindow.dismissImmediate:2422 
+10-04 12:44:02.590 W/WindowOnBackDispatcher( 8864): sendCancelIfRunning: isInProgress=falsecallback=android.view.ViewRootImpl$$ExternalSyntheticLambda19@feb5f92
+10-04 12:44:02.592 I/ViewRootImpl@2ccb906[PopupWindow:9f2ed48]( 8864): dispatchDetachedFromWindow
+10-04 12:44:02.594 D/InputTransport( 8864): Input channel destroyed: '9e922d6', fd=108
+10-04 12:44:02.599 D/nativeloader( 8864): Load /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a/libhermes.so using class loader ns clns-4 (caller=/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!classes21.dex): ok
+10-04 12:44:02.600 D/nativeloader( 8864): Load /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a/libhermestooling.so using class loader ns clns-4 (caller=/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!classes21.dex): ok
+10-04 12:44:02.600 D/jni_lib_merge( 8864): Entering merged library JNI_OnLoad.
+10-04 12:44:02.600 D/jni_lib_merge( 8864): Preparing 4 pre-merged libs (including stub)
+10-04 12:44:02.600 D/jni_lib_merge( 8864): Preparing to register libhermes_executor_so.  onload_func: 0x70a61717e0
+10-04 12:44:02.600 D/jni_lib_merge( 8864): Preparing to register libhermesinstancejni_so.  onload_func: 0x70a61a726c
+10-04 12:44:02.600 D/jni_lib_merge( 8864): Preparing to register libjsijniprofiler_so.  onload_func: 0x70a61a92bc
+10-04 12:44:02.600 D/jni_lib_merge( 8864): About to register 3 actual methods.
+10-04 12:44:02.608 D/nativeloader( 8864): Load /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a/libNitroHaptics.so using class loader ns clns-4 (caller=/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!classes10.dex): ok
+10-04 12:44:02.608 I/Nitro.HybridObjectRegistry( 8864): Registering HybridObject "Haptics"...
+10-04 12:44:02.608 I/Nitro.HybridObjectRegistry( 8864): Successfully registered HybridObject "Haptics"!
+10-04 12:44:02.610 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.610 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.610 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.610 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.610 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 3]
+10-04 12:44:02.610 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 3]
+10-04 12:44:02.610 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.610 W/soloader.recovery.CheckBaseApkExists( 8864): Base apk exists: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk
+10-04 12:44:02.610 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.610 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.610 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.610 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.610 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 3]
+10-04 12:44:02.610 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 3]
+10-04 12:44:02.610 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.610 E/SoLoader( 8864): Checking /data/app missing libraries.
+10-04 12:44:02.610 E/SoLoader( 8864): Successfully recovered from /data/app disk failure.
+10-04 12:44:02.611 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.611 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.611 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.611 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.611 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 3]
+10-04 12:44:02.611 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 3]
+10-04 12:44:02.611 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.611 E/SoLoader( 8864): Checking /data/data missing libraries.
+10-04 12:44:02.611 E/SoLoader( 8864): No libraries missing from unpacking so paths while recovering /data/data failure
+10-04 12:44:02.611 W/SoLoader( 8864): Running a recovery step for libappmodules.so due to com.facebook.soloader.SoLoaderDSONotFoundError: couldn't find DSO to load: libappmodules.so
+10-04 12:44:02.611 W/SoLoader( 8864): 	existing SO sources: 
+10-04 12:44:02.611 W/SoLoader( 8864): 		SoSource 0: ApplicationSoSource[DirectorySoSource[root = /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64 flags = 0]]
+10-04 12:44:02.611 W/SoLoader( 8864): 		SoSource 1: DirectApkSoSource[root = [/data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/base.apk!/lib/arm64-v8a]]
+10-04 12:44:02.611 W/SoLoader( 8864): 		SoSource 2: DirectorySoSource[root = /system/lib64 flags = 3]
+10-04 12:44:02.611 W/SoLoader( 8864): 		SoSource 3: DirectorySoSource[root = /vendor/lib64 flags = 3]
+10-04 12:44:02.611 W/SoLoader( 8864): 	Native lib dir: /data/app/~~0c_qKZcQ-uopC7_LSrMPdQ==/com.csparks113.MorseCodeApp-dx4VdSGGTgKJtH84AvJOyQ==/lib/arm64
+10-04 12:44:02.611 W/SoLoader( 8864): Failed to recover
+10-04 12:44:02.661 I/ExpoModulesCore( 8864): ✅ AppContext was initialized
+10-04 12:44:02.674 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateReactInstanceTask(): Loading JS Bundle
+10-04 12:44:02.674 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateReactInstanceTask(): Calling DevSupportManagerBase.onNewReactContextCreated(reactContext)
+10-04 12:44:02.676 W/unknown:BridgelessReact( 8864): ReactHost{0}.startSurface(surfaceId = 0): Execute
+10-04 12:44:02.682 W/unknown:ReactNative( 8864): Packager connection already open, nooping.
+10-04 12:44:02.682 W/unknown:BridgelessReact( 8864): ReactContext.onHostResume()
+10-04 12:44:02.684 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateReactInstanceTask(): Executing ReactInstanceEventListeners
+10-04 12:44:02.850 E/ReactNativeJS( 8864): [runtime not ready]: Invariant Violation: TurboModuleRegistry.getEnforcing(...): 'PlatformConstants' could not be found. Verify that a module by this name is registered in the native binary.
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): ReactHost{0}.handleHostException(message = "[runtime not ready]: Invariant Violation: TurboModuleRegistry.getEnforcing(...): 'PlatformConstants' could not be found. Verify that a module by this name is registered in the native binary., stack:
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): invariant@6351:25
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): getEnforcing@6314:26
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): anonymous@6275:49
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): anonymous@6232:80
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): anonymous@6182:47
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): anonymous@5987:34
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): anonymous@38514:29
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): anonymous@38491:68
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): setUpDefaltReactNativeEnvironment@4017:11
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): anonymous@3990:98
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): guardedLoadModule@158:46
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): global@246839:3
+10-04 12:44:02.857 W/unknown:BridgelessReact( 8864): ")
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): Exception in native call from JS
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): com.facebook.react.common.JavascriptException: [runtime not ready]: Invariant Violation: TurboModuleRegistry.getEnforcing(...): 'PlatformConstants' could not be found. Verify that a module by this name is registered in the native binary., stack:
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): invariant@6351:25
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): getEnforcing@6314:26
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): anonymous@6275:49
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): metroRequire@78:91
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): anonymous@6232:80
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): metroRequire@78:91
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): anonymous@6182:47
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): metroRequire@78:91
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): anonymous@5987:34
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): metroRequire@78:91
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): anonymous@38514:29
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): metroRequire@78:91
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): anonymous@38491:68
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): guardedLoadModule@165:37
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): metroRequire@78:91
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): setUpDefaltReactNativeEnvironment@4017:11
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): anonymous@3990:98
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): guardedLoadModule@158:46
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): metroRequire@78:91
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): global@246839:3
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at com.facebook.react.modules.core.ExceptionsManagerModule.reportException(ExceptionsManagerModule.kt:52)
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at com.facebook.react.runtime.ReactInstance$ReactJsExceptionHandlerImpl.reportJsException(ReactInstance.kt:281)
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at com.facebook.jni.NativeRunnable.run(Native Method)
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at android.os.Handler.handleCallback(Handler.java:958)
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at com.facebook.react.bridge.queue.MessageQueueThreadHandler.dispatchMessage(MessageQueueThreadHandler.kt:21)
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at android.os.Looper.loopOnce(Looper.java:230)
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at android.os.Looper.loop(Looper.java:319)
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion.startNewBackgroundThread$lambda$1(MessageQueueThreadImpl.kt:175)
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion.$r8$lambda$ldnZnqelhYFctGaUKkOKYj5rxo4(Unknown Source:0)
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+10-04 12:44:02.857 E/unknown:ReactNative( 8864): 	at java.lang.Thread.run(Thread.java:1119)
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask()
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): ReactHost{0}.raiseSoftException(getOrCreateDestroyTask()): handleHostException(message = "[runtime not ready]: Invariant Violation: TurboModuleRegistry.getEnforcing(...): 'PlatformConstants' could not be found. Verify that a module by this name is registered in the native binary., stack:
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): invariant@6351:25
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): getEnforcing@6314:26
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): anonymous@6275:49
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): anonymous@6232:80
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): anonymous@6182:47
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): anonymous@5987:34
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): anonymous@38514:29
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): anonymous@38491:68
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): setUpDefaltReactNativeEnvironment@4017:11
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): anonymous@3990:98
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): guardedLoadModule@158:46
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): metroRequire@78:91
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): global@246839:3
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): ")
+10-04 12:44:02.858 E/ReactNativeJS( 8864): [runtime not ready]: Error: Non-js exception: AppRegistryBinding::startSurface failed. Global was not installed.
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): Unhandled SoftException
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): com.facebook.react.bridge.ReactNoCrashSoftException: raiseSoftException(getOrCreateDestroyTask()): handleHostException(message = "[runtime not ready]: Invariant Violation: TurboModuleRegistry.getEnforcing(...): 'PlatformConstants' could not be found. Verify that a module by this name is registered in the native binary., stack:
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): invariant@6351:25
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): getEnforcing@6314:26
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@6275:49
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@6232:80
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@6182:47
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@5987:34
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@38514:29
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@38491:68
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): setUpDefaltReactNativeEnvironment@4017:11
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@3990:98
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@158:46
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): global@246839:3
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): ")
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.runtime.ReactHostImpl.raiseSoftException(ReactHostImpl.kt:787)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.runtime.ReactHostImpl.getOrCreateDestroyTask(ReactHostImpl.kt:1311)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.runtime.ReactHostImpl.destroy$lambda$10(ReactHostImpl.kt:473)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.runtime.ReactHostImpl.$r8$lambda$vrU67S1pce6ypI1MpEJ0yfM09iA(Unknown Source:0)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.runtime.ReactHostImpl$$ExternalSyntheticLambda35.call(D8$$SyntheticClass:0)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.runtime.internal.bolts.Task$Companion.call$lambda$2(Task.kt:315)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.runtime.internal.bolts.Task$Companion.$r8$lambda$MFqd_-X5KhHmu0hvNE2Bec_4mJM(Unknown Source:0)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.runtime.internal.bolts.Task$Companion$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at java.lang.Thread.run(Thread.java:1119)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): Caused by: com.facebook.react.common.JavascriptException: [runtime not ready]: Invariant Violation: TurboModuleRegistry.getEnforcing(...): 'PlatformConstants' could not be found. Verify that a module by this name is registered in the native binary., stack:
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): invariant@6351:25
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): getEnforcing@6314:26
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@6275:49
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@6232:80
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@6182:47
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@5987:34
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@38514:29
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@38491:68
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@165:37
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): setUpDefaltReactNativeEnvironment@4017:11
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): anonymous@3990:98
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): loadModuleImplementation@252:40
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): guardedLoadModule@158:46
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): metroRequire@78:91
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): global@246839:3
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.modules.core.ExceptionsManagerModule.reportException(ExceptionsManagerModule.kt:52)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.runtime.ReactInstance$ReactJsExceptionHandlerImpl.reportJsException(ReactInstance.kt:281)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.jni.NativeRunnable.run(Native Method)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at android.os.Handler.handleCallback(Handler.java:958)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.bridge.queue.MessageQueueThreadHandler.dispatchMessage(MessageQueueThreadHandler.kt:21)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at android.os.Looper.loopOnce(Looper.java:230)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at android.os.Looper.loop(Looper.java:319)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion.startNewBackgroundThread$lambda$1(MessageQueueThreadImpl.kt:175)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion.$r8$lambda$ldnZnqelhYFctGaUKkOKYj5rxo4(Unknown Source:0)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+10-04 12:44:02.858 E/unknown:ReactHost( 8864): 	... 1 more
+10-04 12:44:02.858 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): Resetting createReactInstance task ref
+10-04 12:44:02.870 D/CompatibilityChangeReporter( 8864): Compat change id reported: 171228096; UID 10463; state: ENABLED
+10-04 12:44:02.890 I/Dialog  ( 8864): mIsDeviceDefault = false, mIsSamsungBasicInteraction = false, isMetaDataInActivity = false
+10-04 12:44:02.891 I/DecorView( 8864): setWindowBackground: isPopOver=false color=eecc0000 d=android.graphics.drawable.ColorDrawable@81f8b2d
+10-04 12:44:02.891 I/DecorView( 8864): setWindowBackground: isPopOver=false color=ff000000 d=android.graphics.drawable.ColorDrawable@47f9ab0
+10-04 12:44:02.891 I/WindowManager( 8864): WindowManagerGlobal#addView, ty=2, view=DecorView@f96ad29[MainActivity], caller=android.view.WindowManagerImpl.addView:150 android.app.Dialog.show:506 com.facebook.react.devsupport.RedBoxDialogSurfaceDelegate.show:128 
+10-04 12:44:02.892 D/NativeCustomFrequencyManager( 8864): [NativeCFMS] BpCustomFrequencyManager::BpCustomFrequencyManager()
+10-04 12:44:02.896 I/InsetsController( 8864): onStateChanged: host=com.csparks113.MorseCodeApp/com.csparks113.MorseCodeApp.MainActivity, from=android.view.ViewRootImpl.setView:1797, state=InsetsState: {mDisplayFrame=Rect(0, 0 - 1080, 2340), mDisplayCutout=DisplayCutout{insets=Rect(0, 74 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(514, 0 - 566, 74), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 displayHeight=2340 physicalDisplayWidth=1080 physicalDisplayHeight=2340 density={2.8125} cutoutSpec={M 0,0 H -9.244444444444444 V 26.31111111111111 H 9.244444444444444 V 0 H 0 Z @dp} rotation={0} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}}}, mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=101, center=Point(101, 101)}, RoundedCorner{position=TopRight, radius=101, center=Point(979, 101)}, RoundedCorner{position=BottomRight, radius=101, center=Point(979, 2239)}, RoundedCorner{position=BottomLeft, radius=101, center=Point(101, 2239)}]}  mRoundedCornerFrame=Rect(0, 0 - 1080, 2340), mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(956, 0 - 1080, 74) rotation=0}, mDisplayShape=DisplayShape{ spec=-311912193 displayWidth=1080 displayHeight=2340 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}, mSources= { InsetsSource: {d7ac0001 mType=navigationBars mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0004 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags=[]}, InsetsSource: {d7ac0005 mType=mandatorySystemGestures mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0006 mType=tappableElement mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0024 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags=[]}, InsetsSource: {f8e40000 mType=statusBars mFrame=[0,0][1080,74] mVisible=true mFlags=[]}, InsetsSource: {f8e40005 mType=mandatorySystemGestures mFrame=[0,0][1080,108] mVisible=true mFlags=[]}, InsetsSource: {f8e40006 mType=tappableElement mFrame=[0,0][1080,74] mVisible=true mFlags=[]}, InsetsSource: {27 mType=displayCutout mFrame=[0,0][1080,74] mVisible=true mFlags=[]} }
+10-04 12:44:02.896 I/ViewRootImpl@2a068ae[MainActivity]( 8864): synced displayState. AttachInfo displayState=2
+10-04 12:44:02.896 I/ViewRootImpl@2a068ae[MainActivity]( 8864): setView = com.android.internal.policy.DecorView@f96ad29 TM=true
+10-04 12:44:02.896 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): Starting React Native destruction
+10-04 12:44:02.896 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): DevSupportManager cleanup
+10-04 12:44:02.896 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): Move ReactHost to onHostDestroy()
+10-04 12:44:02.896 W/unknown:BridgelessReact( 8864): ReactContext.onHostPause()
+10-04 12:44:02.896 W/unknown:BridgelessReact( 8864): ReactContext.onHostDestroy()
+10-04 12:44:02.900 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): Stopping all React Native surfaces
+10-04 12:44:02.900 E/unknown:SurfaceMountingManager( 8864): Stopping surface [1]
+10-04 12:44:02.900 D/AnimatorSet( 8864): mReversing is false. Don't call initChildren.
+10-04 12:44:02.901 E/ReactNativeJS( 8864): [runtime not ready]: Error: Non-js exception: AppRegistryBinding::stopSurface failed. Global was not installed.
+10-04 12:44:02.901 D/AnimatorSet( 8864): mReversing is false. Don't call initChildren.
+10-04 12:44:02.901 D/AnimatorSet( 8864): mReversing is false. Don't call initChildren.
+10-04 12:44:02.906 I/InsetsSourceConsumer( 8864): applyRequestedVisibilityToControl: visible=true, type=statusBars, host=com.csparks113.MorseCodeApp/com.csparks113.MorseCodeApp.MainActivity
+10-04 12:44:02.907 I/InsetsSourceConsumer( 8864): applyRequestedVisibilityToControl: visible=true, type=navigationBars, host=com.csparks113.MorseCodeApp/com.csparks113.MorseCodeApp.MainActivity
+10-04 12:44:02.907 I/BufferQueueProducer( 8864): [](id:22a000000002,api:0,p:0,c:8864) setDequeueTimeout:2077252342
+10-04 12:44:02.907 I/BLASTBufferQueue_Java( 8864): new BLASTBufferQueue, mName= ViewRootImpl@2a068ae[MainActivity] mNativeObject= 0xb4000071e0c73b10 sc.mNativeObject= 0xb400007350cc0310 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3085 android.view.ViewRootImpl.relayoutWindow:10224 android.view.ViewRootImpl.performTraversals:4167 android.view.ViewRootImpl.doTraversal:3345 android.view.ViewRootImpl$TraversalRunnable.run:11437 android.view.Choreographer$CallbackRecord.run:1690 android.view.Choreographer$CallbackRecord.run:1699 android.view.Choreographer.doCallbacks:1154 android.view.Choreographer.doFrame:1080 android.view.Choreographer$FrameDisplayEventReceiver.run:1647 
+10-04 12:44:02.907 I/BLASTBufferQueue_Java( 8864): update, w= 1080 h= 2340 mName = ViewRootImpl@2a068ae[MainActivity] mNativeObject= 0xb4000071e0c73b10 sc.mNativeObject= 0xb400007350cc0310 format= -1 caller= android.graphics.BLASTBufferQueue.<init>:89 android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3085 android.view.ViewRootImpl.relayoutWindow:10224 android.view.ViewRootImpl.performTraversals:4167 android.view.ViewRootImpl.doTraversal:3345 android.view.ViewRootImpl$TraversalRunnable.run:11437 
+10-04 12:44:02.907 I/ViewRootImpl@2a068ae[MainActivity]( 8864): Relayout returned: old=(0,0,1080,2340) new=(0,0,1080,2340) relayoutAsync=false req=(1080,2340)0 dur=3 res=0x403 s={true 0xb400007410c81d70} ch=true seqId=0
+10-04 12:44:02.908 I/ViewRootImpl@2a068ae[MainActivity]( 8864): performConfigurationChange setNightDimText nightDimLevel=0
+10-04 12:44:02.908 D/ViewRootImpl@2a068ae[MainActivity]( 8864): mThreadedRenderer.initialize() mSurface={isValid=true 0xb400007410c81d70} hwInitialized=true
+10-04 12:44:02.915 D/AbsListView( 8864):  in onLayout changed 
+10-04 12:44:02.915 D/ViewRootImpl@2a068ae[MainActivity]( 8864): reportNextDraw android.view.ViewRootImpl.performTraversals:4781 android.view.ViewRootImpl.doTraversal:3345 android.view.ViewRootImpl$TraversalRunnable.run:11437 android.view.Choreographer$CallbackRecord.run:1690 android.view.Choreographer$CallbackRecord.run:1699 
+10-04 12:44:02.915 I/ViewRootImpl@2a068ae[MainActivity]( 8864): Setup new sync=wmsSync-ViewRootImpl@2a068ae[MainActivity]#4
+10-04 12:44:02.915 I/ViewRootImpl@2a068ae[MainActivity]( 8864): Creating new active sync group ViewRootImpl@2a068ae[MainActivity]#5
+10-04 12:44:02.915 I/SurfaceSyncGroup( 8864): addLocalSync=ViewRootImpl@2a068ae[MainActivity]#5 to name=wmsSync-ViewRootImpl@2a068ae[MainActivity]#4, callers=android.window.SurfaceSyncGroup.add:431 android.window.SurfaceSyncGroup.add:392 android.window.SurfaceSyncGroup.add:340 android.view.ViewRootImpl.createSyncIfNeeded:4912 android.view.ViewRootImpl.performTraversals:4796 android.view.ViewRootImpl.doTraversal:3345 
+10-04 12:44:02.915 I/ViewRootImpl@2a068ae[MainActivity]( 8864): registerCallbacksForSync syncBuffer=false
+10-04 12:44:02.917 I/ViewRootImpl@2a068ae[MainActivity]( 8864): Received frameDrawingCallback syncResult=0 frameNum=1.
+10-04 12:44:02.917 I/ViewRootImpl@2a068ae[MainActivity]( 8864): mWNT: t=0xb400007240dd0850 mBlastBufferQueue=0xb4000071e0c73b10 fn= 1 mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$8.onFrameDraw:13946 android.view.ThreadedRenderer$1.onFrameDraw:792 <bottom of call stack> 
+10-04 12:44:02.917 I/ViewRootImpl@2a068ae[MainActivity]( 8864): Setting up sync and frameCommitCallback
+10-04 12:44:02.923 I/BLASTBufferQueue( 8864): [ViewRootImpl@2a068ae[MainActivity]#2](f:0,a:0,s:0) onFrameAvailable the first frame is available
+10-04 12:44:02.924 I/ViewRootImpl@2a068ae[MainActivity]( 8864): Received frameCommittedCallback lastAttemptedDrawFrameNum=1 didProduceBuffer=true
+10-04 12:44:02.924 I/SurfaceSyncGroup( 8864): onTransactionReady mName=wmsSync-ViewRootImpl@2a068ae[MainActivity]#4 callback=7571939
+10-04 12:44:02.924 D/OpenGLRenderer( 8864): CFMS:: SetUp Pid : 8864    Tid : 8891
+10-04 12:44:02.924 I/ViewRootImpl@2a068ae[MainActivity]( 8864): reportDrawFinished seqId=0
+10-04 12:44:02.924 D/OpenGLRenderer( 8864): HWUI - treat SMPTE_170M as sRGB
+10-04 12:44:02.966 E/unknown:SurfaceMountingManager( 8864): Surface [1] was stopped on SurfaceMountingManager.
+10-04 12:44:02.966 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): Destroying MemoryPressureRouter
+10-04 12:44:02.966 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): Resetting ReactContext ref
+10-04 12:44:02.966 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): Destroying ReactContext
+10-04 12:44:02.966 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): Resetting ReactInstance ptr
+10-04 12:44:02.966 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): Destroying ReactInstance
+10-04 12:44:02.967 E/unknown:ReactNative( 8864): Tried to remove non-existent frame callback
+10-04 12:44:02.973 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): Resetting start task ref
+10-04 12:44:02.973 W/unknown:BridgelessReact( 8864): ReactHost{0}.getOrCreateDestroyTask(): Resetting destroy task ref
+10-04 12:44:02.991 I/ViewRootImpl@9e31501[MainActivity]( 8864): onDisplayChanged oldDisplayState=2 newDisplayState=2
+10-04 12:44:02.991 I/ViewRootImpl@2a068ae[MainActivity]( 8864): onDisplayChanged oldDisplayState=2 newDisplayState=2
+10-04 12:44:03.025 I/ViewRootImpl@9e31501[MainActivity]( 8864): onDisplayChanged oldDisplayState=2 newDisplayState=2
+10-04 12:44:03.025 I/ViewRootImpl@2a068ae[MainActivity]( 8864): onDisplayChanged oldDisplayState=2 newDisplayState=2
+10-04 12:44:03.041 I/ViewRootImpl@2a068ae[MainActivity]( 8864): handleWindowFocusChanged: 1 0 call from android.view.ViewRootImpl.-$$Nest$mhandleWindowFocusChanged:0
+10-04 12:44:03.041 D/ViewRootImpl@2a068ae[MainActivity]( 8864): mThreadedRenderer.initializeIfNeeded()#2 mSurface={isValid=true 0xb400007410c81d70}
+10-04 12:44:03.042 D/InputMethodManagerUtils( 8864): startInputInner - Id : 0
+10-04 12:44:03.042 I/InputMethodManager( 8864): startInputInner - IInputMethodManagerGlobalInvoker.startInputOrWindowGainedFocus
+10-04 12:44:03.047 D/InputMethodManagerUtils( 8864): startInputInner - Id : 0
+10-04 12:44:03.058 I/InsetsController( 8864): onStateChanged: host=com.csparks113.MorseCodeApp/com.csparks113.MorseCodeApp.MainActivity, from=android.view.ViewRootImpl$ViewRootHandler.handleMessageImpl:7279, state=InsetsState: {mDisplayFrame=Rect(0, 0 - 1080, 2340), mDisplayCutout=DisplayCutout{insets=Rect(0, 74 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(514, 0 - 566, 74), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 displayHeight=2340 physicalDisplayWidth=1080 physicalDisplayHeight=2340 density={2.8125} cutoutSpec={M 0,0 H -9.244444444444444 V 26.31111111111111 H 9.244444444444444 V 0 H 0 Z @dp} rotation={0} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}}}, mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=101, center=Point(101, 101)}, RoundedCorner{position=TopRight, radius=101, center=Point(979, 101)}, RoundedCorner{position=BottomRight, radius=101, center=Point(979, 2239)}, RoundedCorner{position=BottomLeft, radius=101, center=Point(101, 2239)}]}  mRoundedCornerFrame=Rect(0, 0 - 1080, 2340), mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(956, 0 - 1080, 74) rotation=0}, mDisplayShape=DisplayShape{ spec=-311912193 displayWidth=1080 displayHeight=2340 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}, mSources= { InsetsSource: {d7ac0001 mType=navigationBars mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0004 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags=[]}, InsetsSource: {d7ac0005 mType=mandatorySystemGestures mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0006 mType=tappableElement mFrame=[0,2205][1080,2340] mVisible=true mFlags=[]}, InsetsSource: {d7ac0024 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags=[]}, InsetsSource: {f8e40000 mType=statusBars mFrame=[0,0][1080,74] mVisible=true mFlags=[]}, InsetsSource: {f8e40005 mType=mandatorySystemGestures mFrame=[0,0][1080,108] mVisible=true mFlags=[]}, InsetsSource: {f8e40006 mType=tappableElement mFrame=[0,0][1080,74] mVisible=true mFlags=[]}, InsetsSource: {3 mType=ime mFrame=[0,0][0,0] mVisible=false mFlags=[]}, InsetsSource: {27 mType=displayCutout mFrame=[0,0][1080,74] mVisible=true mFlags=[]} }
+10-04 12:44:03.059 I/InsetsSourceConsumer( 8864): applyRequestedVisibilityToControl: visible=false, type=ime, host=com.csparks113.MorseCodeApp/com.csparks113.MorseCodeApp.MainActivity
+10-04 12:44:07.867 D/ProfileInstaller( 8864): Installing profile for com.csparks113.MorseCodeApp
+10-04 12:44:09.551 I/ViewRootImpl@9e31501[MainActivity]( 8864): onDisplayChanged oldDisplayState=2 newDisplayState=2
+10-04 12:44:09.553 I/ViewRootImpl@2a068ae[MainActivity]( 8864): onDisplayChanged oldDisplayState=2 newDisplayState=2

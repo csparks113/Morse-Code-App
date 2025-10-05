@@ -1,6 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply from: rootProject.file("../nitrogen/generated/android/morseNitro+autolinking.gradle")
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
@@ -96,6 +97,17 @@ android {
         versionName "1.0.0"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+
+        externalNativeBuild {
+            cmake {
+                targets "appmodules", "morseNitro"
+            }
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path file("src/main/cpp/CMakeLists.txt")
+        }
     }
     signingConfigs {
         debug {
@@ -129,6 +141,9 @@ android {
     }
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+    buildFeatures {
+        prefab true
     }
 }
 
@@ -179,4 +194,7 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // Low-latency audio backend for Nitro outputs hybrid
+    implementation("com.google.oboe:oboe:1.9.3")
 }
