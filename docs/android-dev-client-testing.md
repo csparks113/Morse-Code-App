@@ -4,22 +4,39 @@
 
 ## Session Summary
 
-- Windows build tooling is now standardized (Visual Studio Dev Prompt, NDK 27.1, CMake); Gradle builds ReactAndroid/Hermes from source via the composite include without manual patches.
-- The app now uses React Native's upstream CMake template so `libappmodules.so` is produced; Nitro still ships as `libmorseNitro.so`, and both libraries are packaged for every ABI.
-- Nitro's generated loader initializes `libmorseNitro.so` before the bridgeless host spins up, and SoLoader (initialized with `OpenSourceMergedSoMapping`) resolves the merged symbols cleanly.
-- With Metro running (`npx expo start --dev-client` plus `adb reverse tcp:8081 tcp:8081`), the Expo Android dev client boots to the JS runtime; the only remaining warning is that the `OutputsAudio` HybridObject is not yet default-constructible.
+- Bridgeless dev client on the New Architecture builds reliably from the VS Developer Command Prompt with NDK 27.1; Gradle now packages both `libappmodules.so` and `libmorseNitro.so` for every ABI.
+- Nitro `OutputsAudio` lives under `outputs-native/android/c++` with explicit `HybridObject` registration, keeping Nitro as the default low-latency audio path while the Audio API fallback stays available behind the env toggles.
+- Bridgeless dev client boots whenever Metro is running (`npx expo start --dev-client` plus `adb reverse tcp:8081 tcp:8081`); keyer logs confirm Nitro audio, haptics, and torch flows stay entirely on the native thread.
+- Investigation history below is preserved for context; new iOS setup notes capture the steps required to bring up the bridgeless dev client on macOS.
 
 ## Current Diagnosis
 
-- Bridgeless startup succeeds: `libappmodules.so` and the merged ReactAndroid symbols load, TurboModules resolve, and the client no longer stalls on the splash screen.
-- The Nitro warning about `OutputsAudio` not having a default constructor is the only outstanding issue; it does not block startup but should be cleaned up for correctness.
+- Bridgeless startup is stable on the latest dev client builds; Nitro audio, haptics, and torch integrations run end-to-end with the latencies logged above.
+- No native library blockers remain; focus shifts to console replay alignment, keyer classification accuracy, and cross-platform parity.
+
+## Known Issues
+
+- Developer console **Play Pattern** drift: tone, flash, haptic, and torch cues fall out of sync at higher WPM; profile the Nitro replay scheduler before shipping the console replay flow.
+- Send keyer misclassifies dot-leading sequences (for example `...-`) at higher WPM; tighten the timing heuristics and add instrumentation to confirm fixes.
 
 ## Recommended Next Steps
 
-1. Smoke-test the dev client (navigation, reloads, Expo Router flows) with Metro attached to confirm bridgeless stability.
-2. Update the Nitro `OutputsAudio` HybridObject (for example, add the `HybridObject(TAG)` base constructor) so the module initializes without warnings.
-3. Validate the Nitro audio path and latency, watching for any fallback to the Audio API.
-4. Monitor logcat for recurring `libappmodules.so` recovery warnings—none are expected now, but note any regressions.
+1. Keep Metro running interactively during testing; capture `[outputs-audio]` and `keyer.*` latency snapshots and refresh `latest-logcat.txt` whenever behaviour changes.
+2. Profile the developer console **Play Pattern** drift and record backlog notes here until the Nitro replay pipeline keeps all channels aligned.
+3. Tighten the send keyer dot/dash heuristics at higher WPM; document threshold updates and correlate with `keyer.classification` traces.
+4. Follow the iOS setup checklist below to bring up the bridgeless dev client on macOS and confirm Nitro parity.
+5. Monitor logcat and Metro for new warnings after dependency bumps or codegen runs (for example default-constructor failures or `Unable to load script`).
+
+## iOS Setup Checklist
+
+
+1. Use macOS with Xcode 16.x installed (`sudo xcode-select --switch /Applications/Xcode.app`) and ensure CocoaPods is available (`sudo gem install cocoapods` if needed).
+2. From the repo root install dependencies and regenerate Nitrogen bindings: `npm install` then `npm run nitro:codegen`.
+3. Sync native sources with Expo prebuild while New Architecture is enabled: `EXPO_USE_NEW_ARCHITECTURE=1 npx expo prebuild --platform ios --clean` (omit `--clean` when you only need configuration updates).
+4. Install pods inside `ios/`: `cd ios && bundle exec pod install` (or `pod install`) and return to the project root.
+5. Start Metro via `npx expo start --dev-client`, then launch the dev client with `EXPO_USE_NEW_ARCHITECTURE=1 npx expo run:ios --device` or open `ios/MorseCodeApp.xcworkspace` in Xcode and run it on a device/simulator.
+6. Verify the Nitro module registers (look for "OutputsAudio" in the Xcode console) and capture keyer timing logs; keep the device on the same network as Metro.
+
 ## Follow-up Session (2025-10-04)
 
 - Switched from Maven artifacts to a local composite build (`includeBuild('../node_modules/react-native')`) so Gradle can compile `ReactAndroid` and `hermes-engine` from source.
@@ -46,21 +63,16 @@
 - Removed the runtime guard that disabled New Architecture, preloaded `libreactnative.so` before ReactHost spin-up, and captured new logcat traces. Despite these changes the bridgeless runtime still aborts, logging repeated `SoLoaderDSONotFoundError: couldn't find DSO to load: libreact_featureflagsjni.so` (`latest-logcat.txt`).
 - Experimented with exporting standalone `libreact_featureflagsjni.so`/`libreact_newarchdefaults.so` from the ReactAndroid CMake build. Converting the object targets into shared libraries triggered cascading link failures (missing Hermes/fbjni symbols, unresolved ReactNative references), so the changes were rolled back.
 
-### Current Blocker
+### Historical Blocker (Resolved)
 
-- Bridgeless startup continues to crash because `SoLoader.loadLibrary("react_featureflagsjni")` fails even when `libreactnative.so` is present. The app returns to the splash screen immediately after logging the `SoLoaderDSONotFoundError`.
+- (2025-10-05) Resolved the earlier `SoLoader.loadLibrary("react_featureflagsjni")` failure by initializing SoLoader with `OpenSourceMergedSoMapping` and adopting the upstream React Native CMake template. The historical notes that follow are retained for context only.
 
-### Next Actions
+### Toolchain Notes
 
-1. Investigate SoLoader's merged library mapping (`OpenSourceMergedSoMapping`) to ensure `react_featureflagsjni` and `react_newarchdefaults` resolve to `libreactnative` before ReactNativeFeatureFlags initializes.
-2. If SoLoader cannot map the merged symbols, derive standalone shared libraries from the ReactAndroid sources without breaking the existing `libreactnative` link (e.g., share object libraries or add thin wrapper targets).
-3. Once `SoLoader` can load the feature flag libraries, rebuild (`gradlew.bat app:assembleDebug`) and reinstall the dev client to validate bridgeless startup and the Nitro audio path end-to-end.
+- Prefab duplication is resolved: `com.facebook.react:react-native` now resolves to the composite source build, so only the locally built prefab is consumed.
+- Hermes/DIA environment stays healthy when Gradle runs inside the Visual Studio Developer Prompt.
+- Always start Metro (and `adb reverse tcp:8081 tcp:8081` on Android) before launching the dev client to avoid `Unable to load script` during bridgeless startup.
 
-### Pending After Toolchain Install
-
-- Prefab duplicate is resolved—`com.facebook.react:react-native` now resolves to the composite source build, so only the locally built prefab should be consumed.
-- Hermes/DIA environment is healthy when Gradle is invoked from the Visual Studio developer prompt.
-- Dev client remains blocked on `SoLoaderDSONotFoundError` until we provide loadable `react_featureflagsjni` / `react_newarchdefaults` shared libraries.
 ## Follow-up Session (2025-10-05 Late Night)
 
 - Updated `MainApplication` to initialize SoLoader with `OpenSourceMergedSoMapping` and removed the direct `DefaultNewArchitectureEntryPoint.load()` call so we do not double-override feature flags. Missing libs now map into `libreactnative.so`.
@@ -72,11 +84,12 @@
 - Swapped the app CMake script for the upstream React Native template, added Nitro include paths, and moved the Nitro JNI adapter under `android/app/src/main/cpp/nitro/` so it only links with `libmorseNitro.so`.
 - Added `appmodules` to the Gradle `externalNativeBuild` target list; `gradlew app:assembleDebug --stacktrace --console=plain --no-daemon` now produces and packages `libappmodules.so` alongside the Nitro libraries.
 - Rebuilt, reinstalled the dev client, and confirmed logcat shows `libappmodules.so` loading cleanly and Nitro HybridObjects registering exactly once (`latest-logcat.txt:1058`, `latest-logcat.txt:937-1340`).
-- Metro must be running (`npx expo start --dev-client`, plus `adb reverse tcp:8081 tcp:8081`) or the dev client will still report `Unable to load script` while waiting for the JS bundle.
+- Metro must be running (`npx expo start --dev-client`, plus `adb reverse tcp:8081 tcp:8081`) or the dev client will still report `Unable to load script` while waiting for the JS bundle.`r`n`r`n## Follow-up Session (2025-10-05 Evening)
 
-
-
-
+- Added `margelo::nitro::HybridObject(HybridOutputsAudioSpec::TAG)` to the OutputsAudio constructor under `outputs-native/android/c++`, rebuilt via `gradlew.bat :app:externalNativeBuildDebug`, and reinstalled the dev client.
+- Confirmed Nitro HybridObjects register cleanly: Metro and logcat show keyer prepare/press/replay events with Nitro latencies and no default-construction warnings.
+- Documented the Metro plus `adb reverse` workflow so future runs avoid `Unable to load script` during bridgeless startup.
+- Captured Nitro latency snapshots (manual keying, console replay, session send/receive) for ongoing performance comparisons.
 
 
 

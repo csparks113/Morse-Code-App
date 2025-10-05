@@ -1,69 +1,68 @@
-﻿# Codex Handoff Log
+# Codex Handoff Log
 
 Use this document to capture the single source of truth after each working session. Update the sections below before ending work so future chats can resume without reconstructing context.
 
 ## Current Focus
-- **Initiative:** Outputs rewire - Foundations & Benchmarks
-- **Objective:** Validate dependency compatibility (react-native-audio-api, react-native-nitro-haptics) and baseline touch-to-output latency (tone/haptic/flash/torch).
+- **Initiative:** Outputs rewire - Nitro alignment and orchestration
+- **Objective:** Keep Nitro audio as the default path while eliminating replay drift and high-WPM classification errors.
 - **Owner:** Codex pairing session (update with your initials if another contributor takes over).
 
 ## Latest Update
-- **When:** 2025-10-03 (evening)
-- **Summary:** Validated latency instrumentation on the Galaxy S22+ dev client; flash and haptic paths respond in ~1-6 ms, but `react-native-audio-api` sidetone still shows 70-200 ms start/stop latency even after resuming during warm-up. Nitro loader now handles missing native bindings gracefully, and the Audio API plugin is back on its foreground-service defaults for further profiling.
-- **State:** Device is connected over `adb` with the audio-api backend active; latency results are logged in `docs/refactor-notes.md`. Next work is reducing audio latency or implementing the Nitro native module before flipping the orchestrator.
+- **When:** 2025-10-05
+- **Summary:** Bridgeless dev client now ships Nitro `OutputsAudio` by default; documentation and onboarding paths were updated to reflect the Nitro baseline and outstanding tuning work (console replay drift, send keyer misclassification). Audio API fallback remains available only behind env toggles for diagnostics.
+- **State:** Android dev client is connected over `adb` with Nitro active; investigation log and README capture current known issues. Next focus is replay alignment and high-WPM keyer accuracy.
 
 ## Next Steps
-
-1. Rebuild the Android dev client with the Nitro `OutputsAudio` module, rerun the Galaxy S22+ latency tests (Developer Console -> Latency), and capture both `[outputs-audio]` and `keyer.*` logs to quantify Nitro start/stop timings against the previous Audio API baseline.
-2. Toggle `EXPO_FORCE_NITRO_OUTPUTS` / `EXPO_DISABLE_NITRO_OUTPUTS` to confirm Nitro <-> Audio API fallbacks behave end-to-end (keyer + replay) and note the expected behavior in the handoff log.
-3. Document the final torch/wake-lock + audio-permission recommendations in `docs/nitro-integration-prep.md`, then schedule the orchestrator flip once latency targets (<15 ms touch-to-tone) are met on hardware.
+1. Profile developer console **Play Pattern** runs, capture `[outputs-audio]` and `keyer.*` logs, and record tone vs flash/haptic/torch offsets in `docs/android-dev-client-testing.md`.
+2. Tune Nitro replay scheduling and timeline offsets until drift stays within ~5 ms; document before/after traces in the investigation log.
+3. Audit dot/dash thresholds at higher WPM, correlate with `keyer.classification` traces, and propose updated heuristics in `services/outputs`.
+4. Run the iOS bridgeless checklist to confirm Nitro registration, latency logging, and parity with Android.
 
 ### Rebuild + Logging Recipe (Galaxy S22+)
-
-1. **Stop Metro** if it is running (`Ctrl+C` in the terminal window that is hosting `npx expo start`).
+1. **Stop Metro** if it is running (`Ctrl+C` in the terminal hosting `npx expo start`).
 2. **Reinstall the dev client** (PowerShell from `C:\dev\Morse`):
    ```powershell
    adb uninstall com.csparks113.MorseCodeApp  # optional but keeps things clean
    setx EXPO_USE_NEW_ARCHITECTURE 1
-   npx expo run:android --device --variant debug
+   EXPO_USE_NEW_ARCHITECTURE=1 npx expo run:android --device --variant debug
    ```
    Wait for Gradle to finish and install the fresh build on the S22+.
-3. **Restart Metro** in a clean shell (PowerShell or bash from `C:\dev\Morse`):
+3. **Restart Metro** in a clean shell:
    ```powershell
-   npx expo start --dev-client --clear
+   EXPO_USE_NEW_ARCHITECTURE=1 npx expo start --dev-client --clear
    ```
    Leave this session running; use another terminal for log collection.
-4. **Capture warm-up + tone logs** (new PowerShell window):
+4. **Capture Nitro logs** (new PowerShell window):
    ```powershell
    adb logcat -c
    adb logcat ReactNativeJS:D ReactNative:W *:S | findstr /R /C:"keyer.prepare" /C:"keyer.tone"
    ```
    Trigger the Developer Console latency tests, then `Ctrl+C` to stop the log stream.
-   To drill into the Audio API stages, run a second tail:
+   To inspect Nitro playback details, run a second tail:
    ```powershell
-   adb logcat ReactNativeJS:D ReactNative:W *:S | findstr /C:"[audio-api]"
+   adb logcat ReactNativeJS:D ReactNative:W *:S | findstr /C:"[outputs-audio]"
    ```
 
 ## Device Smoke Test Checklist
-1. Install dependencies with `npm install` and ensure your Expo CLI is logged in.
+1. Install dependencies with `npm install` and ensure Expo CLI auth is valid.
 2. Build the dev client with New Architecture enabled:
-   - iOS: `npx expo run:ios --device` (or `--configuration Release` when profiling).
-   - Android: `npx expo run:android --device` (use the short project path to avoid Windows MAX_PATH issues).
-3. Start the bundler with `npx expo start --dev-client --clear` and connect the device via the Expo dev client.
-4. In-app, open the Developer Console -> Latency card and confirm tone samples log `backend=audio-api` after triggering keyer presses.
-5. Hold and release the keyer button several times; watch for immediate sidetone start/stop with latency deltas < 15 ms.
-6. Trigger a replay (practice/session playback) to ensure the native `playMorse` path runs without falling back to Expo.
-7. Capture any anomalies (fallback to Expo, delayed start/stop, console errors) and note results in `docs/refactor-notes.md` under **Completed (Today)** or follow-up tasks.
+   - iOS: `EXPO_USE_NEW_ARCHITECTURE=1 npx expo run:ios --device` (or build via Xcode).
+   - Android: `EXPO_USE_NEW_ARCHITECTURE=1 npx expo run:android --device` (keep workspace path short on Windows).
+3. Start Metro with `EXPO_USE_NEW_ARCHITECTURE=1 npx expo start --dev-client --clear` and connect the device via the Expo dev client.
+4. In-app, open the Developer Console -> Latency card and confirm samples log `backend=nitro`.
+5. Hold and release the keyer button several times; verify touch-to-tone latency stays within target bounds and note any drift across channels.
+6. Trigger a replay (practice/session playback) and compare Nitro timing against console telemetry; capture offsets if drift appears.
+7. Document anomalies in `docs/android-dev-client-testing.md` and mirror follow-up tasks in `docs/refactor-notes.md`.
 
 ## Verification
-- **Outstanding checks:** Resolve high touch-to-tone latency on hardware and validate the Nitro `OutputsAudio` native implementation once built.
-- **Recent checks:** Galaxy S22+ Developer Console latency run (2025-10-03); `npx expo run:android --device` (2025-10-03); `npx tsc --noEmit` (2025-10-03); `npx nitrogen` (generates stubs, 2025-10-03).
+- **Outstanding checks:** Resolve Nitro replay drift and high-WPM dot/dash misclassification; validate iOS Nitro parity.
+- **Recent checks:** Bridgeless dev client rebuild with Nitro enabled (2025-10-05); documentation sweep (2025-10-05).
 
 ## Reference Docs
+- `docs/android-dev-client-testing.md` - investigation log and known issues.
 - `docs/refactor-notes.md` - master backlog and daily log.
-- `docs/outputs-rewire-plan.md` - detailed outputs strategy and milestones.
+- `docs/outputs-rewire-plan.md` - outputs strategy and milestones.
 - `docs/developer-console-updates.md` - console instrumentation history.
-- `docs/latency-instrumentation-blueprint.md` - touch-to-output telemetry capture plan.
 - `docs/nitro-integration-prep.md` - New Architecture + Nitrogen setup checklist.
 
 ## Update Checklist (run this before ending a session)
@@ -74,8 +73,3 @@ Use this document to capture the single source of truth after each working sessi
 - [ ] Run `npm run verify:handoff` and resolve any failures.
 
 _Tip: Keep entries terse but explicit enough that a new chat can resume work immediately._
-
-
-
-
-

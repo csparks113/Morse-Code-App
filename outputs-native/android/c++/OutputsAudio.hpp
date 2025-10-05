@@ -82,4 +82,3 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
 
 } // namespace margelo::nitro::morse
 
-

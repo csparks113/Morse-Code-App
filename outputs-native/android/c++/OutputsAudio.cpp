@@ -44,7 +44,7 @@ inline std::chrono::microseconds toMicros(double milliseconds) {
 } // namespace
 
 OutputsAudio::OutputsAudio()
-    : mStream(nullptr),
+    : HybridOutputsAudioSpec(), margelo::nitro::HybridObject(HybridOutputsAudioSpec::TAG), mStream(nullptr),
       mSampleRate(48000.0),
       mFrequency(600.0),
       mTargetGain(0.0f),
@@ -57,7 +57,9 @@ OutputsAudio::OutputsAudio()
       mEnvelopeConfig{ kDefaultAttackMs, kDefaultReleaseMs },
       mPhase(0.0),
       mPlaybackCancel(false),
-      mPlaybackRunning(false) {}
+      mPlaybackRunning(false) {
+  logEvent("constructor");
+}
 
 OutputsAudio::~OutputsAudio() {
   teardown();

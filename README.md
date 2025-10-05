@@ -1,115 +1,96 @@
 # Morse Code Master
 
-A premium dark-themed Expo React Native app for learning, practicing, and mastering Morse code.
+A premium dark-themed Expo + React Native app for learning, practicing, and mastering Morse code.
 
 ## Features
-
-- Koch-style lessons for alphabet and numbers
-- Practice sending and receiving Morse
-- Track progress and mastery
-- Adjustable WPM and input mode toggles (audio/light/haptics)
-- Zustand state management with AsyncStorage persistence
-- Expo Router navigation
-- Paywall stub for future premium features (planned)
+- Koch-style lessons that cover the alphabet and numerals.
+- Practice sending and receiving Morse with Nitro-backed low-latency outputs.
+- Real-time latency telemetry (tone, flash, haptic, torch) surfaced in developer mode.
+- Adjustable WPM, tone frequency, and per-channel toggles.
+- Progress tracking with Zustand + AsyncStorage persistence.
+- Expo Router navigation and lesson challenges.
 
 ## Architecture Overview
-
-- **Expo + React Native + TypeScript**: Fast development, cross-platform
-- **Expo Router**: File-based navigation, tabs for main screens
-- **Zustand + persist (AsyncStorage)**: Global state with persistence
-- **expo-audio**: Audio playback for Morse tones (replaces the deprecated expo-av module; we still shim FS writes via `expo-file-system/legacy`).
-- **Component-based UI**: NeonHeaderCard, coin-style LessonPath, ProgressBar
-- **Theme**: Charcoal/black background, neon blue accents, gold for completion
-
-## Run Instructions
-
-```sh
-npx expo start
-```
+- Expo + React Native + TypeScript running in the bridgeless New Architecture (Hermes) runtime.
+- Nitro `OutputsAudio` (Android) built from source with Oboe provides the default audio path; Audio API fallback stays behind env toggles for diagnostics.
+- Expo modules remain for flash, torch, and haptics fallbacks; Nitro haptics is preferred where supported.
+- Developer console exposes manual triggers, telemetry summaries, and exports for latency analysis.
 
 ## Getting Started
+```bash
+npm install
+EXPO_USE_NEW_ARCHITECTURE=1 npx expo start --dev-client
+```
 
-- Prerequisites: Node 18+, npm 9+, Android Studio (Android), Xcode (iOS), and Expo Go on your device if you’re testing on hardware.
-- Install deps: `npm install`
-- Start dev server: `npx expo start` (or `npx expo start -c` to clear cache)
-- Open:
-  - Android Emulator: press `a` in the Expo CLI
-  - iOS Simulator: press `i`
-  - Physical device: scan the QR code with Expo Go
+- Keep Metro running with `npx expo start --dev-client` so bridgeless builds can attach.
+- Android: use the VS Developer Command Prompt, then run `EXPO_USE_NEW_ARCHITECTURE=1 npx expo run:android --device --variant debug` (or omit `--variant` for emulator). Ensure `adb reverse tcp:8081 tcp:8081` is active.
+- iOS (macOS required): follow the checklist in `docs/android-dev-client-testing.md` to run `EXPO_USE_NEW_ARCHITECTURE=1 npx expo run:ios --device` or build via Xcode.
+
+## Tooling Requirements
+- Node 18+, npm 9+.
+- Android Studio command-line tools, SDK 36, and NDK 27.1.12297006; Visual Studio 2022 Build Tools with Desktop C++ workload for Hermes.
+- Python 3.x on PATH for Hermes build scripts.
+- Expo CLI (`npx expo`).
+- For iOS: Xcode 16.x and CocoaPods.
 
 ## Development Tips
+- Clear Metro cache: `EXPO_USE_NEW_ARCHITECTURE=1 npx expo start --dev-client -c`.
+- Lint: `npm run lint`.
+- Format: `npm run format`.
+- Type-check: `npx tsc --noEmit`.
+- Logcat filters:
+  - Nitro audio: `adb logcat ReactNativeJS:D ReactNative:W *:S | findstr /C:"[outputs-audio]"`.
+  - Latency traces: `adb logcat ReactNativeJS:D ReactNative:W *:S | findstr /R /C:"keyer.prepare" /C:"keyer.tone"`.
 
-- Clear Metro cache: `npx expo start -c`
-- Lint: `npm run lint`
-- Format: `npm run format`
-- Type-check: `npx tsc -noEmit`
-- Dev menu: shake device, or use `Ctrl+M` (Android) / `Cmd+D` (iOS Simulator)
-- Reset local state (AsyncStorage): uninstall the app or clear storage from the OS/app settings
+## Documentation
+- Living spec: `docs/living-spec.md`.
+- Android dev client log: `docs/android-dev-client-testing.md`.
+- Nitro prep checklist: `docs/nitro-integration-prep.md`.
+- Developer console updates: `docs/developer-console-updates.md`.
+- Outputs rewire plan: `docs/outputs-rewire-plan.md`.
 
-## Troubleshooting
-
-- SDK 54 warnings:
-  - `expo-av` is deprecated; audio playback now uses `expo-audio` so we stay ahead of SDK 54.
-  - `expo-file-system` legacy API is used intentionally for tone file writes to avoid runtime errors; migration to the new File/Directory API is planned.
-- Routing issues: keep non‑screen modules out of `app/` so Expo Router doesn’t treat them as routes.
-- If you see strange bundler errors: stop the server, run `npx expo start -c`, and try again.
-
-## Project Documentation
-
-We maintain a master specification:
-
-- Local: `docs/living-spec.md`
-- ChatGPT (reference-only): https://chat.openai.com/c/68ba2d82c54481918f76e07b99235977
-
-## Folder Structure
-
-```
+## Folder Structure (excerpt)
+```text
 app/
-  _layout.tsx
-  +not-found.tsx
   (tabs)/
-    _layout.tsx
-    index.tsx           # Home: Lessons
-    practice.tsx        # Practice tab
-    settings.tsx        # Settings tab (receive-only, audio/light/haptics, WPM)
+    index.tsx        # Lessons hub
+    practice.tsx     # Practice playground
+    settings.tsx     # Channel toggles, developer mode
   lessons/
     [group]/
-      overview.tsx      # Group overview
+      overview.tsx
       [lessonId]/
-        receive.tsx     # Receive lesson (multiple-choice listen)
-        send.tsx        # Send lesson (tap/hold keyer)
-
+        receive.tsx
+        send.tsx
 components/
-  Coin.tsx              # Coin visuals (used by Lesson/Challenge nodes)
-  LessonNode.tsx        # Coin-based lesson node
-  ChallengeNode.tsx     # Coin-based challenge node
-  LessonPath.tsx        # Vertical path of nodes + prompts
-  LessonPromptCard.tsx  # Actions under selected node
-  NeonHeaderCard.tsx    # Header with group picker modal
-  ProgressBar.tsx       # Compact coin summary row
-
-theme/
-  theme.ts              # App shell theme (tabs, settings, etc.)
-  coinTheme.ts          # Palette for coin visuals
-  lessonTheme.ts        # Neon theme tokens used by lesson screens
-
-data/
-  lessons.ts
-
+  LessonPath.tsx
+  SessionHeader.tsx
+  NeonHeaderCard.tsx
+outputs-native/
+  android/
+    c++/OutputsAudio.cpp   # Nitro OutputsAudio implementation
+  audio.nitro.ts           # JS spec for Nitro OutputsAudio
 store/
   useSettingsStore.ts
   useProgressStore.ts
-
-types/
-  progress.ts
-
 utils/
-  morse.ts
   audio.ts
-
-assets/
-  images/, fonts/ (tones are generated at runtime)
+  morse.ts
 ```
 
+## Roadmap
+- Align developer console **Play Pattern** replay so tone/flash/haptic/torch stay within ~5 ms.
+- Harden send keyer classification at higher WPM with adaptive thresholds and regression guards.
+- Restructure the lessons tab into sections/subsections with updated progress tracking.
+- Expand practice modes (Timing/Target/Custom) once the outputs orchestrator and telemetry guardrails are in place.
+- Deliver full multi-language support with localized content, per-language keyboards, and QA coverage.
+- Validate Nitro parity on iOS using the bridgeless dev client checklist.
 
+## Known Issues
+- Developer console **Play Pattern** drift: tone, flash, haptic, and torch cues fall out of sync at higher WPM while the Nitro replay scheduler is tuned.
+- Send keyer misclassifies dot-leading sequences at higher WPM; classification thresholds are under review.
 
+## Troubleshooting
+- If the dev client hangs on splash, ensure Metro is running and `adb reverse tcp:8081 tcp:8081` is active.
+- If Nitro modules are missing, rebuild from the VS Developer Command Prompt so Hermes/Nitro libraries compile with the correct toolchain.
+- For `Unable to load script`, restart Metro with `--dev-client -c` and reinstall the dev client.

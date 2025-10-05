@@ -14,8 +14,7 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
-import java.io.IOException
-import com.margelo.nitro.com.morsecode.generated.OutputsAudioLoader
+import java.io.IOException
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
 
@@ -46,7 +45,7 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
-    OutputsAudioLoader.ensureInitialized()
+    System.loadLibrary("morseNitro")
     try {
       SoLoader.init(this, OpenSourceMergedSoMapping)
     } catch (error: IOException) {

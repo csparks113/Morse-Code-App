@@ -104,6 +104,12 @@ android {
             }
         }
     }
+    sourceSets {
+        main {
+            java.srcDir "${projectRoot}/nitrogen/generated/android/kotlin"
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path file("src/main/cpp/CMakeLists.txt")
