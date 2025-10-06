@@ -39,6 +39,15 @@ This plan tracks the remaining work needed to deliver a fully native, low-latenc
 - Refresh documentation and onboarding checklists after major dependency bumps (Expo SDK, Hermes, Nitro modules).
 - Maintain a rolling log of latency measurements per device to detect drift over time.
 
+## Incremental Roadmap (2025-10-05)
+- **Step 1 - Native keyer input:** replace the React Pressable path with a Nitro-powered press tracker so down/up timestamps come from the native clock. Ship with telemetry updates and regression guards.
+- **Step 2 - Native timestamp propagation:** surface Nitro OutputsAudio symbol metadata (start time, duration) through JS consumers and retime flash/torch scheduling around the native start time.
+- **Step 3 - Native flash/torch fallback:** if JS scheduling still drifts, promote flash/torch triggers into the Nitro layer while keeping the JS UI for controls.
+- **Step 4 - iOS parity:** port the winning combination to iOS once Android metrics lock in.
+
+## Fallback: Full Native Orchestrator
+If the incremental steps fail to hit the <=5 ms alignment target, fall back to a full native orchestration pass: move keyer input, flash overlay, and torch into Nitro alongside audio/haptics so the entire timeline executes on the native thread.
+
 ## Fallback Paths
 - **Audio**: fall back to the Audio API or an Expo module only when Nitro is disabled (env toggles) or unsupported on hardware.
 - **Haptics**: default to Nitro; Expo haptics remains the safety net for devices lacking Nitro support.

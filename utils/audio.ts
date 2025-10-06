@@ -1,4 +1,4 @@
-﻿type AudioApiModule = typeof import('react-native-audio-api');
+type AudioApiModule = typeof import('react-native-audio-api');
 
 let audioApiModule: AudioApiModule | null = null;
 let audioApiModuleLoaded = false;
@@ -202,8 +202,15 @@ export function getMorseUnitMs(): number {
   return Math.max(20, Math.round(1200 / Math.max(5, Number(wpm) || 20)));
 }
 
+export type NativeSymbolTimingContext = {
+  nativeTimestampMs: number | null;
+  nativeDurationMs: number | null;
+  nativeSequence: number | null;
+  nativeOffsetMs: number | null;
+};
+
 export type PlayOpts = {
-  onSymbolStart?: (symbol: '.' | '-', durationMs: number) => void;
+  onSymbolStart?: (symbol: '.' | '-', durationMs: number, native?: NativeSymbolTimingContext) => void;
   onSymbolEnd?: (symbol: '.' | '-', durationMs: number) => void;
   onGap?: (gapMs: number) => void;
   hz?: number;
@@ -815,6 +822,55 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
     return;
   }
 
+  const supportsNativeTimeline = typeof (outputsAudio as any).getLatestSymbolInfo === 'function';
+  let nativeSequence = 0;
+  let nativeOffsetMs: number | null = null;
+
+  const pollNextNativeSymbol = async (): Promise<NativeSymbolTimingContext | null> => {
+    if (!supportsNativeTimeline || token !== nitroPlaybackToken) {
+      return null;
+    }
+    const deadline = nowMs() + Math.max(unitMs * 3, 250);
+    while (token === nitroPlaybackToken) {
+      const payload = (outputsAudio as any).getLatestSymbolInfo?.();
+      if (payload) {
+        try {
+          const info = JSON.parse(payload) as {
+            sequence?: number;
+            timestampMs?: number;
+            durationMs?: number;
+          };
+          const sequence = typeof info.sequence === 'number' ? info.sequence : null;
+          if (sequence != null && sequence > nativeSequence) {
+            nativeSequence = sequence;
+            const timestampMs = typeof info.timestampMs === 'number' ? info.timestampMs : null;
+            const durationMs = typeof info.durationMs === 'number' ? info.durationMs : null;
+            let offsetMs: number | null = null;
+            if (timestampMs != null) {
+              offsetMs = nowMs() - timestampMs;
+              nativeOffsetMs = offsetMs;
+            }
+            return {
+              nativeTimestampMs: timestampMs,
+              nativeDurationMs: durationMs,
+              nativeSequence,
+              nativeOffsetMs: nativeOffsetMs ?? offsetMs,
+            };
+          }
+        } catch (parseError) {
+          if (__DEV__) {
+            console.warn('Failed to parse OutputsAudio symbol info:', parseError);
+          }
+        }
+      }
+      if (nowMs() >= deadline) {
+        break;
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+    return null;
+  };
+
   for (let i = 0; i < pattern.length; i += 1) {
     if (token !== nitroPlaybackToken) {
       return;
@@ -822,8 +878,18 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
 
     const symbol = pattern[i];
     const duration = durations[i];
-    opts.onSymbolStart?.(symbol, duration);
-    await sleep(duration);
+
+    let nativeTiming: NativeSymbolTimingContext | null = null;
+    if (supportsNativeTimeline) {
+      nativeTiming = await pollNextNativeSymbol();
+    }
+
+    opts.onSymbolStart?.(symbol, duration, nativeTiming ?? undefined);
+
+    const effectiveDuration = nativeTiming?.nativeDurationMs != null && nativeTiming.nativeDurationMs > 0
+      ? nativeTiming.nativeDurationMs
+      : duration;
+    await sleep(effectiveDuration);
 
     if (token !== nitroPlaybackToken) {
       return;
@@ -1211,6 +1277,7 @@ export function stopPlayback(): void {
 
 // Utils
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+
 
 
 

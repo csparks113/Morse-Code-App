@@ -1,6 +1,8 @@
+
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Link } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import SessionHeader from '@/components/session/SessionHeader';
@@ -8,12 +10,18 @@ import { sessionStyleSheet, sessionContainerPadding } from '@/theme/sessionStyle
 import { colors as lessonColors, surfaces, radii, spacing, sessionLayoutTheme } from '@/theme/lessonTheme';
 import { typography, fontWeight } from '@/theme/tokens';
 
-const PRACTICE_SECTIONS = ['customPractice', 'timingPractice'] as const;
-const summaryLayout = sessionLayoutTheme.summary;
-const summaryStandalone = summaryLayout.standalone;
-const summaryContentLayout = summaryLayout.content;
+type PracticeSection = {
+  key: string;
+  labelKey: string;
+  subtitleKey: string;
+  href?: '/practice/keyer';
+};
 
-type PracticeSectionKey = (typeof PRACTICE_SECTIONS)[number];
+const PRACTICE_SECTIONS: PracticeSection[] = [
+  { key: 'keyerLab', labelKey: 'keyerLab', subtitleKey: 'keyerLabDescription', href: '/practice/keyer' },
+  { key: 'customPractice', labelKey: 'customPractice', subtitleKey: 'comingSoon' },
+  { key: 'timingPractice', labelKey: 'timingPractice', subtitleKey: 'comingSoon' },
+];
 
 export default function PracticeScreen() {
   const { t } = useTranslation('practice');
@@ -34,16 +42,36 @@ export default function PracticeScreen() {
             showCloseButton={false}
             exitToHome={false}
           />
-          <Text style={styles.subtitle}>{t('comingSoon')}</Text>
+          <Text style={styles.subtitle}>{t('intro')}</Text>
         </View>
 
         <View style={[sessionStyleSheet.centerGroup, styles.sectionsWrap]}>
-          {PRACTICE_SECTIONS.map((key: PracticeSectionKey) => (
-            <View key={key} style={styles.section}>
-              <Text style={styles.sectionTitle}>{t(key)}</Text>
-              <Text style={styles.sectionSubtitle}>{t('comingSoon')}</Text>
-            </View>
-          ))}
+          {PRACTICE_SECTIONS.map((section) => {
+            const title = t(section.labelKey);
+            const subtitle = t(section.subtitleKey);
+            const content = (
+              <>
+                <Text style={styles.sectionTitle}>{title}</Text>
+                <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+              </>
+            );
+
+            if (section.href) {
+              return (
+                <Link key={section.key} href={section.href} asChild>
+                  <Pressable style={({ pressed }) => [styles.section, styles.interactiveSection, pressed && styles.sectionPressed]}>
+                    {content}
+                  </Pressable>
+                </Link>
+              );
+            }
+
+            return (
+              <View key={section.key} style={styles.section}>
+                {content}
+              </View>
+            );
+          })}
         </View>
       </View>
     </SafeAreaView>
@@ -53,7 +81,7 @@ export default function PracticeScreen() {
 const styles = StyleSheet.create({
   subtitle: {
     color: lessonColors.textDim,
-    marginTop: spacing(summaryContentLayout.subLabelMarginTopStep),
+    marginTop: spacing(sessionLayoutTheme.summary.content.subLabelMarginTopStep),
     fontSize: typography.body,
     fontWeight: fontWeight.medium,
     textAlign: 'center',
@@ -63,15 +91,26 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'stretch',
     justifyContent: 'flex-start',
-    gap: spacing(summaryStandalone.gapStep),
+    gap: spacing(sessionLayoutTheme.summary.standalone.gapStep),
   },
   section: {
     backgroundColor: surfaces.card,
     borderRadius: radii.xl,
-    padding: spacing(summaryStandalone.paddingHorizontalStep),
+    padding: spacing(sessionLayoutTheme.summary.standalone.paddingHorizontalStep),
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: lessonColors.border,
     gap: spacing(1),
+  },
+  interactiveSection: {
+    borderWidth: 2,
+    borderColor: lessonColors.blueNeon,
+    shadowColor: lessonColors.blueNeon,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  sectionPressed: {
+    backgroundColor: surfaces.pressed,
   },
   sectionTitle: {
     color: lessonColors.text,

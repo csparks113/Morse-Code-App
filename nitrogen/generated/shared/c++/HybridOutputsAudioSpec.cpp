@@ -19,6 +19,7 @@ namespace margelo::nitro::morse {
       prototype.registerHybridMethod("startTone", &HybridOutputsAudioSpec::startTone);
       prototype.registerHybridMethod("stopTone", &HybridOutputsAudioSpec::stopTone);
       prototype.registerHybridMethod("playMorse", &HybridOutputsAudioSpec::playMorse);
+      prototype.registerHybridMethod("getLatestSymbolInfo", &HybridOutputsAudioSpec::getLatestSymbolInfo);
       prototype.registerHybridMethod("teardown", &HybridOutputsAudioSpec::teardown);
     });
   }

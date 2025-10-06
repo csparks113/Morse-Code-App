@@ -1,7 +1,7 @@
 import { Animated, Platform, Vibration } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { playMorseCode, stopPlayback, createToneController } from '@/utils/audio';
+import { playMorseCode, stopPlayback, createToneController, type NativeSymbolTimingContext } from '@/utils/audio';
 import { acquireTorch, releaseTorch, resetTorch, isTorchAvailable } from '@/utils/torch';
 import { nowMs } from '@/utils/time';
 import { traceOutputs } from './trace';
@@ -548,20 +548,32 @@ const defaultOutputsService: OutputsService = {
     });
 
     let symbolIndex = 0;
-    const symbolTracker = (symbol: '.' | '-', durationMs: number) => {
+    const symbolTracker = (symbol: '.' | '-', durationMs: number, native?: NativeSymbolTimingContext) => {
       const correlation = createPressCorrelation(playbackSource);
+      const nativeTimestampMs = native?.nativeTimestampMs ?? null;
+      const nativeDurationMs = native?.nativeDurationMs ?? null;
+      const nativeOffsetMs = native?.nativeOffsetMs ?? null;
+      const nativeSequence = native?.nativeSequence ?? null;
       traceOutputs('playMorse.symbol', {
         symbol,
         durationMs,
         index: symbolIndex,
         source: playbackSource,
         correlationId: correlation.id,
+        nativeTimestampMs,
+        nativeDurationMs,
+        nativeOffsetMs,
+        nativeSequence,
       });
       symbolIndex += 1;
       onSymbolStart?.(symbol, durationMs, {
         requestedAtMs: correlation.startedAtMs,
         correlationId: correlation.id,
         source: playbackSource,
+        nativeTimestampMs,
+        nativeDurationMs,
+        nativeOffsetMs,
+        nativeSequence,
       });
     };
 
@@ -594,3 +606,5 @@ const defaultOutputsService: OutputsService = {
 };
 
 export { defaultOutputsService };
+
+

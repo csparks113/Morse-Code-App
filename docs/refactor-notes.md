@@ -22,6 +22,12 @@
 2. Prototype adaptive thresholds or hysteresis that protect dot-leading sequences, then document the new rules in `services/outputs` helpers.
 3. Add a regression guard (unit test or log assertion) once the heuristics stabilize.
 
+### Outputs Alignment (Incremental Plan)
+1. Finish integrating native keyer press tracking so rapid dots use monotonic timestamps; update telemetry and regression guards once the module lands.
+2. Wire Nitro symbol timestamps through JS consumers (OutputsService, flash/torch controllers) and retime the replay/console paths around the native start time.
+3. If flash/haptic drift persists, add native-driven flash/torch triggers as the next increment and benchmark the results.
+4. After each increment, archive fresh logcat captures under `docs/logs/`, compare them against prior runs, and summarize the deltas here.
+
 ### Operational Follow-ups
 1. Keep `README.md` and `docs/living-spec.md` fresh whenever architecture or known issues shift.
 2. Schedule console/outputs telemetry reviews after dependency bumps (Expo SDK, Nitro modules, Hermes) to catch regressions quickly.

@@ -2,5 +2,12 @@
   "title": "[!! Practice !!]",
   "customPractice": "[!! Custom Practice !!]",
   "timingPractice": "[!! Timing Practice !!]",
-  "comingSoon": "[!! Coming soon. !!]"
+  "comingSoon": "[!! Coming soon. !!]",
+  "keyerLab": "[!! Keyer Lab !!]",
+  "keyerLabDescription": "[!! Open the Nitro-backed keyer sandbox to test outputs. !!]",
+  "keyerLabInstructions": "[!! Hold the keyer button to test tone, haptics, flash, and torch. Toggle channels anytime; the session never ends. !!]",
+  "keyerLabHeaderTop": "[!! Practice !!]",
+  "keyerLabHeaderBottom": "[!! Keyer Lab !!]",
+  "keyerLabButtonLabel": "[!! Tap & hold to key !!]",
+  "intro": "[!! Start with the Keyer Lab below while we finish the rest of the practice tools. !!]"
 }

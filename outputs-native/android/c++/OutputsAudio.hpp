@@ -1,10 +1,12 @@
 #pragma once
 
+#include <cstdint>
 #include <atomic>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
+#include <string>
 #include <vector>
 
 #include <oboe/Oboe.h>
@@ -28,6 +30,7 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   void startTone(const ToneStartOptions& options) override;
   void stopTone() override;
   void playMorse(const PlaybackRequest& request) override;
+  std::string getLatestSymbolInfo() override;
   void teardown() override;
 
   oboe::DataCallbackResult onAudioReady(oboe::AudioStream* stream,
@@ -74,6 +77,12 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   EnvelopeConfig mEnvelopeConfig;
   double mPhase;
 
+  std::mutex mSymbolInfoMutex;
+  uint64_t mSymbolSequence;
+  uint64_t mSymbolSequenceConsumed;
+  PlaybackSymbol mLatestSymbolKind;
+  double mLatestSymbolTimestampMs;
+  double mLatestSymbolDurationMs;
   std::thread mPlaybackThread;
   std::mutex mPlaybackMutex;
   std::atomic<bool> mPlaybackCancel;

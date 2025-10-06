@@ -7,6 +7,8 @@
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
+#include <iomanip>
+#include <sstream>
 #include <thread>
 #include <utility>
 
@@ -57,7 +59,12 @@ OutputsAudio::OutputsAudio()
       mEnvelopeConfig{ kDefaultAttackMs, kDefaultReleaseMs },
       mPhase(0.0),
       mPlaybackCancel(false),
-      mPlaybackRunning(false) {
+      mPlaybackRunning(false),
+      mSymbolSequence(0),
+      mSymbolSequenceConsumed(0),
+      mLatestSymbolKind(PlaybackSymbol::Dot),
+      mLatestSymbolTimestampMs(0.0),
+      mLatestSymbolDurationMs(0.0) {
   logEvent("constructor");
 }
 
@@ -393,6 +400,8 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
       continue;
     }
 
+    const double symbolDurationMs = unitMs * (isDash ? static_cast<double>(kDashUnits) : 1.0);
+
     ToneStartOptions startOptions;
     startOptions.toneHz = toneHz;
     startOptions.gain = static_cast<double>(gain);
@@ -402,8 +411,17 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
     startOptions.envelope = envelope;
     startToneInternal(startOptions, false);
 
-    const double symbolDurationMs = unitMs * (isDash ? static_cast<double>(kDashUnits) : 1.0);
-    const auto symbolDeadline = std::chrono::steady_clock::now() + toMicros(symbolDurationMs);
+    const auto startedAt = std::chrono::steady_clock::now();
+    const double startedAtMs = std::chrono::duration<double, std::milli>(startedAt.time_since_epoch()).count();
+    {
+      std::lock_guard<std::mutex> infoLock(mSymbolInfoMutex);
+      mSymbolSequence += 1;
+      mLatestSymbolKind = isDash ? PlaybackSymbol::Dash : PlaybackSymbol::Dot;
+      mLatestSymbolTimestampMs = startedAtMs;
+      mLatestSymbolDurationMs = symbolDurationMs;
+    }
+
+    const auto symbolDeadline = startedAt + toMicros(symbolDurationMs);
     sleepUntil(symbolDeadline);
 
     stopTone();
@@ -417,6 +435,23 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
   const bool cancelled = mPlaybackCancel.load(std::memory_order_acquire);
   mPlaybackCancel.store(false, std::memory_order_release);
   logEvent("playMorse.end", "cancelled=%d", cancelled ? 1 : 0);
+}
+
+std::string OutputsAudio::getLatestSymbolInfo() {
+  std::lock_guard<std::mutex> lock(mSymbolInfoMutex);
+  if (mSymbolSequenceConsumed == mSymbolSequence) {
+    return {};
+  }
+  mSymbolSequenceConsumed = mSymbolSequence;
+  const char symbolChar = mLatestSymbolKind == PlaybackSymbol::Dash ? '-' : '.';
+  std::ostringstream stream;
+  stream.setf(std::ios::fixed, std::ios::floatfield);
+  stream << "{\"sequence\":" << mSymbolSequence
+         << ",\"symbol\":\"" << symbolChar << "\""
+         << ",\"timestampMs\":" << std::setprecision(3) << mLatestSymbolTimestampMs
+         << ",\"durationMs\":" << std::setprecision(3) << mLatestSymbolDurationMs
+         << "}";
+  return stream.str();
 }
 
 oboe::DataCallbackResult OutputsAudio::onAudioReady(oboe::AudioStream* stream,
@@ -474,6 +509,8 @@ void OutputsAudio::teardown() {
 }
 
 } // namespace margelo::nitro::morse
+
+
 
 
 

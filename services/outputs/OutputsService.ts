@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Animated } from 'react-native';
 
 import type { PressTracker } from '@/services/latency/pressTracker';
@@ -30,6 +30,10 @@ export type PlaybackSymbolContext = {
   requestedAtMs: number;
   correlationId: string;
   source: string;
+  nativeTimestampMs?: number | null;
+  nativeDurationMs?: number | null;
+  nativeOffsetMs?: number | null;
+  nativeSequence?: number | null;
 };
 
 export type PlayMorseOptions = {
@@ -88,3 +92,5 @@ export function useOutputsService(): OutputsService {
   const service = React.useContext(OutputsServiceContext);
   return service ?? defaultOutputsService;
 }
+
+

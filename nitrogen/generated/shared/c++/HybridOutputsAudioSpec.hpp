@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <string>
 #if __has_include(<NitroModules/HybridObject.hpp>)
 #include <NitroModules/HybridObject.hpp>
 #else
@@ -57,6 +58,7 @@ namespace margelo::nitro::morse {
       virtual void startTone(const ToneStartOptions& options) = 0;
       virtual void stopTone() = 0;
       virtual void playMorse(const PlaybackRequest& request) = 0;
+      virtual std::string getLatestSymbolInfo() = 0;
       virtual void teardown() = 0;
 
     protected:
