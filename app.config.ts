@@ -24,7 +24,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     [
       'expo-splash-screen',
       {
-        image: './assets/images/splash-icon.png',
+        image: './assets/images/icon-foreground.png',
         imageWidth: 200,
         resizeMode: 'contain',
         backgroundColor: '#000000',
@@ -50,7 +50,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   }
 
   const androidConfig: ExpoConfig['android'] = {
-    icon: './assets/images/icon.png',
+    icon: './assets/icon.png',
     adaptiveIcon: {
       foregroundImage: './assets/images/icon-foreground.png',
       backgroundColor: '#000000',
@@ -67,7 +67,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     slug: 'Morse-Code-App',
     version: '1.0.0',
     orientation: 'portrait',
-    icon: './assets/images/icon.png',
+    icon: './assets/icon.png',
     scheme: 'morsecodeapp',
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,

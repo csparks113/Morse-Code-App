@@ -21,6 +21,7 @@ Use this document to capture the single source of truth after each working sessi
 ### Rebuild + Logging Recipe (Galaxy S22+)
 1. **Stop Metro** if it is running (`Ctrl+C` in the terminal hosting `npx expo start`).
 2. **Reinstall the dev client** (PowerShell from `C:\dev\Morse`):
+   - Use **Visual Studio 2026 Developer PowerShell v18.0.0-insiders** (or manually set `VCINSTALLDIR`, `VSINSTALLDIR`, `DIA_SDK_DIR`, and prepend the MSVC `Hostx64\\x64` bin to `PATH`) before running the Expo build so Hermes can locate the DIA SDK.
    ```powershell
    adb uninstall com.csparks113.MorseCodeApp  # optional but keeps things clean
    setx EXPO_USE_NEW_ARCHITECTURE 1

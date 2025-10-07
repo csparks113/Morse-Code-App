@@ -47,7 +47,7 @@
 4. Dev clients boot with Nitro audio/haptics enabled; monitor `[outputs-audio]` + `keyer.*` logs for latency or fallback warnings.
 5. `npm run nitro:codegen` is idempotent on a clean tree.
 
-## Known Issues (2025-10-05)
-- Developer console **Play Pattern** introduces audible delay and flash/haptic/torch drift; profile the Nitro replay scheduler before shipping replay flows.
+## Known Issues (2025-10-06)
+- Developer console **Play Pattern** still trails the Nitro audio clock by ~30-40 ms on average (p95 ~90 ms); continue logging native vs JS deltas after each scheduling tweak.
 - Send keyer misclassifies dot-leading sequences (for example `...-`) at higher WPM; tighten timing heuristics and continue logging `keyer.classification` events.
 - Track Nitro vs Audio API touch-to-tone deltas in `docs/android-dev-client-testing.md` whenever tuning changes land.

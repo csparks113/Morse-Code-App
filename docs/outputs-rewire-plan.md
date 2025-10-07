@@ -22,6 +22,7 @@ This plan tracks the remaining work needed to deliver a fully native, low-latenc
 
 ### Keyer Precision
 - Audit dot/dash thresholds at high WPM and correlate with `keyer.classification` telemetry.
+- (2025-10-06) Keyer button now uses a gesture-handler Pan detector so down/up timestamps are captured via the native pipeline, reducing missed rapid dots.
 - Experiment with adaptive thresholds or hysteresis that stabilise dot-leading sequences (`...-`, `..-.`, etc.).
 - Add regression guards (unit tests or watchdog logs) once the heuristics settle.
 

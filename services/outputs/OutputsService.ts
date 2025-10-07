@@ -65,6 +65,39 @@ export type KeyerOutputsHandle = {
   updateOptions(options: KeyerOutputsOptions): void;
 };
 
+
+export function resolvePlaybackRequestedAt(context?: PlaybackSymbolContext): number | undefined {
+  if (!context) {
+    return undefined;
+  }
+  if (typeof context.nativeTimestampMs === 'number') {
+    return context.nativeTimestampMs;
+  }
+  if (typeof context.requestedAtMs === 'number') {
+    return context.requestedAtMs;
+  }
+  return undefined;
+}
+
+export function buildPlaybackMetadata(context?: PlaybackSymbolContext): Record<string, number> | undefined {
+  if (!context) {
+    return undefined;
+  }
+  const metadata: Record<string, number> = {};
+  if (typeof context.nativeTimestampMs === 'number') {
+    metadata.nativeTimestampMs = context.nativeTimestampMs;
+  }
+  if (typeof context.nativeDurationMs === 'number') {
+    metadata.nativeDurationMs = context.nativeDurationMs;
+  }
+  if (typeof context.nativeOffsetMs === 'number') {
+    metadata.nativeOffsetMs = context.nativeOffsetMs;
+  }
+  if (typeof context.nativeSequence === 'number') {
+    metadata.nativeSequence = context.nativeSequence;
+  }
+  return Object.keys(metadata).length > 0 ? metadata : undefined;
+}
 export interface OutputsService {
   createFlashValue(): Animated.Value;
   flashPulse(options: FlashPulseOptions): void;
@@ -92,5 +125,6 @@ export function useOutputsService(): OutputsService {
   const service = React.useContext(OutputsServiceContext);
   return service ?? defaultOutputsService;
 }
+
 
 

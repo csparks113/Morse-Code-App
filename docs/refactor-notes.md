@@ -5,12 +5,15 @@
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
 ## Completed (Today - 2025-10-05)
+- Swapped the keyer button over to a native-backed gesture handler so down/up timestamps now come from the gesture pipeline, reducing missed rapid dots.
 - Finalised the bridgeless Nitro baseline across docs and the README so onboarding starts from the New Architecture + Nitro OutputsAudio stack.
 - Documented developer console **Play Pattern** drift and the send keyer dot-leading misclassification across the log, Nitro prep notes, and living spec.
 - Trimmed Nitro integration and outputs rewire plans to remove Audio API-first guidance while highlighting the remaining tuning backlog.
 - Synced the living spec architecture/details with the current bridgeless runtime so cross-platform contributors have an accurate map.
 
 ## Next Steps
+
+- Verify the new keyer gesture handler and verdict delay on device (Practice Keyer + send lesson) before landing further changes.
 
 ### Console Replay Alignment
 1. Instrument developer console **Play Pattern** runs to capture tone vs flash/haptic/torch offsets and log the deltas in `docs/android-dev-client-testing.md`.

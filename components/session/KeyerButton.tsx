@@ -1,5 +1,7 @@
 import React from "react";
-import { Pressable, StyleSheet, StyleProp, Text, ViewStyle } from "react-native";
+import { StyleSheet, StyleProp, Text, View, ViewStyle } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { runOnJS } from "react-native-reanimated";
 
 import { colors, spacing, surfaces, sessionControlTheme } from "@/theme/lessonTheme";
 
@@ -22,37 +24,110 @@ function KeyerButton({
   label = DEFAULT_LABEL,
   style,
 }: KeyerButtonProps) {
+  const [pressed, setPressed] = React.useState(false);
+  const activeRef = React.useRef(false);
+
+  const handleDown = React.useCallback(
+    (timestamp?: number) => {
+      if (disabled || activeRef.current) {
+        return;
+      }
+      activeRef.current = true;
+      setPressed(true);
+      onPressIn?.(timestamp);
+    },
+    [disabled, onPressIn],
+  );
+
+  const handleUp = React.useCallback(
+    (timestamp?: number) => {
+      if (!activeRef.current) {
+        return;
+      }
+      activeRef.current = false;
+      setPressed(false);
+      onPressOut?.(timestamp);
+    },
+    [onPressOut],
+  );
+
+  const handleCancel = React.useCallback(() => {
+    if (!activeRef.current) {
+      return;
+    }
+    activeRef.current = false;
+    setPressed(false);
+    onPressOut?.();
+  }, [onPressOut]);
+
+  const extractTimestamp = React.useCallback((event: any): number | undefined => {
+    const changed = event?.changedTouches?.[0];
+    if (changed?.timestamp != null) {
+      return changed.timestamp;
+    }
+    const first = event?.allTouches?.[0];
+    if (first?.timestamp != null) {
+      return first.timestamp;
+    }
+    return typeof event?.timestamp === 'number' ? event.timestamp : undefined;
+  }, []);
+
+  const gesture = React.useMemo(() => {
+    const pan = Gesture.Pan()
+      .maxPointers(1)
+      .minDistance(0)
+      .runOnJS(true)
+      .onTouchesDown((event) => {
+        if (disabled) return;
+        const ts = extractTimestamp(event);
+        runOnJS(handleDown)(ts);
+      })
+      .onTouchesUp((event) => {
+        if (disabled) return;
+        const ts = extractTimestamp(event);
+        runOnJS(handleUp)(ts);
+      })
+      .onFinalize((event) => {
+        if (disabled) return;
+        const ts = extractTimestamp(event);
+        if (ts != null) {
+          runOnJS(handleUp)(ts);
+        } else {
+          runOnJS(handleCancel)();
+        }
+      });
+    return disabled ? pan.enabled(false) : pan;
+  }, [disabled, extractTimestamp, handleCancel, handleDown, handleUp]);
+
   return (
-    <Pressable
-      onPressIn={(event) => {
-        onPressIn?.(event?.nativeEvent?.timestamp);
-      }}
-      onPressOut={(event) => {
-        onPressOut?.(event?.nativeEvent?.timestamp);
-      }}
-      disabled={disabled}
-      style={({ pressed }) => [
-        styles.base,
-        minHeight != null ? { minHeight } : null,
-        style,
-        pressed && !disabled ? styles.pressed : null,
-        disabled ? styles.disabled : null,
-      ]}
-    >
-      <Text style={styles.text}>{label}</Text>
-    </Pressable>
+    <GestureDetector gesture={gesture}>
+      <View
+        accessibilityRole="button"
+        accessible
+        pointerEvents={disabled ? 'none' : 'auto'}
+        style={[
+          styles.base,
+          minHeight != null ? { minHeight } : null,
+          style,
+          pressed ? styles.pressed : null,
+          disabled ? styles.disabled : null,
+        ]}
+      >
+        <Text style={styles.text}>{label}</Text>
+      </View>
+    </GestureDetector>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    width: "100%",
+    width: '100%',
     borderRadius: keyerButtonTheme.borderRadius,
     borderWidth: keyerButtonTheme.borderWidth,
     borderColor: colors.border,
     backgroundColor: surfaces.sunken,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: spacing(keyerButtonTheme.paddingVerticalStep),
   },
   pressed: {
@@ -63,15 +138,10 @@ const styles = StyleSheet.create({
   },
   text: {
     color: colors.text,
-    fontWeight: "800",
+    fontWeight: '800',
     fontSize: keyerButtonTheme.fontSize,
     letterSpacing: keyerButtonTheme.letterSpacing,
   },
 });
 
 export default KeyerButton;
-
-
-
-
-

@@ -37,7 +37,7 @@ This document captures how the app is organized and behaves so changes are inten
 
 ## Outputs Stack
 
-- **Audio (Android)**: Nitro `OutputsAudio` (C++ hybrid in `outputs-native/android/c++`) streams tone playback on the native thread with Oboe. Env toggles (`EXPO_FORCE_NITRO_OUTPUTS`, `EXPO_DISABLE_NITRO_OUTPUTS`) control fallback to the Audio API path for diagnostics.
+- **Audio (Android)**: Nitro `OutputsAudio` (C++ hybrid in `outputs-native/android/c++`) streams tone playback on the native thread with Oboe, and now exposes native symbol timestamps so JS scheduling stays aligned with the audio clock. Env toggles (`EXPO_FORCE_NITRO_OUTPUTS`, `EXPO_DISABLE_NITRO_OUTPUTS`) control fallback to the Audio API path for diagnostics.
 - **Haptics**: Bridgeless Nitro haptics module handles keyer and playback feedback; Expo haptics remains the guard fallback.
 - **Flash**: Receive/playback flows animate the flash overlay via Reanimated UI thread worklets.
 - **Torch**: Torch pulses go through the existing Expo module with capability checks surfaced in developer mode.
@@ -66,7 +66,7 @@ This document captures how the app is organized and behaves so changes are inten
 
 ## Known Issues
 
-- Developer console **Play Pattern** drift causes tone/flash/haptic/torch cues to desynchronise at higher WPM; scheduler tuning is in progress.
+- Developer console **Play Pattern** still shows ~30-40 ms average drift between audio and flash/haptics; further native scheduling tweaks are underway to close the remaining gap.
 - Send keyer misclassifies dot-leading sequences (for example `...-`) at higher WPM; timing heuristics require refinement.
 
 ## Contributing Notes

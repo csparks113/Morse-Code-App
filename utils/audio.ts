@@ -46,6 +46,8 @@ import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { AudioContext as AudioApiContext, GainNode as AudioApiGainNode, OscillatorNode as AudioApiOscillatorNode } from 'react-native-audio-api';
 import type { OutputsAudio, PlaybackSymbol } from '@/outputs-native/audio.nitro';
+import { nowMs } from '@/utils/time';
+
 
 type NitroModulesExports = typeof import('react-native-nitro-modules');
 
@@ -830,8 +832,9 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
     if (!supportsNativeTimeline || token !== nitroPlaybackToken) {
       return null;
     }
-    const deadline = nowMs() + Math.max(unitMs * 3, 250);
-    while (token === nitroPlaybackToken) {
+    const timeoutMs = Math.min(Math.max(unitMs * 2, 150), 400);
+    const deadline = nowMs() + timeoutMs;
+    while (token === nitroPlaybackToken && nowMs() <= deadline) {
       const payload = (outputsAudio as any).getLatestSymbolInfo?.();
       if (payload) {
         try {
@@ -841,7 +844,27 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
             durationMs?: number;
           };
           const sequence = typeof info.sequence === 'number' ? info.sequence : null;
-          if (sequence != null && sequence > nativeSequence) {
+          if (sequence != null) {
+            if (sequence <= nativeSequence) {
+              const resetDetected = sequence <= 1 && nativeSequence > 1;
+              if (resetDetected) {
+                nativeSequence = 0;
+                nativeOffsetMs = null;
+                continue;
+              }
+              continue;
+            }
+            const jump = sequence - nativeSequence;
+            if (jump > 1) {
+              if (__DEV__) {
+                console.warn('[outputs-audio] native sequence jump', {
+                  previous: nativeSequence,
+                  next: sequence,
+                  delta: jump,
+                });
+              }
+              nativeOffsetMs = null;
+            }
             nativeSequence = sequence;
             const timestampMs = typeof info.timestampMs === 'number' ? info.timestampMs : null;
             const durationMs = typeof info.durationMs === 'number' ? info.durationMs : null;
@@ -863,9 +886,6 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
           }
         }
       }
-      if (nowMs() >= deadline) {
-        break;
-      }
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
     return null;
@@ -886,10 +906,20 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
 
     opts.onSymbolStart?.(symbol, duration, nativeTiming ?? undefined);
 
-    const effectiveDuration = nativeTiming?.nativeDurationMs != null && nativeTiming.nativeDurationMs > 0
+    const nativeTimestampMs = nativeTiming?.nativeTimestampMs ?? null;
+    const nativeDurationMs = nativeTiming?.nativeDurationMs != null && nativeTiming.nativeDurationMs > 0
       ? nativeTiming.nativeDurationMs
       : duration;
-    await sleep(effectiveDuration);
+    const symbolEndTargetMs = nativeTimestampMs != null ? nativeTimestampMs + nativeDurationMs : null;
+
+    if (symbolEndTargetMs != null) {
+      const waitMs = symbolEndTargetMs - nowMs();
+      if (waitMs > 0) {
+        await sleep(waitMs);
+      }
+    } else {
+      await sleep(nativeDurationMs);
+    }
 
     if (token !== nitroPlaybackToken) {
       return;
@@ -900,7 +930,15 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
     if (i < pattern.length - 1) {
       const gap = unitMs;
       opts.onGap?.(gap);
-      await sleep(gap);
+      const nextSymbolTargetMs = symbolEndTargetMs != null ? symbolEndTargetMs + gap : null;
+      if (nextSymbolTargetMs != null) {
+        const gapWaitMs = nextSymbolTargetMs - nowMs();
+        if (gapWaitMs > 0) {
+          await sleep(gapWaitMs);
+        }
+      } else {
+        await sleep(gap);
+      }
       if (token !== nitroPlaybackToken) {
         return;
       }
@@ -1277,6 +1315,8 @@ export function stopPlayback(): void {
 
 // Utils
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+
+
 
 
 

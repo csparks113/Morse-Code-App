@@ -29,7 +29,7 @@ The developer-mode console now exposes a richer toolset for verifying the Nitro-
 - Nitro playback emits `[outputs-audio]` traces for warm-up, playback, and stop events; correlate them with `keyer.*` traces during tuning.
 
 ## Known Issues
-- **Play Pattern drift**: tone, flash, haptic, and torch cues fall out of sync at higher WPM while the Nitro replay scheduler is tuned. Capture offset measurements and logcat snapshots during testing.
+- **Play Pattern drift**: tone, flash, haptic, and torch cues now trail audio by ~33 ms on average (p95 ~88 ms); keep capturing logs after each native scheduling tweak to verify improvements.
 - **Keyer classification**: send mode occasionally mislabels dot-leading sequences at higher WPM; pair console metrics with `keyer.classification` traces while refining thresholds.
 
 Keep this document handy when onboarding contributors or triaging output issues; everything above is in place and ready for further tuning ahead of the Outputs Service rewire.

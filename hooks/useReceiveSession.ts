@@ -1,10 +1,10 @@
-﻿import React from 'react';
+import React from 'react';
 import { Dimensions } from 'react-native';
 import type { Animated } from 'react-native';
 
 import type { ActionButtonState } from '@/components/session/ActionButton';
 import type { PromptActionLabels, PromptActionConfig, SessionActionIconName } from '@/hooks/sessionActionTypes';
-import { useOutputsService, type PlaybackSymbolContext } from '@/services/outputs/OutputsService';
+import { useOutputsService, type PlaybackSymbolContext, resolvePlaybackRequestedAt, buildPlaybackMetadata } from '@/services/outputs/OutputsService';
 import { getMorseUnitMs } from '@/utils/audio';
 import { toMorse } from '@/utils/morse';
 import { useProgressStore } from '@/store/useProgressStore';
@@ -126,13 +126,16 @@ export function useReceiveSession({
 
   const runFlash = React.useCallback(
     (durationMs: number, context?: PlaybackSymbolContext) => {
+      const requestedAtMs = resolvePlaybackRequestedAt(context);
+      const metadata = buildPlaybackMetadata(context);
       outputs.flashPulse({
         enabled: lightEnabled,
         durationMs,
         flashValue: flash,
         source: context?.source ?? 'session.receive',
-        requestedAtMs: context?.requestedAtMs,
+        requestedAtMs,
         correlationId: context?.correlationId,
+        metadata,
       });
     },
     [outputs, lightEnabled, flash],
@@ -140,13 +143,16 @@ export function useReceiveSession({
 
   const hapticTick = React.useCallback(
     (symbol: '.' | '-', durationMs: number, context?: PlaybackSymbolContext) => {
+      const requestedAtMs = resolvePlaybackRequestedAt(context);
+      const metadata = buildPlaybackMetadata(context);
       outputs.hapticSymbol({
         enabled: hapticsEnabled,
         symbol,
         durationMs,
         source: context?.source ?? 'session.receive',
-        requestedAtMs: context?.requestedAtMs,
+        requestedAtMs,
         correlationId: context?.correlationId,
+        metadata,
       });
     },
     [outputs, hapticsEnabled],
@@ -384,4 +390,6 @@ export function useReceiveSession({
     handleSummaryContinue,
   };
 }
+
+
 

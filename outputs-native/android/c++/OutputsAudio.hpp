@@ -57,6 +57,7 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   EnvelopeConfig resolveEnvelope(const std::optional<ToneEnvelopeOptions>& envelopeOpt) const;
   float computeRampStep(float magnitude, float durationMs) const;
   void cancelPlaybackThread(bool join);
+  void resetSymbolInfo();
   void runPattern(std::vector<PlaybackSymbol> pattern,
                   double toneHz,
                   float gain,
@@ -90,4 +91,3 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
 };
 
 } // namespace margelo::nitro::morse
-

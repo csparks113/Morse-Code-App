@@ -12,7 +12,7 @@ A premium dark-themed Expo + React Native app for learning, practicing, and mast
 
 ## Architecture Overview
 - Expo + React Native + TypeScript running in the bridgeless New Architecture (Hermes) runtime.
-- Nitro `OutputsAudio` (Android) built from source with Oboe provides the default audio path; Audio API fallback stays behind env toggles for diagnostics.
+- Nitro `OutputsAudio` (Android) built from source with Oboe provides the default audio path and now shares native symbol timestamps with JS so replay/console scheduling follows the audio clock; Audio API fallback stays behind env toggles for diagnostics.
 - Expo modules remain for flash, torch, and haptics fallbacks; Nitro haptics is preferred where supported.
 - Developer console exposes manual triggers, telemetry summaries, and exports for latency analysis.
 
@@ -79,7 +79,7 @@ utils/
 ```
 
 ## Roadmap
-- Align developer console **Play Pattern** replay so tone/flash/haptic/torch stay within ~5 ms.
+- Finish the incremental Nitro alignment plan (native keyer input, timestamp propagation, optional native flash/torch) so tone/flash/haptic/torch stay within ~5 ms.
 - Harden send keyer classification at higher WPM with adaptive thresholds and regression guards.
 - Restructure the lessons tab into sections/subsections with updated progress tracking.
 - Expand practice modes (Timing/Target/Custom) once the outputs orchestrator and telemetry guardrails are in place.
@@ -87,7 +87,7 @@ utils/
 - Validate Nitro parity on iOS using the bridgeless dev client checklist.
 
 ## Known Issues
-- Developer console **Play Pattern** drift: tone, flash, haptic, and torch cues fall out of sync at higher WPM while the Nitro replay scheduler is tuned.
+- Developer console **Play Pattern** still shows ~30-40 ms average drift between audio and flash/haptics; native scheduling work is ongoing to reach parity.
 - Send keyer misclassifies dot-leading sequences at higher WPM; classification thresholds are under review.
 
 ## Troubleshooting

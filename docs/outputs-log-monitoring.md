@@ -71,114 +71,29 @@ Get-Item 'latest-logcat-play-pattern.txt' | Select-Object Name, Length, LastWrit
 ```
 
 ## Summarize Output Timings
-Use the helper snippet below to compute timing deltas between key output events. It expects the latest capture file and prints aggregate statistics in milliseconds.
+Run the analyzer script to compute both the classic JS timing deltas and the new native-alignment metrics:
 
 ```powershell
 Set-Location -Path 'C:\dev\Morse'
 
-$patterns = @(
-    '\[outputs-audio\]',
-    'outputs\.flashPulse(\.commit)?',
-    'outputs\.hapticSymbol',
-    'outputs\.playMorse\.symbol',
-    'keyer\.(prepare|tone)'
-)
-
-$lines = Select-String -Path 'latest-logcat-play-pattern.txt' -Pattern $patterns
-$year = (Get-Date).Year
-$events = [System.Collections.Generic.List[object]]::new()
-
-foreach ($item in $lines) {
-    $line = $item.Line.Trim()
-    if ($line -match "^(?<md>\d\d-\d\d)\s+(?<time>\d\d:\d\d:\d\d\.\d+)\s+\d+\s+\d+\s+\w\s+ReactNativeJS:\s+'\[outputs\]\s+(?<event>[^']+)'") {
-        $dateString = "$year $($matches['md']) $($matches['time'])"
-        $logTime = [datetime]::ParseExact($dateString, 'yyyy MM-dd HH:mm:ss.fff', [System.Globalization.CultureInfo]::InvariantCulture)
-        $tsMatch = [regex]::Match($line, 'timestamp:\s*([0-9\.]+)')
-        $timestamp = if ($tsMatch.Success) { [double]$tsMatch.Groups[1].Value } else { $null }
-        $events.Add([pscustomobject]@{
-            LogTime   = $logTime
-            Event     = $matches['event']
-            Timestamp = $timestamp
-        })
-    }
-}
-
-$hapticToFlash = @()
-$flashToCommit = @()
-$prepareDurations = @()
-$toneDurations = @()
-$toneGaps = @()
-$lastHaptic = $null
-$lastFlash = $null
-$lastPrepare = $null
-$lastToneStart = $null
-$lastToneStop = $null
-
-foreach ($event in $events) {
-    switch ($event.Event) {
-        'outputs.hapticSymbol' {
-            $lastHaptic = $event
-        }
-        'outputs.flashPulse' {
-            if ($lastHaptic) { $hapticToFlash += ($event.Timestamp - $lastHaptic.Timestamp) }
-            $lastFlash = $event
-        }
-        'outputs.flashPulse.commit' {
-            if ($lastFlash) { $flashToCommit += ($event.Timestamp - $lastFlash.Timestamp) }
-        }
-        'keyer.prepare' {
-            $lastPrepare = $event
-        }
-        'keyer.prepare.complete' {
-            if ($lastPrepare) { $prepareDurations += ($event.Timestamp - $lastPrepare.Timestamp) }
-            $lastPrepare = $null
-        }
-        'keyer.tone.start' {
-            if ($lastToneStop) { $toneGaps += ($event.Timestamp - $lastToneStop.Timestamp) }
-            $lastToneStart = $event
-        }
-        'keyer.tone.stop' {
-            if ($lastToneStart) { $toneDurations += ($event.Timestamp - $lastToneStart.Timestamp) }
-            $lastToneStop = $event
-            $lastToneStart = $null
-        }
-    }
-}
-
-function Get-Stats($label, $values) {
-    if (!$values -or $values.Count -eq 0) {
-        return [pscustomobject]@{ Metric = $label; Count = 0; Min = ''; Max = ''; Mean = ''; P95 = '' }
-    }
-
-    $sorted = $values | Sort-Object
-    $mean = ($values | Measure-Object -Average).Average
-    $min = $sorted[0]
-    $max = $sorted[-1]
-    $p95Index = [math]::Min([math]::Floor(0.95 * ($sorted.Count - 1)), $sorted.Count - 1)
-    $p95 = $sorted[$p95Index]
-
-    [pscustomobject]@{
-        Metric = $label
-        Count  = $values.Count
-        Min    = '{0:N3}' -f $min
-        Max    = '{0:N3}' -f $max
-        Mean   = '{0:N3}' -f $mean
-        P95    = '{0:N3}' -f $p95
-    }
-}
-
-$stats = @()
-$stats += Get-Stats 'haptic -> flashPulse (ms)' $hapticToFlash
-$stats += Get-Stats 'flashPulse -> commit (ms)' $flashToCommit
-$stats += Get-Stats 'keyer.prepare duration (ms)' $prepareDurations
-$stats += Get-Stats 'keyer tone on duration (ms)' $toneDurations
-$stats += Get-Stats 'tone gap between stop/start (ms)' $toneGaps
-
-$stats | Format-Table -AutoSize
+# Point to the capture you'd like to inspect
+.cscripts\analyze-logcat.ps1 -LogFile latest-logcat-play-pattern.txt
 ```
 
+The script prints:
+- audio?haptic/flash deltas (ms) with min/mean/P95 like before.
+- Native symbol sample counts, offsets, and durations.
+- Overall and per-unit JS vs native timestamp delays so you can confirm playback is aligned to the audio clock.
+
+Capture files archived under `docs/logs/` make it easy to diff analyzer output between runs.
+
+
+### Analyze Captures Automatically
+Run `scripts/analyze-logcat.ps1 -Path docs/logs/<file>` to produce the native vs JS timing summary (updated to parse the multi-line symbol metadata). Record the aggregate table in `docs/android-dev-client-testing.md` after every capture so improvements stay traceable.
 ### Export Runs for Diffing
 Rename or copy `latest-logcat-play-pattern.txt` into `docs/logs/` (or another archive folder) after each capture so you can diff runs and track improvements over time.
+
+
 
 
 

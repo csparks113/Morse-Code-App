@@ -1,7 +1,8 @@
 import { Animated, Platform, Vibration } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { playMorseCode, stopPlayback, createToneController, type NativeSymbolTimingContext } from '@/utils/audio';
+import { playMorseCode, stopPlayback, createToneController } from '@/utils/audio';
+import type { NativeSymbolTimingContext } from '@/utils/audio';
 import { acquireTorch, releaseTorch, resetTorch, isTorchAvailable } from '@/utils/torch';
 import { nowMs } from '@/utils/time';
 import { traceOutputs } from './trace';
@@ -409,7 +410,7 @@ const defaultOutputsService: OutputsService = {
 
     const requestedAt =
       typeof requestedAtMs === 'number' && Number.isFinite(requestedAtMs) ? requestedAtMs : nowMs();
-    const sampleMetadata = metadata ?? { durationMs };
+    const sampleMetadata = { durationMs, ...(metadata ?? {}) };
     const { fadeMs, holdMs } = computeFlashTimings(durationMs);
 
     const startSequence = () => {
@@ -606,5 +607,6 @@ const defaultOutputsService: OutputsService = {
 };
 
 export { defaultOutputsService };
+
 
 

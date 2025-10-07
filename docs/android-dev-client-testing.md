@@ -122,5 +122,8 @@
 - Attempted to launch a 180 s Play Pattern capture via the PowerShell job script inside Codex CLI; the harness timed out after 10 s so no new log was recorded.
 - Updated docs/outputs-log-monitoring.md so the logcat recipe keeps OutputsAudio:D lines alongside the JS events.
 - Recommended to re-run the capture from a local shell (outside the CLI timeout) once the native timestamp plumbing lands, then archive the log under docs/logs/ for diffing.
+- Re-ran Play Pattern capture on 2025-10-06 21:13 and archived the log at `docs/logs/logcat-play-pattern-20251006-2113-native-symbols.txt` using the updated PowerShell capture script.
+- Native timestamp propagation works end-to-end: JS `playMorse.symbol` events now carry `nativeTimestampMs`/`nativeOffsetMs`, and the latest run shows mean JS delay versus native tone start ranging from ~40 ms (`unitMs` 24) up to ~150 ms (`unitMs` 120) with P95 roughly 86-323 ms (native offsets match those numbers).
+- 2025-10-06 21:36 capture after native-aligned playback loop: archived at `docs/logs/logcat-play-pattern-20251006-2136-native-sync.txt`. Overall JS delay vs native audio now averages ~33 ms with P95 ˜88 ms across 540 symbols; per-unit runs range from ~15-49 ms mean and 28-123 ms P95 (unitMs 24–120).
 - Outstanding integration tasks: finish the OutputsAudio.cpp reset handling, tighten pollNextNativeSymbol guards in utils/audio.ts, and confirm the NativeSymbolTimingContext import stays DCE-safe for web/iOS builds.
 

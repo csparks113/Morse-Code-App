@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
 import { ThemeProvider, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -79,38 +80,42 @@ export default function RootLayout() {
 
   if (!ready) {
     return (
-      <SafeAreaProvider>
-        <StatusBar style="light" backgroundColor={theme.colors.background} />
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: theme.colors.background,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <ActivityIndicator color={theme.colors.accent} />
-        </View>
-      </SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <StatusBar style="light" backgroundColor={theme.colors.background} />
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: theme.colors.background,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ActivityIndicator color={theme.colors.accent} />
+          </View>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     );
   }
 
   return (
-    <SafeAreaProvider>
-      <I18nextProvider i18n={i18n}>
-        <ThemeProvider value={navTheme}>
-          <StatusBar style="light" backgroundColor={theme.colors.background} />
-          <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: 'transparent' },
-                animation: 'fade',
-              }}
-            />
-          </View>
-        </ThemeProvider>
-      </I18nextProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <I18nextProvider i18n={i18n}>
+          <ThemeProvider value={navTheme}>
+            <StatusBar style="light" backgroundColor={theme.colors.background} />
+            <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: 'transparent' },
+                  animation: 'fade',
+                }}
+              />
+            </View>
+          </ThemeProvider>
+        </I18nextProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

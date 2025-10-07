@@ -317,6 +317,7 @@ void OutputsAudio::cancelPlaybackThread(bool join) {
     if (!mPlaybackThread.joinable()) {
       mPlaybackRunning.store(false, std::memory_order_release);
       mPlaybackCancel.store(false, std::memory_order_release);
+      resetSymbolInfo();
       return;
     }
     mPlaybackCancel.store(true, std::memory_order_release);
@@ -333,6 +334,16 @@ void OutputsAudio::cancelPlaybackThread(bool join) {
 
   mPlaybackRunning.store(false, std::memory_order_release);
   mPlaybackCancel.store(false, std::memory_order_release);
+  resetSymbolInfo();
+}
+
+void OutputsAudio::resetSymbolInfo() {
+  std::lock_guard<std::mutex> lock(mSymbolInfoMutex);
+  mSymbolSequence = 0;
+  mSymbolSequenceConsumed = 0;
+  mLatestSymbolKind = PlaybackSymbol::Dot;
+  mLatestSymbolTimestampMs = 0.0;
+  mLatestSymbolDurationMs = 0.0;
 }
 
 void OutputsAudio::playMorse(const PlaybackRequest& request) {
@@ -434,6 +445,9 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
   mPlaybackRunning.store(false, std::memory_order_release);
   const bool cancelled = mPlaybackCancel.load(std::memory_order_acquire);
   mPlaybackCancel.store(false, std::memory_order_release);
+  if (cancelled) {
+    resetSymbolInfo();
+  }
   logEvent("playMorse.end", "cancelled=%d", cancelled ? 1 : 0);
 }
 
@@ -451,6 +465,12 @@ std::string OutputsAudio::getLatestSymbolInfo() {
          << ",\"timestampMs\":" << std::setprecision(3) << mLatestSymbolTimestampMs
          << ",\"durationMs\":" << std::setprecision(3) << mLatestSymbolDurationMs
          << "}";
+  logEvent("symbol.info",
+           "sequence=%llu symbol=%c timestamp=%.3f duration=%.3f",
+           static_cast<unsigned long long>(mSymbolSequence),
+           symbolChar,
+           mLatestSymbolTimestampMs,
+           mLatestSymbolDurationMs);
   return stream.str();
 }
 
@@ -509,11 +529,6 @@ void OutputsAudio::teardown() {
 }
 
 } // namespace margelo::nitro::morse
-
-
-
-
-
 
 
 

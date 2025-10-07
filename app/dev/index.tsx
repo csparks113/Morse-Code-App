@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -24,7 +24,7 @@ import {
   type OutputsTraceEntry,
 } from '@/store/useDeveloperStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { useOutputsService, type KeyerOutputsOptions } from '@/services/outputs/OutputsService';
+import { useOutputsService, type KeyerOutputsOptions, resolvePlaybackRequestedAt, buildPlaybackMetadata } from '@/services/outputs/OutputsService';
 import { createPressTracker } from '@/services/latency/pressTracker';
 import { useOutputsDiagnosticsStore } from '@/store/useOutputsDiagnosticsStore';
 import {
@@ -312,21 +312,25 @@ export default function DeveloperConsoleScreen() {
         unitMs,
         source: 'console.replay',
         onSymbolStart: (symbol, durationMs, context) => {
+          const requestedAtMs = resolvePlaybackRequestedAt(context);
+          const metadata = buildPlaybackMetadata(context);
           outputs.hapticSymbol({
             enabled: manualOptions.hapticsEnabled,
             symbol,
             durationMs,
             source: context?.source ?? 'console.replay',
-            requestedAtMs: context?.requestedAtMs,
+            requestedAtMs,
             correlationId: context?.correlationId,
+            metadata,
           });
           outputs.flashPulse({
             enabled: manualOptions.lightEnabled,
             durationMs,
             flashValue: manualFlashValue,
             source: context?.source ?? 'console.replay',
-            requestedAtMs: context?.requestedAtMs,
+            requestedAtMs,
             correlationId: context?.correlationId,
+            metadata,
           });
         },
       });
@@ -1328,4 +1332,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
+
+
 

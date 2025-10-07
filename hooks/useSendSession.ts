@@ -1,11 +1,11 @@
-﻿import React from 'react';
+import React from 'react';
 import { Animated, Dimensions } from 'react-native';
 
 import type { ActionButtonState } from '@/components/session/ActionButton';
 import type { PromptActionLabels, PromptActionConfig, SessionActionIconName } from '@/hooks/sessionActionTypes';
 import { useSessionFlow } from '@/hooks/useSessionFlow';
 import { useKeyerOutputs } from '@/hooks/useKeyerOutputs';
-import { useOutputsService, type PlaybackSymbolContext } from '@/services/outputs/OutputsService';
+import { useOutputsService, type PlaybackSymbolContext, resolvePlaybackRequestedAt, buildPlaybackMetadata } from '@/services/outputs/OutputsService';
 import { createPressTracker } from '@/services/latency/pressTracker';
 import { useProgressStore } from '@/store/useProgressStore';
 import { toMorse } from '@/utils/morse';
@@ -15,7 +15,7 @@ import {
   getMorseUnitMs,
   MORSE_UNITS,
 } from '@/utils/morseTiming';
-import { toMonotonicTime } from '@/utils/time';
+import { nowMs, toMonotonicTime } from '@/utils/time';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 type PressWindow = { startMs: number; endMs: number };
@@ -165,6 +165,7 @@ export function useSendSession({
   const ignorePressRef = React.useRef(false);
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const idleTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+const verdictTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const canInteractRef = React.useRef(false);
 
   const updateInput = React.useCallback((next: string) => {
@@ -186,6 +187,13 @@ export function useSendSession({
     }
   }, []);
 
+  const clearVerdictTimer = React.useCallback(() => {
+    if (verdictTimerRef.current) {
+      clearTimeout(verdictTimerRef.current);
+      verdictTimerRef.current = null;
+    }
+  }, []);
+
   const clearPlaybackTimeout = React.useCallback(() => {
     flashOpacity.stopAnimation?.(() => {
       flashOpacity.setValue(0);
@@ -198,20 +206,24 @@ export function useSendSession({
       clearAdvanceTimer();
       clearIdleTimeout();
       clearPlaybackTimeout();
+      clearVerdictTimer();
       teardown().catch(() => {});
       outputs.stopMorse();
     };
-  }, [prepare, teardown, clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout]);
+  }, [prepare, teardown, clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout, clearVerdictTimer]);
 
   const flashSymbol = React.useCallback(
     (durationMs: number, context?: PlaybackSymbolContext) => {
+      const requestedAtMs = resolvePlaybackRequestedAt(context);
+      const metadata = buildPlaybackMetadata(context);
       outputs.flashPulse({
         enabled: lightEnabled,
         durationMs,
         flashValue: flashOpacity,
         source: context?.source ?? 'session.send.replay',
-        requestedAtMs: context?.requestedAtMs,
+        requestedAtMs,
         correlationId: context?.correlationId,
+        metadata,
       });
     },
     [outputs, lightEnabled, flashOpacity],
@@ -219,12 +231,15 @@ export function useSendSession({
 
   const hapticSymbol = React.useCallback(
     (symbol: '.' | '-', context?: PlaybackSymbolContext) => {
+      const requestedAtMs = resolvePlaybackRequestedAt(context);
+      const metadata = buildPlaybackMetadata(context);
       outputs.hapticSymbol({
         enabled: hapticsEnabled,
         symbol,
         source: context?.source ?? 'session.send.replay',
-        requestedAtMs: context?.requestedAtMs,
+        requestedAtMs,
         correlationId: context?.correlationId,
+        metadata,
       });
     },
     [outputs, hapticsEnabled],
@@ -246,6 +261,7 @@ export function useSendSession({
     clearAdvanceTimer();
     clearIdleTimeout();
     clearPlaybackTimeout();
+    clearVerdictTimer();
     outputs.stopMorse();
 
     setIsReplaying(false);
@@ -269,7 +285,9 @@ export function useSendSession({
       clearAdvanceTimer();
       clearIdleTimeout();
       clearPlaybackTimeout();
+      clearVerdictTimer();
       setIsReplaying(false);
+      onUp(nowMs());
 
       const willExhaustHearts = isChallenge && !isCorrect && hearts <= 1;
 
@@ -320,7 +338,22 @@ export function useSendSession({
       clearAdvanceTimer,
       clearIdleTimeout,
       clearPlaybackTimeout,
+      clearVerdictTimer,
+      onUp,
     ],
+  );
+
+  const verdictDelayMs = React.useMemo(() => Math.max(120, Math.min(240, unitMs * 1.2)), [unitMs]);
+
+  const queueVerdict = React.useCallback(
+    (isCorrect: boolean) => {
+      clearVerdictTimer();
+      verdictTimerRef.current = setTimeout(() => {
+        verdictTimerRef.current = null;
+        finishQuestion(isCorrect);
+      }, verdictDelayMs);
+    },
+    [clearVerdictTimer, finishQuestion, verdictDelayMs],
   );
 
   const scheduleIdleTimeout = React.useCallback(() => {
@@ -329,9 +362,9 @@ export function useSendSession({
     const timeoutMs = Math.max(600, unitMs * MORSE_UNITS.word * 1.2);
     idleTimeoutRef.current = setTimeout(() => {
       if (!canInteractRef.current) return;
-      finishQuestion(false);
+      queueVerdict(false);
     }, timeoutMs);
-  }, [clearIdleTimeout, unitMs, finishQuestion]);
+  }, [clearIdleTimeout, unitMs, queueVerdict]);
 
   const canInteractBase =
     started && !summary && !earlySummary && !!currentTarget && feedback === 'idle';
@@ -344,6 +377,7 @@ export function useSendSession({
     (rawTimestamp?: number) => {
       if (!canInteractBase || isReplaying) return;
       clearIdleTimeout();
+      clearVerdictTimer();
 
       const press = pressTracker.begin(rawTimestamp);
       const timestamp = press.startedAtMs;
@@ -354,7 +388,7 @@ export function useSendSession({
         if (gapType !== 'intra') {
           ignorePressRef.current = true;
           lastReleaseRef.current = null;
-          finishQuestion(false);
+          queueVerdict(false);
           return;
         }
       }
@@ -363,7 +397,7 @@ export function useSendSession({
       pressStartRef.current = timestamp;
       onDown(timestamp);
     },
-    [canInteractBase, isReplaying, unitMs, gapTolerance, finishQuestion, onDown, clearIdleTimeout, pressTracker],
+    [canInteractBase, isReplaying, unitMs, gapTolerance, queueVerdict, onDown, clearIdleTimeout, clearVerdictTimer, pressTracker],
   );
 
   const appendSymbol = React.useCallback(
@@ -374,17 +408,17 @@ export function useSendSession({
       updateInput(next);
 
       if (!target.startsWith(next)) {
-        finishQuestion(false);
+        queueVerdict(false);
         return;
       }
       if (target === next) {
-        finishQuestion(true);
+        queueVerdict(true);
         return;
       }
 
       scheduleIdleTimeout();
     },
-    [currentTarget, finishQuestion, updateInput, scheduleIdleTimeout],
+    [currentTarget, queueVerdict, updateInput, scheduleIdleTimeout],
   );
 
   const onPressOut = React.useCallback((rawTimestamp?: number) => {
@@ -414,20 +448,21 @@ export function useSendSession({
     const symbol = classifySignalDuration(duration, unitMs, signalTolerance);
     if (!symbol) {
       lastReleaseRef.current = null;
-      finishQuestion(false);
+      queueVerdict(false);
       return;
     }
 
     lastReleaseRef.current = releaseAt;
     appendSymbol(symbol);
-  }, [canInteractBase, isReplaying, unitMs, signalTolerance, finishQuestion, appendSymbol, onUp]);
+  }, [canInteractBase, isReplaying, unitMs, signalTolerance, queueVerdict, appendSymbol, onUp]);
 
   const handleSummaryContinue = React.useCallback(() => {
     clearAdvanceTimer();
     clearIdleTimeout();
     clearPlaybackTimeout();
+    clearVerdictTimer();
     outputs.stopMorse();
-  }, [clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout]);
+  }, [clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout, clearVerdictTimer]);
 
   const playCurrentTarget = React.useCallback(async () => {
     if (isReplaying) return;
@@ -531,6 +566,9 @@ export function useSendSession({
     handleSummaryContinue,
   };
 }
+
+
+
 
 
 
