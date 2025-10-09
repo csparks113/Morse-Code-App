@@ -27,10 +27,12 @@ type SummaryProps = {
 
 type SessionSummaryProps = SummaryProps & {
   onContinue?: () => void;
+  onRetry?: () => void;
 };
 
 type ContinueProps = {
   onContinue?: () => void;
+  onRetry?: () => void;
 };
 
 const SUMMARY_FOOTER_SPACING = getSessionFooterSpacing('summary');
@@ -130,7 +132,7 @@ export function SessionSummaryContent({ percent, correct, total }: SummaryProps)
   );
 }
 
-export function SessionSummaryContinue({ onContinue }: ContinueProps) {
+export function SessionSummaryContinue({ onContinue, onRetry }: ContinueProps) {
   const { t } = useTranslation(['common']);
 
   const handleContinue = React.useCallback(() => {
@@ -139,23 +141,41 @@ export function SessionSummaryContinue({ onContinue }: ContinueProps) {
     router.replace('/');
   }, [onContinue]);
 
+  const handleRetry = React.useCallback(() => {
+    onRetry?.();
+  }, [onRetry]);
+
+  const showRetry = typeof onRetry === 'function';
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t('common:continue')}
-      onPress={handleContinue}
-      style={({ pressed }) => [styles.continue, pressed && styles.continuePressed]}
-    >
-      <Text style={styles.continueText}>{t('common:continue')}</Text>
-    </Pressable>
+    <View style={styles.actionsRow}>
+      {showRetry ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('common:retry')}
+          onPress={handleRetry}
+          style={({ pressed }) => [styles.retry, pressed && styles.retryPressed]}
+        >
+          <Text style={styles.retryText}>{t('common:retry')}</Text>
+        </Pressable>
+      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('common:continue')}
+        onPress={handleContinue}
+        style={({ pressed }) => [styles.continue, pressed && styles.continuePressed]}
+      >
+        <Text style={styles.continueText}>{t('common:continue')}</Text>
+      </Pressable>
+    </View>
   );
 }
 
-export default function SessionSummary({ percent, correct, total, onContinue }: SessionSummaryProps) {
+export default function SessionSummary({ percent, correct, total, onContinue, onRetry }: SessionSummaryProps) {
   return (
     <View style={styles.standaloneWrap}>
       <SessionSummaryContent percent={percent} correct={correct} total={total} />
-      <SessionSummaryContinue onContinue={onContinue} />
+      <SessionSummaryContinue onContinue={onContinue} onRetry={onRetry} />
     </View>
   );
 }
@@ -196,13 +216,37 @@ const styles = StyleSheet.create({
     marginTop: spacing(summaryContentLayout.subLabelMarginTopStep),
     fontWeight: fontWeight.medium,
   },
-  continue: {
+  actionsRow: {
+    flexDirection: 'row',
     alignSelf: 'stretch',
+    gap: spacing(2),
+    marginBottom: SUMMARY_FOOTER_SPACING,
+  },
+  retry: {
+    flex: 1,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: colors.blueNeon,
+    paddingVertical: spacing(summaryContinueLayout.paddingVerticalStep),
+    paddingHorizontal: spacing(summaryContinueLayout.paddingHorizontalStep),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  retryPressed: { opacity: 0.92 },
+  retryText: {
+    color: colors.blueNeon,
+    fontWeight: fontWeight.extraBold,
+    fontSize: typography.subtitle,
+  },
+  continue: {
+    flex: 1,
     backgroundColor: colors.blueNeon,
     borderRadius: 30,
     paddingVertical: spacing(summaryContinueLayout.paddingVerticalStep),
     paddingHorizontal: spacing(summaryContinueLayout.paddingHorizontalStep),
-    marginBottom: SUMMARY_FOOTER_SPACING,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   continuePressed: { opacity: 0.92 },
   continueText: {

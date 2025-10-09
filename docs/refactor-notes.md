@@ -4,7 +4,14 @@
 - When you pick up a task, copy the relevant bullet into your working notes and expand it with acceptance criteria, links, or test plans.
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
-## Completed (Today - 2025-10-05)
+- Instrumented outputs service to trace resolved tone volume / flash intensity and added queueVerdict ignorePress telemetry.
+- Auto-cut keyer outputs when send verdict banners appear by routing verdict handlers through cutActiveOutputs so tone/flash/haptics drop immediately.
+- Instrumented console/manual handles with watchdog timers that log pressTimeout samples into the latency store and force-cut stuck tone/flash.
+
+## Completed (Today - 2025-10-06)
+- Routed Nitro native offsets through JS pulse scheduling so flash/haptic outputs wait for the captured timeline and latency logs include the scheduled delay.
+
+## Completed (2025-10-05)
 - Swapped the keyer button over to a native-backed gesture handler so down/up timestamps now come from the gesture pipeline, reducing missed rapid dots.
 - Finalised the bridgeless Nitro baseline across docs and the README so onboarding starts from the New Architecture + Nitro OutputsAudio stack.
 - Documented developer console **Play Pattern** drift and the send keyer dot-leading misclassification across the log, Nitro prep notes, and living spec.
@@ -13,7 +20,7 @@
 
 ## Next Steps
 
-- Verify the new keyer gesture handler and verdict delay on device (Practice Keyer + send lesson) before landing further changes.
+- Verify the new keyer gesture handler, verdict delay, and timeline-synced flash/haptic pulses on device (Practice Keyer + send lesson) before landing further changes.
 
 ### Console Replay Alignment
 1. Instrument developer console **Play Pattern** runs to capture tone vs flash/haptic/torch offsets and log the deltas in `docs/android-dev-client-testing.md`.
@@ -27,7 +34,7 @@
 
 ### Outputs Alignment (Incremental Plan)
 1. Finish integrating native keyer press tracking so rapid dots use monotonic timestamps; update telemetry and regression guards once the module lands.
-2. Wire Nitro symbol timestamps through JS consumers (OutputsService, flash/torch controllers) and retime the replay/console paths around the native start time.
+2. Wire Nitro symbol timestamps through JS consumers (OutputsService, flash/torch controllers) and retime the replay/console paths around the native start time (flash/haptic done; torch scheduling still pending).
 3. If flash/haptic drift persists, add native-driven flash/torch triggers as the next increment and benchmark the results.
 4. After each increment, archive fresh logcat captures under `docs/logs/`, compare them against prior runs, and summarize the deltas here.
 
@@ -72,3 +79,16 @@
 - Added latency instrumentation across tone/haptic/flash/torch channels and surfaced telemetry in the developer console.
 - Integrated Nitro dependencies, wired Nitrogen codegen into prebuild, and rebuilt the Android dev client from `C:\dev\Morse` for on-device validation.
 - Documented developer console upgrades (manual triggers, latency summaries, torch indicator) and synced UI spacing/theme guards across session surfaces.
+
+### Outputs Stability
+- Completed 2025-10-08: Auto-cut active keyer inputs as soon as a verdict banner displays so outputs cannot stick in the "on" state (useSendSession now routes verdicts through cutActiveOutputs).
+- Completed 2025-10-08: Added watchdog logging when manual/dev-console handles fail to release tone/flash within expected timeouts (default outputs service records pressTimeout samples and force-cuts handles).
+- Follow up with send/practice flows to ensure the verdict timers cancel pending pressStart correlations before queuing the next prompt (verify practice/send flows honour the cutActiveOutputs path).
+
+
+
+
+
+
+
+

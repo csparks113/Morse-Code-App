@@ -53,6 +53,8 @@ export default function SendSessionScreen() {
   const setLightEnabled = useSettingsStore((s) => s.setLightEnabled);
   const setTorchEnabled = useSettingsStore((s) => s.setTorchEnabled);
   const toneHzSetting = useSettingsStore((s) => s.toneHz as unknown as string | number);
+  const audioVolumePercent = useSettingsStore((s) => s.audioVolumePercent ?? 100);
+  const flashBrightnessPercent = useSettingsStore((s) => s.flashBrightnessPercent ?? 80);
   const signalTolerancePercent = useSettingsStore((s) => s.signalTolerancePercent ?? 30);
   const gapTolerancePercent = useSettingsStore((s) => s.gapTolerancePercent ?? 50);
 
@@ -60,6 +62,10 @@ export default function SendSessionScreen() {
     const parsed = Number(toneHzSetting);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 600;
   }, [toneHzSetting]);
+
+  const flashMaxOpacity = React.useMemo(() => {
+    return 0.28 * Math.max(0, Math.min(1, flashBrightnessPercent / 100));
+  }, [flashBrightnessPercent]);
 
   const {
     started,
@@ -94,6 +100,8 @@ export default function SendSessionScreen() {
     lightEnabled,
     torchEnabled,
     toneHz: toneHzValue,
+    audioVolumePercent,
+    flashBrightnessPercent,
     signalTolerancePercent,
     gapTolerancePercent,
     actionLabels: {
@@ -143,7 +151,7 @@ export default function SendSessionScreen() {
           </View>
 
           <View style={[sessionStyleSheet.bottomGroup, { alignItems: 'center' }]}>
-            <SessionSummaryContinue onContinue={handleSummaryContinue} />
+            <SessionSummaryContinue onContinue={handleSummaryContinue} onRetry={startSession} />
           </View>
         </View>
       </SafeAreaView>
@@ -153,14 +161,13 @@ export default function SendSessionScreen() {
 
   return (
     <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
-      <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={0.28} />
-
       <View
         style={[
           sessionStyleSheet.container,
           sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'standard' }),
         ]}
       >
+        <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={flashMaxOpacity} />
         <View style={sessionStyleSheet.topGroup}>
           <SessionHeader
             labelTop={meta.headerTop}
@@ -230,3 +237,9 @@ export default function SendSessionScreen() {
     </SafeAreaView>
   );
 }
+
+
+
+
+
+

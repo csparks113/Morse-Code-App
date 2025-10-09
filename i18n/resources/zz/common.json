@@ -1,4 +1,4 @@
-﻿{
+{
   "lesson": "[!! Lesson {{num}} !!]",
   "review": "[!! Review !!]",
   "challenge": "[!! Challenge !!]",
@@ -11,5 +11,6 @@
   "back": "[!! Back !!]",
   "help": "[!! Help !!]",
   "menu": "[!! Menu !!]",
-  "loading": "[!! Loading... !!]"
+  "loading": "[!! Loading... !!]",
+  "retry": "[!! Retry !!]"
 }

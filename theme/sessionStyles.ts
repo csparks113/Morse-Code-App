@@ -14,12 +14,13 @@ interface SessionPaddingOptions {
   bottomStep?: number;
   bottomPx?: number;
 }
-
 const sessionStyleDefs = {
-  safe: { flex: 1, backgroundColor: theme.colors.background },
+  safe: { flex: 1, backgroundColor: theme.colors.background, position: 'relative', zIndex: 0 },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    position: 'relative',
+    zIndex: 1,
     paddingHorizontal: spacing(sessionLayoutTheme.container.paddingHorizontalStep),
     justifyContent: 'space-between',
   },
@@ -103,3 +104,9 @@ export const getSessionFooterSpacing = (variant: SessionFooterVariant = 'standar
 
 export const sessionStyles = sessionStyleDefs;
 export const sessionStyleSheet = StyleSheet.create(sessionStyleDefs);
+
+
+
+
+
+

@@ -33,11 +33,17 @@ export default function PracticeKeyerScreen() {
   const setLightEnabled = useSettingsStore((state) => state.setLightEnabled);
   const setTorchEnabled = useSettingsStore((state) => state.setTorchEnabled);
   const toneHzSetting = useSettingsStore((state) => state.toneHz as unknown as string | number);
+  const audioVolumePercent = useSettingsStore((state) => state.audioVolumePercent ?? 100);
+  const flashBrightnessPercent = useSettingsStore((state) => state.flashBrightnessPercent ?? 80);
 
   const toneHz = React.useMemo(() => {
     const parsed = Number(toneHzSetting);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 600;
   }, [toneHzSetting]);
+
+  const flashMaxOpacity = React.useMemo(() => {
+    return 0.28 * Math.max(0, Math.min(1, flashBrightnessPercent / 100));
+  }, [flashBrightnessPercent]);
 
   const pressTracker = React.useMemo(() => createPressTracker('practice.keyer'), []);
 
@@ -48,6 +54,8 @@ export default function PracticeKeyerScreen() {
       lightEnabled,
       torchEnabled,
       toneHz,
+      audioVolumePercent,
+      flashBrightnessPercent,
     },
     { source: 'practice.keyer', pressTracker },
   );
@@ -67,8 +75,6 @@ export default function PracticeKeyerScreen() {
 
   return (
     <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
-      <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={0.28} />
-
       <View
         style={[
           sessionStyleSheet.container,
@@ -78,6 +84,7 @@ export default function PracticeKeyerScreen() {
           }),
         ]}
       >
+        <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={flashMaxOpacity} />
         <View style={sessionStyleSheet.topGroup}>
           <SessionHeader
             labelTop={t('keyerLabHeaderTop')}
@@ -147,3 +154,10 @@ const styles = StyleSheet.create({
     padding: spacing(2),
   },
 });
+
+
+
+
+
+
+

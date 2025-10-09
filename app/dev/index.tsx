@@ -342,7 +342,12 @@ export default function DeveloperConsoleScreen() {
   const triggerStop = React.useCallback(() => {
     clearManualTimeout();
     const completed = manualPressTracker.end();
-    manualHandleRef.current?.pressEnd(completed?.endedAtMs);
+    const endedAtMs = completed?.endedAtMs;
+    if (endedAtMs != null) {
+      manualHandleRef.current?.cutActiveOutputs('console.manual.stop', { endedAtMs });
+    } else {
+      manualHandleRef.current?.cutActiveOutputs('console.manual.stop');
+    }
     outputs.stopMorse();
     manualFlashValue.stopAnimation?.(() => {
       manualFlashValue.setValue(0);
@@ -726,230 +731,241 @@ export default function DeveloperConsoleScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.manualSection}>
-            <Text style={styles.manualHeading}>Manual output triggers</Text>
+              <Text style={styles.manualHeading}>Manual output triggers</Text>
 
-            <View style={styles.consoleMeta}>
-              <Text style={styles.consoleMetaLabel}>Torch</Text>
-              <Text
-                style={[
-                  styles.consoleMetaValue,
-                  !torchSupported && styles.consoleMetaWarning,
-                ]}
-              >
-                {torchSupported ? 'Available' : 'Unavailable'}
+              <View style={styles.consoleMeta}>
+                <Text style={styles.consoleMetaLabel}>Torch</Text>
+                <Text
+                  style={[
+                    styles.consoleMetaValue,
+                    !torchSupported && styles.consoleMetaWarning,
+                  ]}
+                >
+                  {torchSupported ? 'Available' : 'Unavailable'}
+                </Text>
+              </View>
+
+              <View style={styles.manualToggleRow}>
+                <View style={styles.manualToggleItem}>
+                  <Text style={styles.manualToggleLabel}>Audio</Text>
+                  <Switch
+                    value={manualOptions.audioEnabled}
+                    onValueChange={handleManualToggle('audioEnabled')}
+                    trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
+                    thumbColor={
+                      manualOptions.audioEnabled
+                        ? lessonColors.blueNeon
+                        : devConsoleTheme.switchThumb
+                    }
+                  />
+                </View>
+
+                <View style={styles.manualToggleItem}>
+                  <Text style={styles.manualToggleLabel}>Haptics</Text>
+                  <Switch
+                    value={manualOptions.hapticsEnabled}
+                    onValueChange={handleManualToggle('hapticsEnabled')}
+                    trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
+                    thumbColor={
+                      manualOptions.hapticsEnabled
+                        ? lessonColors.blueNeon
+                        : devConsoleTheme.switchThumb
+                    }
+                  />
+                </View>
+
+                <View style={styles.manualToggleItem}>
+                  <Text style={styles.manualToggleLabel}>Flash</Text>
+                  <Switch
+                    value={manualOptions.lightEnabled}
+                    onValueChange={handleManualToggle('lightEnabled')}
+                    trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
+                    thumbColor={
+                      manualOptions.lightEnabled
+                        ? lessonColors.blueNeon
+                        : devConsoleTheme.switchThumb
+                    }
+                  />
+                </View>
+
+                <View
+                  style={[
+                    styles.manualToggleItem,
+                    !torchSupported && styles.manualToggleDisabled,
+                  ]}
+                >
+                  <Text style={styles.manualToggleLabel}>Torch</Text>
+                  <Switch
+                    value={torchSupported ? manualOptions.torchEnabled : false}
+                    onValueChange={handleManualToggle('torchEnabled')}
+                    disabled={!torchSupported}
+                    trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
+                    thumbColor={
+                      torchSupported && manualOptions.torchEnabled
+                        ? lessonColors.blueNeon
+                        : devConsoleTheme.switchThumb
+                    }
+                  />
+                </View>
+              </View>
+
+              <View style={styles.manualInputsRow}>
+                <View style={styles.manualInputGroup}>
+                  <Text style={styles.manualInputLabel}>Pattern</Text>
+                  <TextInput
+                    value={patternInput}
+                    onChangeText={handlePatternChange}
+                    placeholder={DEFAULT_PATTERN}
+                    placeholderTextColor={lessonColors.textDim}
+                    style={styles.manualInput}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+
+                <View style={styles.manualInputGroupSmall}>
+                  <Text style={styles.manualInputLabel}>WPM</Text>
+                  <TextInput
+                    value={wpmInput}
+                    onChangeText={handleWpmChange}
+                    keyboardType="numeric"
+                    placeholder={manualWpm.toString()}
+                    placeholderTextColor={lessonColors.textDim}
+                    style={styles.manualInput}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.manualInputsRow}>
+                <View style={styles.manualInputGroupSmall}>
+                  <Text style={styles.manualInputLabel}>Flash offset (ms)</Text>
+                  <TextInput
+                    value={flashOffsetInput}
+                    onChangeText={handleFlashOffsetChange}
+                    onBlur={resetFlashOffsetInput}
+                    keyboardType="numeric"
+                    placeholder={flashOffsetMs.toString()}
+                    placeholderTextColor={lessonColors.textDim}
+                    style={styles.manualInput}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+
+                <View style={styles.manualInputGroupSmall}>
+                  <Text style={styles.manualInputLabel}>Haptic offset (ms)</Text>
+                  <TextInput
+                    value={hapticOffsetInput}
+                    onChangeText={handleHapticOffsetChange}
+                    onBlur={resetHapticOffsetInput}
+                    keyboardType="numeric"
+                    placeholder={hapticOffsetMs.toString()}
+                    placeholderTextColor={lessonColors.textDim}
+                    style={styles.manualInput}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.buttonRow}>
+                <Pressable
+                  onPress={() => triggerPulse(1)}
+                  style={({ pressed }) => [
+                    styles.button,
+                    styles.actionButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <Text style={styles.buttonText}>Tap Dot</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => triggerPulse(3)}
+                  style={({ pressed }) => [
+                    styles.button,
+                    styles.actionButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <Text style={styles.buttonText}>Tap Dash</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.buttonRow}>
+                <Pressable
+                  onPress={triggerReplay}
+                  style={({ pressed }) => [
+                    styles.buttonSecondary,
+                    styles.actionButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <Text style={styles.buttonSecondaryText}>Play Pattern</Text>
+                </Pressable>
+                <Pressable
+                  onPress={triggerStop}
+                  style={({ pressed }) => [
+                    styles.buttonSecondary,
+                    styles.actionButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <Text style={styles.buttonSecondaryText}>Stop Playback</Text>
+                </Pressable>
+              </View>
+
+              <Text style={styles.manualHint}>
+                Pattern supports dots, dashes, and spaces. Use offsets to tune flash/haptic timing per device.
               </Text>
             </View>
 
-            <View style={styles.manualToggleRow}>
-              <View style={styles.manualToggleItem}>
-                <Text style={styles.manualToggleLabel}>Audio</Text>
-                <Switch
-                  value={manualOptions.audioEnabled}
-                  onValueChange={handleManualToggle('audioEnabled')}
-                  trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
-                  thumbColor={manualOptions.audioEnabled ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
-                />
-              </View>
-
-              <View style={styles.manualToggleItem}>
-                <Text style={styles.manualToggleLabel}>Haptics</Text>
-                <Switch
-                  value={manualOptions.hapticsEnabled}
-                  onValueChange={handleManualToggle('hapticsEnabled')}
-                  trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
-                  thumbColor={manualOptions.hapticsEnabled ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
-                />
-              </View>
-
-              <View style={styles.manualToggleItem}>
-                <Text style={styles.manualToggleLabel}>Flash</Text>
-                <Switch
-                  value={manualOptions.lightEnabled}
-                  onValueChange={handleManualToggle('lightEnabled')}
-                  trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
-                  thumbColor={manualOptions.lightEnabled ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
-                />
-              </View>
-
-              <View
-                style={[
-                  styles.manualToggleItem,
-                  !torchSupported && styles.manualToggleDisabled,
-                ]}
-              >
-                <Text style={styles.manualToggleLabel}>Torch</Text>
-                <Switch
-                  value={torchSupported ? manualOptions.torchEnabled : false}
-                  onValueChange={handleManualToggle('torchEnabled')}
-                  disabled={!torchSupported}
-                  trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
-                  thumbColor={
-                    torchSupported && manualOptions.torchEnabled
-                      ? lessonColors.blueNeon
-                      : devConsoleTheme.switchThumb
-                  }
-                />
-              </View>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Outputs tracing</Text>
+              <Switch
+                value={outputsTracingEnabled}
+                onValueChange={setOutputsTracingEnabled}
+                trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
+                thumbColor={outputsTracingEnabled ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
+              />
             </View>
 
-            <View style={styles.manualInputsRow}>
-              <View style={styles.manualInputGroup}>
-                <Text style={styles.manualInputLabel}>Pattern</Text>
-                <TextInput
-                  value={patternInput}
-                  onChangeText={handlePatternChange}
-                  placeholder={DEFAULT_PATTERN}
-                  placeholderTextColor={lessonColors.textDim}
-                  style={styles.manualInput}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-
-              <View style={styles.manualInputGroupSmall}>
-                <Text style={styles.manualInputLabel}>WPM</Text>
-                <TextInput
-                  value={wpmInput}
-                  onChangeText={handleWpmChange}
-                  keyboardType="numeric"
-                  placeholder={manualWpm.toString()}
-                  placeholderTextColor={lessonColors.textDim}
-                  style={styles.manualInput}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-            </View>
-
-            <View style={styles.manualInputsRow}>
-              <View style={styles.manualInputGroupSmall}>
-                <Text style={styles.manualInputLabel}>Flash offset (ms)</Text>
-                <TextInput
-                  value={flashOffsetInput}
-                  onChangeText={handleFlashOffsetChange}
-                  onBlur={resetFlashOffsetInput}
-                  keyboardType="numeric"
-                  placeholder={flashOffsetMs.toString()}
-                  placeholderTextColor={lessonColors.textDim}
-                  style={styles.manualInput}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-
-              <View style={styles.manualInputGroupSmall}>
-                <Text style={styles.manualInputLabel}>Haptic offset (ms)</Text>
-                <TextInput
-                  value={hapticOffsetInput}
-                  onChangeText={handleHapticOffsetChange}
-                  onBlur={resetHapticOffsetInput}
-                  keyboardType="numeric"
-                  placeholder={hapticOffsetMs.toString()}
-                  placeholderTextColor={lessonColors.textDim}
-                  style={styles.manualInput}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Auto-scroll</Text>
+              <Switch
+                value={autoScroll}
+                onValueChange={setAutoScroll}
+                trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
+                thumbColor={autoScroll ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
+              />
             </View>
 
             <View style={styles.buttonRow}>
               <Pressable
-                onPress={() => triggerPulse(1)}
+                onPress={handleExport}
+                disabled={filteredTraces.length === 0}
+                style={({ pressed }) => [
+                  styles.buttonSecondary,
+                  styles.actionButton,
+                  pressed && styles.buttonPressed,
+                  filteredTraces.length === 0 && styles.buttonDisabled,
+                ]}
+              >
+                <Text style={styles.buttonSecondaryText}>Export JSON</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={clearTraces}
                 style={({ pressed }) => [
                   styles.button,
                   styles.actionButton,
                   pressed && styles.buttonPressed,
                 ]}
               >
-                <Text style={styles.buttonText}>Tap Dot</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => triggerPulse(3)}
-                style={({ pressed }) => [
-                  styles.button,
-                  styles.actionButton,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <Text style={styles.buttonText}>Tap Dash</Text>
+                <Text style={styles.buttonText}>Clear trace buffer</Text>
               </Pressable>
             </View>
-
-            <View style={styles.buttonRow}>
-              <Pressable
-                onPress={triggerReplay}
-                style={({ pressed }) => [
-                  styles.buttonSecondary,
-                  styles.actionButton,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <Text style={styles.buttonSecondaryText}>Play Pattern</Text>
-              </Pressable>
-              <Pressable
-                onPress={triggerStop}
-                style={({ pressed }) => [
-                  styles.buttonSecondary,
-                  styles.actionButton,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <Text style={styles.buttonSecondaryText}>Stop Playback</Text>
-              </Pressable>
-            </View>
-
-            <Text style={styles.manualHint}>
-              Pattern supports dots, dashes, and spaces. Use offsets to tune flash/haptic timing per device.
-            </Text>
-          </View>
-
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>Outputs tracing</Text>
-            <Switch
-              value={outputsTracingEnabled}
-              onValueChange={setOutputsTracingEnabled}
-              trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
-              thumbColor={outputsTracingEnabled ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
-            />
-          </View>
-
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>Auto-scroll</Text>
-            <Switch
-              value={autoScroll}
-              onValueChange={setAutoScroll}
-              trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
-              thumbColor={autoScroll ? lessonColors.blueNeon : devConsoleTheme.switchThumb}
-            />
-          </View>
-
-          <View style={styles.buttonRow}>
-            <Pressable
-              onPress={handleExport}
-              disabled={filteredTraces.length === 0}
-              style={({ pressed }) => [
-                styles.buttonSecondary,
-                styles.actionButton,
-                pressed && styles.buttonPressed,
-                filteredTraces.length === 0 && styles.buttonDisabled,
-              ]}
-            >
-              <Text style={styles.buttonSecondaryText}>Export JSON</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={clearTraces}
-              style={({ pressed }) => [
-                styles.button,
-                styles.actionButton,
-                pressed && styles.buttonPressed,
-              ]}
-            >
-              <Text style={styles.buttonText}>Clear trace buffer</Text>
-            </Pressable>
-          </View>
-
           </ScrollView>
         </View>
       </View>
@@ -1332,6 +1348,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
+
+
 
 
 

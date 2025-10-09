@@ -1,7 +1,7 @@
-﻿import React from "react";
-import { Animated, StyleSheet, StyleProp, ViewStyle } from "react-native";
+import React from 'react';
+import { Animated, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 
-import { theme } from "@/theme/theme";
+import { theme } from '@/theme/theme';
 
 type FlashOverlayProps = {
   opacity: Animated.Value;
@@ -38,7 +38,3 @@ function FlashOverlay({
 }
 
 export default FlashOverlay;
-
-
-
-

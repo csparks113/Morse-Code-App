@@ -11,6 +11,8 @@ export type FlashPulseOptions = {
   durationMs: number;
   flashValue: Animated.Value;
   source?: string;
+  timelineOffsetMs?: number;
+  brightnessPercent?: number;
   requestedAtMs?: number;
   correlationId?: string;
   metadata?: Record<string, string | number | boolean>;
@@ -21,6 +23,7 @@ export type HapticSymbolOptions = {
   symbol: MorseSymbol;
   durationMs?: number;
   source?: string;
+  timelineOffsetMs?: number;
   requestedAtMs?: number;
   correlationId?: string;
   metadata?: Record<string, string | number | boolean>;
@@ -49,6 +52,8 @@ export type KeyerOutputsOptions = {
   lightEnabled: boolean;
   torchEnabled: boolean;
   toneHz: number;
+  audioVolumePercent: number;
+  flashBrightnessPercent: number;
 };
 
 export type KeyerOutputsContext = {
@@ -63,6 +68,7 @@ export type KeyerOutputsHandle = {
   pressStart(timestampMs?: number): void;
   pressEnd(timestampMs?: number): void;
   updateOptions(options: KeyerOutputsOptions): void;
+  cutActiveOutputs(reason?: string, metadata?: Record<string, string | number | boolean>): void;
 };
 
 
@@ -125,6 +131,7 @@ export function useOutputsService(): OutputsService {
   const service = React.useContext(OutputsServiceContext);
   return service ?? defaultOutputsService;
 }
+
 
 
 

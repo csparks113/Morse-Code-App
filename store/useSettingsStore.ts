@@ -2,20 +2,30 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import {
+  SETTINGS_DEFAULTS,
+  clampSettingValue,
+  SettingsLimitKey,
+} from '@/constants/appConfig';
+
 type SettingsState = {
   receiveOnly: boolean;
 
   // Output toggles
   audioEnabled: boolean;
-  lightEnabled: boolean; // flash overlay
-  torchEnabled: boolean; // device flashlight
-  hapticsEnabled: boolean; // vibration/taps feedback
+  lightEnabled: boolean;
+  torchEnabled: boolean;
+  hapticsEnabled: boolean;
+
+  // Output tuning
+  audioVolumePercent: number;
+  flashBrightnessPercent: number;
 
   // Morse timing
-  wpm: number; // words per minute (dot = 1200 / WPM ms)
-  toneHz: number; // tone frequency in Hz
-  signalTolerancePercent: number; // dot/dash tolerance window (percent)
-  gapTolerancePercent: number; // gap tolerance window (percent)
+  wpm: number;
+  toneHz: number;
+  signalTolerancePercent: number;
+  gapTolerancePercent: number;
   flashOffsetMs: number;
   hapticOffsetMs: number;
 
@@ -24,6 +34,8 @@ type SettingsState = {
   setLightEnabled: (value: boolean) => void;
   setTorchEnabled: (value: boolean) => void;
   setHapticsEnabled: (value: boolean) => void;
+  setAudioVolumePercent: (value: number) => void;
+  setFlashBrightnessPercent: (value: number) => void;
   setWpm: (value: number) => void;
   setToneHz: (value: number) => void;
   setSignalTolerancePercent: (value: number) => void;
@@ -32,52 +44,46 @@ type SettingsState = {
   setHapticOffsetMs: (value: number) => void;
 };
 
+const clamp = (key: SettingsLimitKey, raw: number) => {
+  const numeric = Number(raw);
+  const fallback = SETTINGS_DEFAULTS[key];
+  const value = Number.isFinite(numeric) ? numeric : fallback;
+  return clampSettingValue(key, Math.round(value));
+};
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      receiveOnly: false,
+      receiveOnly: SETTINGS_DEFAULTS.receiveOnly,
 
-      audioEnabled: true,
-      lightEnabled: false,
-      torchEnabled: false,
-      hapticsEnabled: true,
+      audioEnabled: SETTINGS_DEFAULTS.audioEnabled,
+      lightEnabled: SETTINGS_DEFAULTS.lightEnabled,
+      torchEnabled: SETTINGS_DEFAULTS.torchEnabled,
+      hapticsEnabled: SETTINGS_DEFAULTS.hapticsEnabled,
 
-      wpm: 12,
-      toneHz: 600,
-      signalTolerancePercent: 30,
-      gapTolerancePercent: 50,
-      flashOffsetMs: 0,
-      hapticOffsetMs: 0,
+      audioVolumePercent: SETTINGS_DEFAULTS.audioVolumePercent,
+      flashBrightnessPercent: SETTINGS_DEFAULTS.flashBrightnessPercent,
+
+      wpm: SETTINGS_DEFAULTS.wpm,
+      toneHz: SETTINGS_DEFAULTS.toneHz,
+      signalTolerancePercent: SETTINGS_DEFAULTS.signalTolerancePercent,
+      gapTolerancePercent: SETTINGS_DEFAULTS.gapTolerancePercent,
+      flashOffsetMs: SETTINGS_DEFAULTS.flashOffsetMs,
+      hapticOffsetMs: SETTINGS_DEFAULTS.hapticOffsetMs,
 
       setReceiveOnly: (value) => set({ receiveOnly: value }),
       setAudioEnabled: (value) => set({ audioEnabled: value }),
       setLightEnabled: (value) => set({ lightEnabled: value }),
       setTorchEnabled: (value) => set({ torchEnabled: value }),
       setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
-      setWpm: (value) => {
-        const clamped = Math.max(5, Math.min(60, Math.round(value)));
-        set({ wpm: clamped });
-      },
-      setToneHz: (value) => {
-        const clamped = Math.max(200, Math.min(1200, Math.round(value)));
-        set({ toneHz: clamped });
-      },
-      setSignalTolerancePercent: (value) => {
-        const clamped = Math.max(20, Math.min(60, Math.round(value)));
-        set({ signalTolerancePercent: clamped });
-      },
-      setGapTolerancePercent: (value) => {
-        const clamped = Math.max(30, Math.min(80, Math.round(value)));
-        set({ gapTolerancePercent: clamped });
-      },
-      setFlashOffsetMs: (value) => {
-        const clamped = Math.max(-300, Math.min(300, Math.round(value)));
-        set({ flashOffsetMs: clamped });
-      },
-      setHapticOffsetMs: (value) => {
-        const clamped = Math.max(-300, Math.min(300, Math.round(value)));
-        set({ hapticOffsetMs: clamped });
-      },
+      setAudioVolumePercent: (value) => set({ audioVolumePercent: clamp('audioVolumePercent', value) }),
+      setFlashBrightnessPercent: (value) => set({ flashBrightnessPercent: clamp('flashBrightnessPercent', value) }),
+      setWpm: (value) => set({ wpm: clamp('wpm', value) }),
+      setToneHz: (value) => set({ toneHz: clamp('toneHz', value) }),
+      setSignalTolerancePercent: (value) => set({ signalTolerancePercent: clamp('signalTolerancePercent', value) }),
+      setGapTolerancePercent: (value) => set({ gapTolerancePercent: clamp('gapTolerancePercent', value) }),
+      setFlashOffsetMs: (value) => set({ flashOffsetMs: clamp('flashOffsetMs', value) }),
+      setHapticOffsetMs: (value) => set({ hapticOffsetMs: clamp('hapticOffsetMs', value) }),
     }),
     {
       name: 'settings',
@@ -88,6 +94,8 @@ export const useSettingsStore = create<SettingsState>()(
         lightEnabled: state.lightEnabled,
         torchEnabled: state.torchEnabled,
         hapticsEnabled: state.hapticsEnabled,
+        audioVolumePercent: state.audioVolumePercent,
+        flashBrightnessPercent: state.flashBrightnessPercent,
         wpm: state.wpm,
         toneHz: state.toneHz,
         signalTolerancePercent: state.signalTolerancePercent,
@@ -98,3 +106,5 @@ export const useSettingsStore = create<SettingsState>()(
     },
   ),
 );
+
+

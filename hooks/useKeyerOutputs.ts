@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import type { Animated } from 'react-native';
 
 import { createPressTracker, type PressTracker } from '@/services/latency/pressTracker';
@@ -10,6 +10,8 @@ type UseKeyerOutputsOptions = {
   lightEnabled: boolean;
   torchEnabled: boolean;
   toneHz: number;
+  audioVolumePercent: number;
+  flashBrightnessPercent: number;
 };
 
 type UseKeyerOutputsMetadata = {
@@ -23,6 +25,7 @@ type UseKeyerOutputsResult = {
   flashOpacity: Animated.Value;
   prepare: () => Promise<void>;
   teardown: () => Promise<void>;
+  cutActiveOutputs: (reason?: string, metadata?: Record<string, string | number | boolean>) => void;
 };
 
 function useStableOptions(options: UseKeyerOutputsOptions): UseKeyerOutputsOptions {
@@ -33,6 +36,8 @@ function useStableOptions(options: UseKeyerOutputsOptions): UseKeyerOutputsOptio
       lightEnabled: options.lightEnabled,
       torchEnabled: options.torchEnabled,
       toneHz: options.toneHz,
+      audioVolumePercent: options.audioVolumePercent,
+      flashBrightnessPercent: options.flashBrightnessPercent,
     }),
     [
       options.audioEnabled,
@@ -40,6 +45,8 @@ function useStableOptions(options: UseKeyerOutputsOptions): UseKeyerOutputsOptio
       options.lightEnabled,
       options.torchEnabled,
       options.toneHz,
+      options.audioVolumePercent,
+      options.flashBrightnessPercent,
     ],
   );
 }
@@ -103,6 +110,10 @@ export function useKeyerOutputs(
     return handleRef.current.teardown();
   }, []);
 
+  const cutActiveOutputs = React.useCallback((reason?: string, metadata?: Record<string, string | number | boolean>) => {
+    handleRef.current.cutActiveOutputs(reason, metadata);
+  }, []);
+
   return React.useMemo(
     () => ({
       onDown,
@@ -110,7 +121,18 @@ export function useKeyerOutputs(
       flashOpacity: handleRef.current.flashOpacity,
       prepare,
       teardown,
+      cutActiveOutputs,
     }),
-    [onDown, onUp, prepare, teardown],
+    [onDown, onUp, prepare, teardown, cutActiveOutputs],
   );
 }
+
+
+
+
+
+
+
+
+
+

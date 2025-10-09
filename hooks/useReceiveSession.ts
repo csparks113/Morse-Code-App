@@ -25,6 +25,7 @@ type UseReceiveSessionArgs = {
   lessonId?: string;
   lightEnabled: boolean;
   hapticsEnabled: boolean;
+  flashBrightnessPercent: number;
   flashOffsetMs?: number;
   hapticOffsetMs?: number;
   actionLabels: PromptActionLabels;
@@ -81,6 +82,7 @@ export function useReceiveSession({
   lessonId,
   lightEnabled,
   hapticsEnabled,
+  flashBrightnessPercent,
   flashOffsetMs = 0,
   hapticOffsetMs = 0,
   actionLabels,
@@ -127,6 +129,7 @@ export function useReceiveSession({
   const runFlash = React.useCallback(
     (durationMs: number, context?: PlaybackSymbolContext) => {
       const requestedAtMs = resolvePlaybackRequestedAt(context);
+      const timelineOffsetMs = context?.nativeOffsetMs ?? undefined;
       const metadata = buildPlaybackMetadata(context);
       outputs.flashPulse({
         enabled: lightEnabled,
@@ -134,16 +137,19 @@ export function useReceiveSession({
         flashValue: flash,
         source: context?.source ?? 'session.receive',
         requestedAtMs,
+        timelineOffsetMs,
+        brightnessPercent: flashBrightnessPercent,
         correlationId: context?.correlationId,
         metadata,
       });
     },
-    [outputs, lightEnabled, flash],
+    [outputs, lightEnabled, flashBrightnessPercent, flash],
   );
 
   const hapticTick = React.useCallback(
     (symbol: '.' | '-', durationMs: number, context?: PlaybackSymbolContext) => {
       const requestedAtMs = resolvePlaybackRequestedAt(context);
+      const timelineOffsetMs = context?.nativeOffsetMs ?? undefined;
       const metadata = buildPlaybackMetadata(context);
       outputs.hapticSymbol({
         enabled: hapticsEnabled,
@@ -151,11 +157,11 @@ export function useReceiveSession({
         durationMs,
         source: context?.source ?? 'session.receive',
         requestedAtMs,
+        timelineOffsetMs,
         correlationId: context?.correlationId,
         metadata,
       });
     },
-    [outputs, hapticsEnabled],
   );
   const playTarget = React.useCallback(async () => {
     if (isPlaying) return;
@@ -390,6 +396,25 @@ export function useReceiveSession({
     handleSummaryContinue,
   };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

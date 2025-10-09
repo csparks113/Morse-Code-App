@@ -99,7 +99,7 @@ export default function LessonPath({ groupId, lessons }: Props) {
       const p = getEntry(key);
       return { key, receiveDone: p.receiveDone, sendDone: p.sendDone };
     });
-  }, [derivedNodes, getEntry]);
+  }, [derivedNodes, getEntry, nodeStates]);
 
   // Availability (gating)
   const availability = React.useMemo(() => {
@@ -120,24 +120,34 @@ export default function LessonPath({ groupId, lessons }: Props) {
             available = cp.receiveDone && (!CHALLENGE_REQUIRES_SEND_TOO || cp.sendDone);
           } else if (prev.kind === 'review') {
             const rp = getEntry(prev.id);
-            available = rp.receiveDone; // waits for the review
+            available = rp.receiveDone;
           } else {
-            // fallback: previous lesson's receive
             let prevLessonNum: number | null = null;
             for (let j = i - 1; j >= 0; j--) if (derivedNodes[j].kind === 'lesson') { prevLessonNum = (derivedNodes[j] as any).lessonNumber; break; }
             available = prevLessonNum == null ? true : getEntry(String(prevLessonNum)).receiveDone;
           }
         }
       } else if (n.kind === 'review') {
-        available = getEntry(String(n.lessonNumber)).receiveDone;
+        const lessonState = getEntry(String(n.lessonNumber));
+        const prevAvailable = i > 0 ? avail[i - 1] : true;
+        available = prevAvailable && lessonState.receiveDone;
       } else {
-        available = getEntry(String(n.sourceLessonNumber)).receiveDone;
+        if (i === 0) {
+          available = false;
+        } else {
+          const prevState = nodeStates[i - 1];
+          const prevNode = derivedNodes[i - 1];
+          const prevAvailable = avail[i - 1];
+          const requireSend = CHALLENGE_REQUIRES_SEND_TOO && prevNode.kind === 'challenge';
+          const prevComplete = prevState?.receiveDone && (!requireSend || prevState?.sendDone);
+          available = Boolean(prevAvailable && prevComplete);
+        }
       }
 
       avail.push(available);
     }
     return avail;
-  }, [derivedNodes, getEntry]);
+  }, [derivedNodes, getEntry, nodeStates]);
 
   // Statuses (single active)
   const statuses: NodeStatus[] = React.useMemo(() => {
@@ -280,3 +290,4 @@ export default function LessonPath({ groupId, lessons }: Props) {
 const styles = StyleSheet.create({
   list: { width: '100%' },
 });
+

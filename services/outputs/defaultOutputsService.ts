@@ -35,6 +35,16 @@ const clampToneHz = (value: number) => {
   return Math.max(80, Math.min(2000, Math.round(numeric)));
 };
 
+const clampPercentToScalar = (percent?: number) => {
+  const numeric = Number(percent);
+  if (!Number.isFinite(numeric)) {
+    return 1;
+  }
+  return Math.max(0, Math.min(1, numeric / 100));
+};
+
+const WATCHDOG_PRESS_TIMEOUT_MS = 4000;
+
 function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?: KeyerOutputsContext): KeyerOutputsHandle {
   let options: KeyerOutputsOptions = { ...initialOptions };
   const contextSource = context?.source ?? 'unspecified';
@@ -64,11 +74,112 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   let torchActive = false;
   let flashActive = false;
 
+  const shouldWatchdog = contextSource.startsWith('console.');
+  let pressWatchdog: ReturnType<typeof setTimeout> | null = null;
+
+  function clearPressWatchdog(): void {
+    if (pressWatchdog) {
+      clearTimeout(pressWatchdog);
+      pressWatchdog = null;
+    }
+  }
+
+  function cutActiveOutputs(
+    reason = 'unspecified',
+    metadata?: Record<string, string | number | boolean>,
+  ): void {
+    clearPressWatchdog();
+    const forcedAt = nowMs();
+    const currentPress = activePress;
+    const holdMs = currentPress ? Math.max(0, forcedAt - currentPress.startedAtMs) : null;
+    const correlationId = currentPress?.id ?? null;
+
+    if (currentPress) {
+      pressEnd(forcedAt);
+    } else {
+      flashOff(forcedAt);
+      stopHaptics(forcedAt);
+      if (torchActive) {
+        disableTorch(forcedAt).catch(() => {});
+      }
+      stopTone(forcedAt).catch(() => {});
+      pressTracker.reset();
+    }
+
+    activePress = null;
+
+    traceOutputs('keyer.forceCut', {
+      reason,
+      source: contextSource,
+      correlationId,
+      holdMs,
+      metadata: metadata ?? null,
+    });
+  }
+
+  function schedulePressWatchdog(startedAt: number): void {
+    if (!shouldWatchdog) {
+      return;
+    }
+    clearPressWatchdog();
+    const scheduledCorrelationId = activePress?.id ?? null;
+    pressWatchdog = setTimeout(() => {
+      pressWatchdog = null;
+      if (scheduledCorrelationId && activePress && activePress.id !== scheduledCorrelationId) {
+        return;
+      }
+      const firedAt = nowMs();
+      const holdMs = Math.max(0, firedAt - startedAt);
+      const correlationId = activePress?.id ?? scheduledCorrelationId ?? null;
+      traceOutputs('keyer.watchdog.pressTimeout', {
+        source: contextSource,
+        holdMs,
+        correlationId,
+        toneActive,
+        flashActive,
+        hapticsActive,
+        torchActive,
+      });
+      const baseMetadata: Record<string, string | number | boolean> = {
+        watchdog: 'pressTimeout',
+        holdMs,
+      };
+      if (toneActive) {
+        recordChannelLatency('touchToTone', startedAt, holdMs, {
+          correlationId: correlationId ?? undefined,
+          metadata: {
+            ...baseMetadata,
+            channel: 'tone',
+          },
+        });
+      }
+      if (flashActive) {
+        recordChannelLatency('touchToFlash', startedAt, holdMs, {
+          correlationId: correlationId ?? undefined,
+          metadata: {
+            ...baseMetadata,
+            channel: 'flash',
+          },
+        });
+      }
+      cutActiveOutputs('watchdog.pressTimeout', {
+        ...baseMetadata,
+        toneActive,
+        flashActive,
+        hapticsActive,
+        torchActive,
+      });
+    }, WATCHDOG_PRESS_TIMEOUT_MS);
+  }
+
   const resolveToneHz = () => clampToneHz(options.toneHz);
+  const resolveToneVolume = () => clampPercentToScalar(options.audioVolumePercent);
+  const resolveFlashIntensity = () => clampPercentToScalar(options.flashBrightnessPercent);
 
   const flashOn = (startedAt: number) => {
     if (!options.lightEnabled) return;
     flashActive = true;
+    const intensity = resolveFlashIntensity();
     try {
       flashOpacity.stopAnimation?.(() => {});
     } catch {
@@ -82,8 +193,11 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     const latencyMs = nowMs() - startedAt;
     traceOutputs('keyer.flash.start', {
       latencyMs,
+      intensity,
     });
-    recordChannelLatency('touchToFlash', startedAt, latencyMs);
+    recordChannelLatency('touchToFlash', startedAt, latencyMs, {
+      metadata: { intensity },
+    });
   };
 
   const flashOff = (endedAt: number) => {
@@ -175,17 +289,20 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   const startTone = async (startedAt: number) => {
     if (!options.audioEnabled) return;
     const hz = resolveToneHz();
+    const volume = resolveToneVolume();
     try {
+      toneController.setVolume?.(volume);
       await toneController.start(hz);
       toneActive = true;
       const latencyMs = nowMs() - startedAt;
       traceOutputs('keyer.tone.start', {
         hz,
+        volume,
         latencyMs,
         backend: toneController.backend,
       });
       recordChannelLatency('touchToTone', startedAt, latencyMs, {
-        metadata: { backend: toneController.backend, hz },
+        metadata: { backend: toneController.backend, hz, volume },
       });
     } catch (error) {
       toneActive = false;
@@ -273,6 +390,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
 
   const teardown = async () => {
     traceOutputs('keyer.teardown');
+    clearPressWatchdog();
     stopHaptics(nowMs());
     if (hapticInterval) {
       clearInterval(hapticInterval);
@@ -334,9 +452,11 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       enableTorch(startedAt).catch(() => {});
     }
     startTone(startedAt).catch(() => {});
+    schedulePressWatchdog(startedAt);
   };
 
   const pressEnd = (timestampMs?: number) => {
+    clearPressWatchdog();
     const currentPress = activePress;
     const completed = pressTracker.end(typeof timestampMs === 'number' ? timestampMs : undefined);
     activePress = null;
@@ -362,6 +482,9 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
 
   const updateOptions = (next: KeyerOutputsOptions) => {
     options = { ...next };
+    if (options.audioEnabled) {
+      toneController.setVolume?.(resolveToneVolume());
+    }
     if (!options.audioEnabled) {
       stopTone(nowMs()).catch(() => {});
     }
@@ -389,6 +512,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     pressStart,
     pressEnd,
     updateOptions,
+    cutActiveOutputs,
   };
 }
 
@@ -607,6 +731,28 @@ const defaultOutputsService: OutputsService = {
 };
 
 export { defaultOutputsService };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

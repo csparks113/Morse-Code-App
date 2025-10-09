@@ -610,6 +610,7 @@ export type ToneController = {
   stop(): Promise<void>;
   teardown(): Promise<void>;
   getCurrentHz(): number | null;
+  setVolume?(value: number): void;
   backend: ToneControllerBackend;
 };
 
@@ -750,6 +751,9 @@ let nitroPlaybackToken = 0;
 
 function createNitroToneController(outputsAudio: OutputsAudio): ToneController {
   let currentHz: number | null = null;
+  let currentGain = 1;
+  let appliedGain = 1;
+  let toneActive = false;
 
   const resolveHz = (hz?: number) => {
     if (typeof hz === 'number' && Number.isFinite(hz)) {
@@ -763,6 +767,32 @@ function createNitroToneController(outputsAudio: OutputsAudio): ToneController {
     return currentHz;
   };
 
+  const clampGain = (value?: number) => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      if (value <= 0) return 0;
+      if (value >= 1) return 1;
+      return value;
+    }
+    return 1;
+  };
+
+  const applyGainIfActive = () => {
+    if (!toneActive) {
+      return;
+    }
+    if (appliedGain === currentGain) {
+      return;
+    }
+    const toneHz = currentHz ?? NITRO_DEFAULT_TONE_HZ;
+    currentHz = toneHz;
+    try {
+      outputsAudio.startTone({ toneHz, gain: currentGain });
+      appliedGain = currentGain;
+    } catch {
+      // ignore
+    }
+  };
+
   return {
     backend: 'nitro',
     getCurrentHz: () => currentHz,
@@ -772,14 +802,23 @@ function createNitroToneController(outputsAudio: OutputsAudio): ToneController {
     },
     start: async (hz?: number) => {
       const toneHz = resolveHz(hz);
-      outputsAudio.startTone({ toneHz });
+      outputsAudio.startTone({ toneHz, gain: currentGain });
+      toneActive = true;
+      appliedGain = currentGain;
+    },
+    setVolume: (value: number) => {
+      currentGain = clampGain(value);
+      applyGainIfActive();
     },
     stop: async () => {
+      toneActive = false;
       outputsAudio.stopTone();
     },
     teardown: async () => {
+      toneActive = false;
       outputsAudio.teardown();
       currentHz = null;
+      appliedGain = currentGain;
     },
   };
 }

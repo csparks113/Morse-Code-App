@@ -60,7 +60,13 @@ export default function ReceiveSessionScreen() {
     setHapticsEnabled,
   } = useSettingsStore();
 
-  const { flashOffsetMs = 0, hapticOffsetMs = 0 } = useSettingsStore() as any;
+  const flashBrightnessPercent = useSettingsStore((s) => s.flashBrightnessPercent ?? 80);
+  const flashOffsetMs = useSettingsStore((s) => s.flashOffsetMs ?? 0);
+  const hapticOffsetMs = useSettingsStore((s) => s.hapticOffsetMs ?? 0);
+
+  const flashMaxOpacity = React.useMemo(() => {
+    return 0.28 * Math.max(0, Math.min(1, flashBrightnessPercent / 100));
+  }, [flashBrightnessPercent]);
 
   const {
     started,
@@ -88,6 +94,7 @@ export default function ReceiveSessionScreen() {
     lessonId: lessonId ? String(lessonId) : undefined,
     lightEnabled,
     hapticsEnabled,
+    flashBrightnessPercent,
     flashOffsetMs,
     hapticOffsetMs,
     actionLabels: {
@@ -142,7 +149,7 @@ export default function ReceiveSessionScreen() {
           </View>
 
           <View style={[sessionStyleSheet.bottomGroup, { alignItems: 'center' }]}>
-            <SessionSummaryContinue onContinue={handleSummaryContinue} />
+            <SessionSummaryContinue onContinue={handleSummaryContinue} onRetry={startSession} />
           </View>
         </View>
       </SafeAreaView>
@@ -152,8 +159,7 @@ export default function ReceiveSessionScreen() {
   return (
     <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
       {/* Flash overlay for playback */}
-      <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={0.28} />
-
+        <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={flashMaxOpacity} />
       <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'summary' })]}>
         {/* --- TOP (fixed): header + progress --- */}
         <View style={sessionStyleSheet.topGroup}>
@@ -236,3 +242,9 @@ export default function ReceiveSessionScreen() {
     </SafeAreaView>
   );
 }
+
+
+
+
+
+

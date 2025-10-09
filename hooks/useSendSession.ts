@@ -7,6 +7,7 @@ import { useSessionFlow } from '@/hooks/useSessionFlow';
 import { useKeyerOutputs } from '@/hooks/useKeyerOutputs';
 import { useOutputsService, type PlaybackSymbolContext, resolvePlaybackRequestedAt, buildPlaybackMetadata } from '@/services/outputs/OutputsService';
 import { createPressTracker } from '@/services/latency/pressTracker';
+import { traceOutputs } from '@/services/outputs/trace';
 import { useProgressStore } from '@/store/useProgressStore';
 import { toMorse } from '@/utils/morse';
 import {
@@ -165,8 +166,28 @@ export function useSendSession({
   const ignorePressRef = React.useRef(false);
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const idleTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-const verdictTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const verdictTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const canInteractRef = React.useRef(false);
+
+  const setIgnorePress = React.useCallback(
+    (next: boolean, reason: string, meta?: Record<string, unknown>) => {
+      const previous = ignorePressRef.current;
+      ignorePressRef.current = next;
+
+      const activePress = pressTracker.peek();
+      traceOutputs('session.send.ignorePress.set', {
+        reason,
+        previous,
+        value: next,
+        changed: previous !== next,
+        activePressId: activePress?.id ?? null,
+        activePressStartedAt: activePress?.startedAtMs ?? null,
+        activePressAgeMs: activePress ? Math.max(0, nowMs() - activePress.startedAtMs) : null,
+        ...(meta ?? {}),
+      });
+    },
+    [pressTracker],
+  );
 
   const updateInput = React.useCallback((next: string) => {
     inputRef.current = next;
@@ -275,10 +296,10 @@ const verdictTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
     pressStartRef.current = null;
     lastReleaseRef.current = null;
-    ignorePressRef.current = false;
+    setIgnorePress(false, 'session.start');
 
     start();
-  }, [pool, clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout, updateInput, isChallenge, start, pressTracker]);
+  }, [pool, clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout, updateInput, isChallenge, start, pressTracker, setIgnorePress]);
 
   const finishQuestion = React.useCallback(
     (isCorrect: boolean) => {
@@ -298,7 +319,7 @@ const verdictTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
         setHearts((value) => Math.max(0, value - 1));
       }
 
-      ignorePressRef.current = false;
+      setIgnorePress(false, 'finishQuestion', { isCorrect });
       pressStartRef.current = null;
       lastReleaseRef.current = null;
 
@@ -340,6 +361,7 @@ const verdictTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
       clearPlaybackTimeout,
       clearVerdictTimer,
       onUp,
+      setIgnorePress,
     ],
   );
 
@@ -386,18 +408,23 @@ const verdictTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
         const gapDuration = timestamp - lastReleaseRef.current;
         const gapType = classifyGapDuration(gapDuration, unitMs, gapTolerance);
         if (gapType !== 'intra') {
-          ignorePressRef.current = true;
+          setIgnorePress(true, 'gap.verdict', {
+            gapType,
+            gapDuration,
+            inputLength: inputRef.current.length,
+            pressId: press.id,
+          });
           lastReleaseRef.current = null;
           queueVerdict(false);
           return;
         }
       }
 
-      ignorePressRef.current = false;
+      setIgnorePress(false, 'press.begin', { pressId: press.id });
       pressStartRef.current = timestamp;
       onDown(timestamp);
     },
-    [canInteractBase, isReplaying, unitMs, gapTolerance, queueVerdict, onDown, clearIdleTimeout, clearVerdictTimer, pressTracker],
+    [canInteractBase, isReplaying, unitMs, gapTolerance, queueVerdict, onDown, clearIdleTimeout, clearVerdictTimer, pressTracker, setIgnorePress],
   );
 
   const appendSymbol = React.useCallback(
@@ -426,13 +453,15 @@ const verdictTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
     onUp(releaseAt);
 
     if (!canInteractBase || isReplaying) {
-      ignorePressRef.current = false;
+      setIgnorePress(false, 'press.cancelled', {
+        cause: !canInteractBase ? 'cannotInteract' : 'replaying',
+      });
       pressStartRef.current = null;
       return;
     }
 
     if (ignorePressRef.current) {
-      ignorePressRef.current = false;
+      setIgnorePress(false, 'press.ignoreConsumed');
       pressStartRef.current = null;
       return;
     }
@@ -454,7 +483,7 @@ const verdictTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
     lastReleaseRef.current = releaseAt;
     appendSymbol(symbol);
-  }, [canInteractBase, isReplaying, unitMs, signalTolerance, queueVerdict, appendSymbol, onUp]);
+  }, [canInteractBase, isReplaying, unitMs, signalTolerance, queueVerdict, appendSymbol, onUp, setIgnorePress]);
 
   const handleSummaryContinue = React.useCallback(() => {
     clearAdvanceTimer();

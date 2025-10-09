@@ -13,6 +13,8 @@ import {
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { theme } from '../../theme/theme';
 import { withAlpha } from '@/theme/tokens';
+import { Ionicons } from '@expo/vector-icons';
+import { SETTINGS_LIMITS } from '@/constants/appConfig';
 import { useProgressStore } from '../../store/useProgressStore';
 import { useDeveloperStore } from '@/store/useDeveloperStore';
 import Constants from 'expo-constants';
@@ -64,26 +66,20 @@ function StepperRow({
   );
 }
 
-const MIN_WPM = 5;
-const MAX_WPM = 20;
-const WPM_STEP = 1;
-const MIN_PERCENT = 5;
-const MAX_PERCENT = 95;
-const PERCENT_STEP = 5;
-const MIN_HZ = 200;
-const MAX_HZ = 1200;
-const HZ_STEP = 10;
+const {
+  wpm: WPM_LIMITS,
+  signalTolerancePercent: SIGNAL_LIMITS,
+  gapTolerancePercent: GAP_LIMITS,
+} = SETTINGS_LIMITS;
 
 export default function SettingsScreen() {
   const { t } = useTranslation(['settings', 'common']);
 
   const {
     wpm,
-    toneHz,
     signalTolerancePercent,
     gapTolerancePercent,
     setWpm,
-    setToneHz,
     setSignalTolerancePercent,
     setGapTolerancePercent,
   } = useSettingsStore();
@@ -226,13 +222,25 @@ export default function SettingsScreen() {
             <Text style={styles.languageValue}>{languageLabel}</Text>
           </Pressable>
 
+          <Pressable
+            style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+            onPress={() => router.push('/settings/output')}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings:outputSettings')}
+          >
+            <View style={styles.rowContent}>
+              <Text style={styles.rowTitle}>{t('settings:outputSettings')}</Text>
+              <Text style={styles.rowSub}>{t('settings:outputSettingsDescription')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+          </Pressable>
 
           <StepperRow
             title={t('settings:sendSpeed')}
             description={t('settings:sendSpeedDescription')}
             valueLabel={t('settings:wpmValue', { value: wpm })}
-            onDecrease={() => setWpm(Math.max(MIN_WPM, wpm - WPM_STEP))}
-            onIncrease={() => setWpm(Math.min(MAX_WPM, wpm + WPM_STEP))}
+            onDecrease={() => setWpm(wpm - WPM_LIMITS.step)}
+            onIncrease={() => setWpm(wpm + WPM_LIMITS.step)}
             decreaseLabel={t('settings:decreaseSendSpeed')}
             increaseLabel={t('settings:increaseSendSpeed')}
           />
@@ -242,10 +250,10 @@ export default function SettingsScreen() {
             description={t('settings:signalToleranceDescription')}
             valueLabel={t('settings:percentValue', { value: signalTolerancePercent })}
             onDecrease={() =>
-              setSignalTolerancePercent(Math.max(MIN_PERCENT, signalTolerancePercent - PERCENT_STEP))
+              setSignalTolerancePercent(signalTolerancePercent - SIGNAL_LIMITS.step)
             }
             onIncrease={() =>
-              setSignalTolerancePercent(Math.min(MAX_PERCENT, signalTolerancePercent + PERCENT_STEP))
+              setSignalTolerancePercent(signalTolerancePercent + SIGNAL_LIMITS.step)
             }
             decreaseLabel={t('settings:decreaseSignalTolerance')}
             increaseLabel={t('settings:increaseSignalTolerance')}
@@ -255,22 +263,12 @@ export default function SettingsScreen() {
             title={t('settings:gapTolerance')}
             description={t('settings:gapToleranceDescription')}
             valueLabel={t('settings:percentValue', { value: gapTolerancePercent })}
-            onDecrease={() => setGapTolerancePercent(Math.max(MIN_PERCENT, gapTolerancePercent - PERCENT_STEP))}
-            onIncrease={() => setGapTolerancePercent(Math.min(MAX_PERCENT, gapTolerancePercent + PERCENT_STEP))}
+            onDecrease={() => setGapTolerancePercent(gapTolerancePercent - GAP_LIMITS.step)}
+            onIncrease={() => setGapTolerancePercent(gapTolerancePercent + GAP_LIMITS.step)}
             decreaseLabel={t('settings:decreaseGapTolerance')}
             increaseLabel={t('settings:increaseGapTolerance')}
           />
 
-          <StepperRow
-            title={t('settings:tonePitch')}
-            description={t('settings:tonePitchDescription')}
-            valueLabel={t('settings:hzValue', { value: toneHz })}
-            onDecrease={() => setToneHz(Math.max(MIN_HZ, toneHz - HZ_STEP))}
-            onIncrease={() => setToneHz(Math.min(MAX_HZ, toneHz + HZ_STEP))}
-            decreaseLabel={t('settings:decreaseTonePitch')}
-            increaseLabel={t('settings:increaseTonePitch')}
-          />
-        
       {/* Danger zone */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t('common:settings')}</Text>
