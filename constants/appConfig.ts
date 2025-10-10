@@ -46,6 +46,7 @@ export type SettingsLimitKey = keyof typeof SETTINGS_LIMITS;
 export const LESSON_CONFIG = {
   send: {
     totalQuestions: 5,
+    verdictBufferMs: 200,
   },
 } as const;
 
@@ -58,6 +59,7 @@ export const APP_CONFIG = {
 } as const;
 
 export const TOTAL_SEND_QUESTIONS = LESSON_CONFIG.send.totalQuestions;
+export const DEFAULT_VERDICT_BUFFER_MS = LESSON_CONFIG.send.verdictBufferMs;
 
 export function clampSettingValue(key: SettingsLimitKey, value: number): number {
   const limit = SETTINGS_LIMITS[key];

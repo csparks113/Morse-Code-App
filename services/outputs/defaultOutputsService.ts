@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 
 import { playMorseCode, stopPlayback, createToneController } from '@/utils/audio';
 import type { NativeSymbolTimingContext } from '@/utils/audio';
-import { acquireTorch, releaseTorch, resetTorch, isTorchAvailable } from '@/utils/torch';
+import { acquireTorch, releaseTorch, resetTorch, isTorchAvailable, forceTorchOff } from '@/utils/torch';
 import { nowMs } from '@/utils/time';
 import { traceOutputs } from './trace';
 import { updateTorchSupport, recordTorchPulse, recordTorchFailure } from '@/store/useOutputsDiagnosticsStore';
@@ -371,13 +371,44 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   const disableTorch = async (endedAt: number) => {
     if (!torchActive) return;
     torchActive = false;
+    let releaseFailed = false;
+    let releaseMessage: string | null = null;
     try {
       await releaseTorch();
-    } catch {
-      // ignore
+    } catch (error) {
+      releaseFailed = true;
+      releaseMessage = error instanceof Error ? error.message : String(error);
+      recordTorchFailure(releaseMessage, 'keyer.release');
+      traceOutputs('keyer.torch.error', {
+        phase: 'release',
+        message: releaseMessage,
+      });
     }
+
+    let forceOffFailed = false;
+    let forceOffMessage: string | null = null;
+    try {
+      await forceTorchOff();
+      traceOutputs('keyer.torch.reset', {
+        reason: releaseFailed ? 'releaseFailed' : 'postReleaseSafety',
+      });
+    } catch (error) {
+      forceOffFailed = true;
+      forceOffMessage = error instanceof Error ? error.message : String(error);
+      traceOutputs('keyer.torch.error', {
+        phase: 'forceOff',
+        message: forceOffMessage,
+      });
+      recordTorchFailure(forceOffMessage, 'keyer.forceOff');
+    }
+
     traceOutputs('keyer.torch.stop', {
-      latencyMs: nowMs() - endedAt,
+      latencyMs: Math.max(0, nowMs() - endedAt),
+      fallback: releaseFailed || forceOffFailed ? 'forceOff' : 'none',
+      releaseFailed,
+      releaseMessage,
+      forceOffFailed,
+      forceOffMessage,
     });
   };
 
@@ -438,7 +469,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       }
     }
     try {
-      await resetTorch();
+      await forceTorchOff();
     } catch {
       // ignore
     }

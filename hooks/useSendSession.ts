@@ -9,6 +9,9 @@ import { useOutputsService, type PlaybackSymbolContext, resolvePlaybackRequested
 import { createPressTracker } from '@/services/latency/pressTracker';
 import { traceOutputs } from '@/services/outputs/trace';
 import { useProgressStore } from '@/store/useProgressStore';
+import { TOTAL_SEND_QUESTIONS, DEFAULT_VERDICT_BUFFER_MS } from '@/constants/appConfig';
+
+export { TOTAL_SEND_QUESTIONS } from '@/constants/appConfig';
 import { toMorse } from '@/utils/morse';
 import {
   classifyGapDuration,
@@ -24,8 +27,6 @@ type Summary = { correct: number; percent: number };
 
 
 const HEARTS_INITIAL = 3;
-
-export const TOTAL_SEND_QUESTIONS = 5;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -165,6 +166,7 @@ export function useSendSession({
   const [earlySummary, setEarlySummary] = React.useState<Summary | null>(null);
   const [isReplaying, setIsReplaying] = React.useState(false);
   const [, setInput] = React.useState('');
+  const [pendingVerdict, setPendingVerdict] = React.useState<string | null>(null);
   const [keyerReleaseSignal, setKeyerReleaseSignal] = React.useState(0);
 
   const inputRef = React.useRef('');
@@ -176,6 +178,8 @@ export function useSendSession({
   const idleTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const verdictTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const canInteractRef = React.useRef(false);
+  const pendingVerdictRef = React.useRef<string | null>(null);
+  const verdictFinalizingRef = React.useRef(false);
 
   const setIgnorePress = React.useCallback(
     (next: boolean, reason: string, meta?: Record<string, unknown>) => {
@@ -323,6 +327,8 @@ export function useSendSession({
     setFeedback('idle');
     setEarlySummary(null);
     if (isChallenge) setHearts(HEARTS_INITIAL);
+    pendingVerdictRef.current = null;
+    setPendingVerdict(null);
 
     releaseActivePress();
     lastReleaseRef.current = null;
@@ -345,7 +351,7 @@ export function useSendSession({
   ]);
 
   const finishQuestion = React.useCallback(
-    (isCorrect: boolean) => {
+    ({ isCorrect, reason }: { isCorrect: boolean; reason: string }) => {
       clearAdvanceTimer();
       clearIdleTimeout();
       clearPlaybackTimeout();
@@ -356,15 +362,15 @@ export function useSendSession({
       const willExhaustHearts = isChallenge && !isCorrect && hearts <= 1;
 
       setFeedback(isCorrect ? 'correct' : 'wrong');
-      if (isCorrect) setShowReveal(true);
+      setShowReveal(true);
 
       if (!isCorrect && isChallenge) {
         setHearts((value) => Math.max(0, value - 1));
       }
 
-      setIgnorePress(false, 'finishQuestion', { isCorrect });
+      setIgnorePress(false, 'finishQuestion', { isCorrect, reason });
       releaseActivePress();
-      forceCutOutputs('finishQuestion', { isCorrect });
+      forceCutOutputs('finishQuestion', { isCorrect, reason });
       lastReleaseRef.current = null;
 
       if (willExhaustHearts) {
@@ -411,18 +417,44 @@ export function useSendSession({
     ],
   );
 
-  const verdictDelayMs = React.useMemo(() => Math.max(120, Math.min(240, unitMs * 1.2)), [unitMs]);
+  const verdictDelayMs = React.useMemo(() => {
+    const dynamic = Math.max(120, Math.min(240, unitMs * 1.2));
+    return Math.max(DEFAULT_VERDICT_BUFFER_MS, dynamic);
+  }, [unitMs, DEFAULT_VERDICT_BUFFER_MS]);
 
-  const queueVerdict = React.useCallback(
-    (isCorrect: boolean) => {
+  const finalizeVerdict = React.useCallback(() => {
+    if (verdictFinalizingRef.current) {
+      return;
+    }
+    verdictFinalizingRef.current = true;
+    verdictTimerRef.current = null;
+    const reason = pendingVerdictRef.current ?? 'verdict.finalize';
+    pendingVerdictRef.current = null;
+    setPendingVerdict(null);
+
+    const targetMorse = currentMorseRef.current;
+    const expected = targetMorse ?? '';
+    const attempted = inputRef.current;
+    const isCorrect = targetMorse ? attempted === expected : attempted.length === 0;
+
+    try {
+      forceCutOutputs('verdict.finalize', { reason, isCorrect });
+      finishQuestion({ isCorrect, reason });
+    } finally {
+      verdictFinalizingRef.current = false;
+    }
+  }, [finishQuestion, forceCutOutputs]);
+
+  const scheduleVerdict = React.useCallback(
+    (reason: string) => {
+      pendingVerdictRef.current = reason;
+      setPendingVerdict(reason);
       clearVerdictTimer();
-      forceCutOutputs('verdict.scheduled', { isCorrect });
       verdictTimerRef.current = setTimeout(() => {
-        verdictTimerRef.current = null;
-        finishQuestion(isCorrect);
+        finalizeVerdict();
       }, verdictDelayMs);
     },
-    [clearVerdictTimer, finishQuestion, verdictDelayMs, forceCutOutputs],
+    [clearVerdictTimer, finalizeVerdict, verdictDelayMs],
   );
 
   const scheduleIdleTimeout = React.useCallback(() => {
@@ -431,12 +463,16 @@ export function useSendSession({
     const timeoutMs = Math.max(600, unitMs * MORSE_UNITS.word * 1.2);
     idleTimeoutRef.current = setTimeout(() => {
       if (!canInteractRef.current) return;
-      queueVerdict(false);
+      scheduleVerdict('idleTimeout');
     }, timeoutMs);
-  }, [clearIdleTimeout, unitMs, queueVerdict]);
+  }, [clearIdleTimeout, unitMs, scheduleVerdict]);
 
   const canInteractBase =
-    started && !summary && !earlySummary && !!currentTarget && feedback === 'idle';
+    started &&
+    !summary &&
+    !earlySummary &&
+    !!currentTarget &&
+    feedback === 'idle';
 
   React.useEffect(() => {
     canInteractRef.current = canInteractBase;
@@ -457,6 +493,12 @@ export function useSendSession({
   const onPressIn = React.useCallback(
     (rawTimestamp?: number) => {
       if (!canInteractBase || isReplaying) return;
+      if (verdictFinalizingRef.current) {
+        setIgnorePress(false, 'press.blockedFinalizing');
+        forceCutOutputs('press.finalizing');
+        pressStartRef.current = null;
+        return;
+      }
       clearIdleTimeout();
       clearVerdictTimer();
 
@@ -474,7 +516,7 @@ export function useSendSession({
             pressId: press.id,
           });
           lastReleaseRef.current = null;
-          queueVerdict(false);
+          scheduleVerdict('gap.nonIntra');
           return;
         }
       }
@@ -483,7 +525,7 @@ export function useSendSession({
       pressStartRef.current = timestamp;
       onDown(timestamp);
     },
-    [canInteractBase, isReplaying, unitMs, gapTolerance, queueVerdict, onDown, clearIdleTimeout, clearVerdictTimer, pressTracker, setIgnorePress],
+    [canInteractBase, isReplaying, unitMs, gapTolerance, scheduleVerdict, onDown, clearIdleTimeout, clearVerdictTimer, pressTracker, setIgnorePress],
   );
 
   const appendSymbol = React.useCallback(
@@ -494,17 +536,17 @@ export function useSendSession({
       updateInput(next);
 
       if (!target.startsWith(next)) {
-        queueVerdict(false);
+        scheduleVerdict('input.mismatch');
         return;
       }
       if (target === next) {
-        queueVerdict(true);
+        scheduleVerdict('input.matched');
         return;
       }
 
       scheduleIdleTimeout();
     },
-    [currentTarget, queueVerdict, updateInput, scheduleIdleTimeout],
+    [currentTarget, scheduleVerdict, updateInput, scheduleIdleTimeout],
   );
 
   const onPressOut = React.useCallback((rawTimestamp?: number) => {
@@ -540,13 +582,13 @@ export function useSendSession({
     const symbol = classifySignalDuration(duration, unitMs, signalTolerance);
     if (!symbol) {
       lastReleaseRef.current = null;
-      queueVerdict(false);
+      scheduleVerdict('signal.unclassified');
       return;
     }
 
     lastReleaseRef.current = releaseAt;
     appendSymbol(symbol);
-  }, [canInteractBase, isReplaying, unitMs, signalTolerance, queueVerdict, appendSymbol, onUp, setIgnorePress, forceCutOutputs]);
+  }, [canInteractBase, isReplaying, unitMs, signalTolerance, scheduleVerdict, appendSymbol, onUp, setIgnorePress, forceCutOutputs]);
 
   const handleSummaryContinue = React.useCallback(() => {
     clearAdvanceTimer();

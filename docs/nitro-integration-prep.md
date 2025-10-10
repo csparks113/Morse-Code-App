@@ -15,11 +15,19 @@
 - Android: minSdk 23, compileSdk 35, targetSdk 35, NDK 27.1.12297006. Gradle packages both `libappmodules.so` and `libmorseNitro.so` per ABI.
 - iOS: leave `RCT_NEW_ARCH_ENABLED=1`; Pods should integrate Nitrogen-generated projects without manual Xcode edits.
 
-## Android Implementation (2025-10-05)
+## Android Implementation Snapshot (2025-10-09)
 - Dedicated `morseNitro` CMake target (under `android/app/src/main/cpp`) wraps the Nitrogen-generated `OutputsAudio` hybrid and links Oboe.
 - `outputs-native/android/c++` hosts the implementation with explicit `margelo::nitro::HybridObject(TAG)` registration so the bridgeless host loads cleanly.
 - `MainApplication` calls `System.loadLibrary("morseNitro")` during `onCreate` so Nitro registers before the React host spins up.
 - JS `shouldPreferNitroOutputs()` controls warm-up via `configureAudio`; Nitro playback drives tone/haptic/torch logging while the Audio API fallback remains behind env toggles.
+- `useSendSession` now forces a `forceCutOutputs` sweep whenever verdicts queue/complete, sessions start/stop, or interaction disables; `KeyerButton` watches a `releaseSignal` to clear any latched gesture state.
+
+## Session Wiring Notes (2025-10-09)
+- `useKeyerOutputs` includes a watchdog counter and AppState cleanup so forced cuts reset the gesture pipeline even if native release callbacks fail.
+- `forceCutOutputs` must be part of any new verdict/buffer experiments; keep the helper wired when refactoring send/practice flows.
+- Flash overlay now renders behind UI surfaces without losing visibility, so brightness tuning can focus on perceived intensity rather than z-index conflicts.
+- Verdict buffer defaults live in `constants/appConfig.ts` (200 ms) and are consumed by `useSendSession` to align verdict banners with forced output cuts.
+- Torch release now always triggers a `forceTorchOff()` pass (with failure logging) so the hardware never stays latched after forced verdicts.
 
 ## iOS Setup Quickstart
 1. Install Xcode 16.x, select it via `sudo xcode-select --switch /Applications/Xcode.app`, and ensure CocoaPods is installed.
@@ -47,7 +55,8 @@
 4. Dev clients boot with Nitro audio/haptics enabled; monitor `[outputs-audio]` + `keyer.*` logs for latency or fallback warnings.
 5. `npm run nitro:codegen` is idempotent on a clean tree.
 
-## Known Issues (2025-10-06)
+## Known Issues (2025-10-09)
 - Developer console **Play Pattern** still trails the Nitro audio clock by ~30-40 ms on average (p95 ~90 ms); continue logging native vs JS deltas after each scheduling tweak.
 - Send keyer misclassifies dot-leading sequences (for example `...-`) at higher WPM; tighten timing heuristics and continue logging `keyer.classification` events.
+- Validate the 200 ms verdict buffer across extreme WPM ranges; adjust the config if banner alignment drifts or misclassifications resurface.
 - Track Nitro vs Audio API touch-to-tone deltas in `docs/android-dev-client-testing.md` whenever tuning changes land.

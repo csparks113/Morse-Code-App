@@ -23,6 +23,8 @@ This plan tracks the remaining work needed to deliver a fully native, low-latenc
 ### Keyer Precision
 - Audit dot/dash thresholds at high WPM and correlate with `keyer.classification` telemetry.
 - (2025-10-06) Keyer button now uses a gesture-handler Pan detector so down/up timestamps are captured via the native pipeline, reducing missed rapid dots.
+- (2025-10-09) Relaxed Morse signal/gap tolerances in code; confirm the wider window removes dot-led cut-offs without hurting high-WPM accuracy and decide whether per-mode overrides are needed.
+- (2025-10-09) Send verdicts now finalize at banner display; verify the deferred scoring path still honours buffer timing and blocks extra symbol overflows.
 - Experiment with adaptive thresholds or hysteresis that stabilise dot-leading sequences (`...-`, `..-.`, etc.).
 - Add regression guards (unit tests or watchdog logs) once the heuristics settle.
 
@@ -39,6 +41,8 @@ This plan tracks the remaining work needed to deliver a fully native, low-latenc
 - Keep Expo config plugins (`withNitroCodegen`, Audio API overrides) aligned with Nitro-first defaults.
 - Refresh documentation and onboarding checklists after major dependency bumps (Expo SDK, Hermes, Nitro modules).
 - Maintain a rolling log of latency measurements per device to detect drift over time.
+- Capture torch failure telemetry after the new reset fallback and flag if any devices still latch the torch between verdicts.
+- Verify the post-release `forceTorchOff` pass keeps hardware off across forced cuts; monitor for increased latency or lock contention.
 
 ## Incremental Roadmap (2025-10-05)
 - **Step 1 - Native keyer input:** replace the React Pressable path with a Nitro-powered press tracker so down/up timestamps come from the native clock. Ship with telemetry updates and regression guards.

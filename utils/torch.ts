@@ -88,3 +88,31 @@ export async function resetTorch(): Promise<void> {
   lockCount = 0;
   await applyState('off');
 }
+
+export async function forceTorchOff(): Promise<void> {
+  if (!hasNativeSupport()) return;
+
+  if (pending) {
+    try {
+      await pending;
+    } catch {
+      // ignore errors from in-flight operation
+    }
+  }
+
+  const operation = TorchModule!
+    .setStateAsync!(OFF_STATE)
+    .then(() => {
+      currentState = 'off';
+    })
+    .catch((error) => {
+      currentState = 'off';
+      throw error;
+    })
+    .finally(() => {
+      pending = null;
+    });
+
+  pending = operation;
+  await operation;
+}

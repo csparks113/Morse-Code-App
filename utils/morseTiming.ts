@@ -27,6 +27,7 @@ export const MORSE_UNITS = {
 // Tolerance clamps: prevent nonsensical values (too strict or too lenient).
 const MIN_TOLERANCE = 0.05; // 5% minimal slack
 const MAX_TOLERANCE = 0.9;  // 90% maximal slack (effectively "anything goes")
+const AMBIGUITY_TOLERANCE_BOOST = 0.2; // extra headroom when classifying near-borderline inputs
 
 /**
  * classifySignalDuration
@@ -54,9 +55,11 @@ export function classifySignalDuration(
 
   // Clamp caller-provided tolerance to a sane range
   const clampedTol = Math.max(MIN_TOLERANCE, Math.min(tolerance, MAX_TOLERANCE));
+  const fallbackTol = Math.min(MAX_TOLERANCE, clampedTol + AMBIGUITY_TOLERANCE_BOOST);
 
   // Dot: anything up to 1 unit with tolerance
-  const dotUpper = unitMs * (1 + clampedTol);
+  const dotTarget = unitMs * MORSE_UNITS.dot;
+  const dotUpper = dotTarget * (1 + clampedTol);
   if (durationMs <= dotUpper) return '.';
 
   // Dash: within tolerance window around 3 units
@@ -64,6 +67,14 @@ export function classifySignalDuration(
   const dashLower = dashTarget * (1 - clampedTol);
   const dashUpper = dashTarget * (1 + clampedTol);
   if (durationMs >= dashLower && durationMs <= dashUpper) return '-';
+
+  // Fallback: pick whichever canonical symbol the duration is closest to within the extended window.
+  const dotRatio = Math.abs(durationMs - dotTarget) / (dotTarget || 1);
+  const dashRatio = Math.abs(durationMs - dashTarget) / (dashTarget || 1);
+  const bestRatio = Math.min(dotRatio, dashRatio);
+  if (bestRatio <= fallbackTol) {
+    return dotRatio <= dashRatio ? '.' : '-';
+  }
 
   // Neither dot nor dash within the allowed error
   return null;
@@ -90,6 +101,9 @@ export function classifyGapDuration(
   unitMs: number,
   tolerance: number,
 ): MorseGap | null {
+  const clampedTol = Math.max(MIN_TOLERANCE, Math.min(tolerance, MAX_TOLERANCE));
+  const fallbackTol = Math.min(MAX_TOLERANCE, clampedTol + AMBIGUITY_TOLERANCE_BOOST);
+
   const targets: { type: MorseGap; duration: number }[] = [
     { type: 'intra', duration: unitMs * MORSE_UNITS.dot },
     { type: 'inter', duration: unitMs * MORSE_UNITS.interChar },
@@ -106,7 +120,16 @@ export function classifyGapDuration(
   }
 
   // Accept only if the smallest relative error is within caller tolerance
-  return best && best.ratio <= tolerance ? best.type : null;
+  if (!best) {
+    return null;
+  }
+  if (best.ratio <= clampedTol) {
+    return best.type;
+  }
+  if (best.ratio <= fallbackTol) {
+    return best.type;
+  }
+  return null;
 }
 
 /**

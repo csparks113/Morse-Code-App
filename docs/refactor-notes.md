@@ -4,11 +4,19 @@
 - When you pick up a task, copy the relevant bullet into your working notes and expand it with acceptance criteria, links, or test plans.
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
-- Instrumented outputs service to trace resolved tone volume / flash intensity and added queueVerdict ignorePress telemetry.
-- Auto-cut keyer outputs when send verdict banners appear by routing verdict handlers through cutActiveOutputs so tone/flash/haptics drop immediately.
-- Instrumented console/manual handles with watchdog timers that log pressTimeout samples into the latency store and force-cut stuck tone/flash.
+## Completed (2025-10-09)
+- Integrated the forced `forceCutOutputs` + release signal flow across `useSendSession`, `useKeyerOutputs`, and `KeyerButton` so any queued verdict or interaction disable clears active tone/flash/haptic outputs.
+- Restored the flash overlay behind session UI layers while keeping pulses visible on send/receive/practice screens.
+- Scrubbed hook dependencies (notably `useSendSession`) so TypeScript no longer warns about stale refs after the outputs cleanup.
+- Prompt card now auto-reveals the correct answer after wrong send submissions, keeping MorseCompare in sync with verdict state.
+- Threaded a configurable verdict buffer (default 200 ms via `constants/appConfig.ts`) so queueVerdict waits for the banner animation before cutting outputs.
+- Hardened torch teardown with a reset fallback when native release fails and widened Morse signal/gap tolerances to stop premature verdicts on dot-led characters.
+- Added a post-release torch force-off pass so every forced cut explicitly drives the hardware OFF even when the native release succeeds.
+- Verdict buffer restarts whenever a new press begins so the user always gets the full timing window before we render the verdict.
+- Added a verdict-finalizing guard so inputs that collide with banner rendering no longer trigger audible click artifacts.
+- Deferred send verdict computation until banner display so we re-check the captured input before scoring, preventing premature wrong/correct decisions and catching extra dots/dashes.
 
-## Completed (Today - 2025-10-06)
+## Completed (2025-10-06)
 - Routed Nitro native offsets through JS pulse scheduling so flash/haptic outputs wait for the captured timeline and latency logs include the scheduled delay.
 
 ## Completed (2025-10-05)
@@ -19,8 +27,10 @@
 - Synced the living spec architecture/details with the current bridgeless runtime so cross-platform contributors have an accurate map.
 
 ## Next Steps
-
-- Verify the new keyer gesture handler, verdict delay, and timeline-synced flash/haptic pulses on device (Practice Keyer + send lesson) before landing further changes.
+- Device-verify the 200 ms verdict buffer, deferred verdict scoring, relaxed classifiers, and torch reset fallback across low/high WPM drills; log findings in `docs/outputs-investigation.md`.
+- Run a focused send-lesson regression sweep (mixing prompts like A↔N, rapid retries, low/high WPM) to flush any remaining keyer/output bugs and capture the results in the investigation log.
+- Surface an `ignorePressRef` / active-press indicator in the developer console so stuck handles are visible without raw log diving.
+- Capture and archive a fresh logcat bundle with the verdict buffer + torch reset enabled for regression comparisons.
 
 ### Console Replay Alignment
 1. Instrument developer console **Play Pattern** runs to capture tone vs flash/haptic/torch offsets and log the deltas in `docs/android-dev-client-testing.md`.
@@ -81,7 +91,7 @@
 - Documented developer console upgrades (manual triggers, latency summaries, torch indicator) and synced UI spacing/theme guards across session surfaces.
 
 ### Outputs Stability
-- Completed 2025-10-08: Auto-cut active keyer inputs as soon as a verdict banner displays so outputs cannot stick in the "on" state (useSendSession now routes verdicts through cutActiveOutputs).
+- Completed 2025-10-09: `forceCutOutputs` now runs whenever verdicts queue or sessions end, and the keyer release signal clears button state so outputs never stay latched between questions.
 - Completed 2025-10-08: Added watchdog logging when manual/dev-console handles fail to release tone/flash within expected timeouts (default outputs service records pressTimeout samples and force-cuts handles).
 - Follow up with send/practice flows to ensure the verdict timers cancel pending pressStart correlations before queuing the next prompt (verify practice/send flows honour the cutActiveOutputs path).
 
