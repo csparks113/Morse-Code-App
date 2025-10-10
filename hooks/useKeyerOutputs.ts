@@ -1,4 +1,5 @@
 import React from 'react';
+import { AppState } from 'react-native';
 import type { Animated } from 'react-native';
 
 import { createPressTracker, type PressTracker } from '@/services/latency/pressTracker';
@@ -71,6 +72,8 @@ export function useKeyerOutputs(
     outputs.createKeyerOutputs(stableOptions, { source, pressTracker }),
   );
   const prevOptionsRef = React.useRef(stableOptions);
+  const isPressingRef = React.useRef(false);
+  const watchdogRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (
     serviceRef.current !== outputs ||
@@ -90,15 +93,37 @@ export function useKeyerOutputs(
 
   React.useEffect(() => {
     return () => {
+      if (watchdogRef.current) {
+        clearTimeout(watchdogRef.current);
+        watchdogRef.current = null;
+      }
+      isPressingRef.current = false;
       handleRef.current.teardown().catch(() => {});
     };
   }, []);
 
-  const onDown = React.useCallback((timestampMs?: number) => {
-    handleRef.current.pressStart(timestampMs);
+  const scheduleWatchdog = React.useCallback(() => {
+    if (watchdogRef.current) {
+      clearTimeout(watchdogRef.current);
+    }
+    watchdogRef.current = setTimeout(() => {
+      handleRef.current.cutActiveOutputs('watchdog.timeout');
+      isPressingRef.current = false;
+    }, 1800);
   }, []);
 
+  const onDown = React.useCallback((timestampMs?: number) => {
+    isPressingRef.current = true;
+    handleRef.current.pressStart(timestampMs);
+    scheduleWatchdog();
+  }, [scheduleWatchdog]);
+
   const onUp = React.useCallback((timestampMs?: number) => {
+    if (watchdogRef.current) {
+      clearTimeout(watchdogRef.current);
+      watchdogRef.current = null;
+    }
+    isPressingRef.current = false;
     handleRef.current.pressEnd(timestampMs);
   }, []);
 
@@ -111,8 +136,22 @@ export function useKeyerOutputs(
   }, []);
 
   const cutActiveOutputs = React.useCallback((reason?: string, metadata?: Record<string, string | number | boolean>) => {
+    if (watchdogRef.current) {
+      clearTimeout(watchdogRef.current);
+      watchdogRef.current = null;
+    }
+    isPressingRef.current = false;
     handleRef.current.cutActiveOutputs(reason, metadata);
   }, []);
+
+  React.useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') {
+        cutActiveOutputs('appstate.change', { state: nextState });
+      }
+    });
+    return () => sub.remove();
+  }, [cutActiveOutputs]);
 
   return React.useMemo(
     () => ({

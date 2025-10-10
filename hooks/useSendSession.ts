@@ -78,6 +78,7 @@ type UseSendSessionResult = {
   finalSummary: Summary | null;
   canInteract: boolean;
   isReplaying: boolean;
+  keyerReleaseSignal: number;
   startSession: () => void;
   onPressIn: (timestampMs?: number) => void;
   onPressOut: (timestampMs?: number) => void;
@@ -146,7 +147,7 @@ export function useSendSession({
     },
   });
 
-  const { onDown, onUp, flashOpacity, prepare, teardown } = useKeyerOutputs({
+  const { onDown, onUp, flashOpacity, prepare, teardown, cutActiveOutputs } = useKeyerOutputs({
     audioEnabled,
     hapticsEnabled,
     lightEnabled,
@@ -164,6 +165,7 @@ export function useSendSession({
   const [earlySummary, setEarlySummary] = React.useState<Summary | null>(null);
   const [isReplaying, setIsReplaying] = React.useState(false);
   const [, setInput] = React.useState('');
+  const [keyerReleaseSignal, setKeyerReleaseSignal] = React.useState(0);
 
   const inputRef = React.useRef('');
   const currentMorseRef = React.useRef('');
@@ -193,6 +195,26 @@ export function useSendSession({
       });
     },
     [pressTracker],
+  );
+
+  const releaseActivePress = React.useCallback(() => {
+    if (pressStartRef.current != null) {
+      onUp(nowMs());
+      pressStartRef.current = null;
+    }
+    lastReleaseRef.current = null;
+  }, [onUp]);
+
+  const forceCutOutputs = React.useCallback(
+    (reason: string, meta?: Record<string, string | number | boolean>) => {
+      releaseActivePress();
+      cutActiveOutputs(reason, meta);
+      pressTracker.reset();
+      ignorePressRef.current = false;
+      lastReleaseRef.current = null;
+      setKeyerReleaseSignal((value) => value + 1);
+    },
+    [cutActiveOutputs, releaseActivePress, pressTracker],
   );
 
   const updateInput = React.useCallback((next: string) => {
@@ -237,7 +259,7 @@ export function useSendSession({
       teardown().catch(() => {});
       outputs.stopMorse();
     };
-  }, [prepare, teardown, clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout, clearVerdictTimer]);
+  }, [prepare, teardown, clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout, clearVerdictTimer, outputs]);
 
   const flashSymbol = React.useCallback(
     (durationMs: number, context?: PlaybackSymbolContext) => {
@@ -291,6 +313,7 @@ export function useSendSession({
     clearPlaybackTimeout();
     clearVerdictTimer();
     outputs.stopMorse();
+    forceCutOutputs('session.start');
 
     setIsReplaying(false);
     updateInput('');
@@ -301,12 +324,25 @@ export function useSendSession({
     setEarlySummary(null);
     if (isChallenge) setHearts(HEARTS_INITIAL);
 
-    pressStartRef.current = null;
+    releaseActivePress();
     lastReleaseRef.current = null;
     setIgnorePress(false, 'session.start');
 
     start();
-  }, [pool, clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout, updateInput, isChallenge, start, pressTracker, setIgnorePress]);
+  }, [
+    pool,
+    clearAdvanceTimer,
+    clearIdleTimeout,
+    clearPlaybackTimeout,
+    clearVerdictTimer,
+    outputs,
+    updateInput,
+    isChallenge,
+    start,
+    setIgnorePress,
+    forceCutOutputs,
+    releaseActivePress,
+  ]);
 
   const finishQuestion = React.useCallback(
     (isCorrect: boolean) => {
@@ -327,7 +363,8 @@ export function useSendSession({
       }
 
       setIgnorePress(false, 'finishQuestion', { isCorrect });
-      pressStartRef.current = null;
+      releaseActivePress();
+      forceCutOutputs('finishQuestion', { isCorrect });
       lastReleaseRef.current = null;
 
       if (willExhaustHearts) {
@@ -369,6 +406,8 @@ export function useSendSession({
       clearVerdictTimer,
       onUp,
       setIgnorePress,
+      forceCutOutputs,
+      releaseActivePress,
     ],
   );
 
@@ -377,12 +416,13 @@ export function useSendSession({
   const queueVerdict = React.useCallback(
     (isCorrect: boolean) => {
       clearVerdictTimer();
+      forceCutOutputs('verdict.scheduled', { isCorrect });
       verdictTimerRef.current = setTimeout(() => {
         verdictTimerRef.current = null;
         finishQuestion(isCorrect);
       }, verdictDelayMs);
     },
-    [clearVerdictTimer, finishQuestion, verdictDelayMs],
+    [clearVerdictTimer, finishQuestion, verdictDelayMs, forceCutOutputs],
   );
 
   const scheduleIdleTimeout = React.useCallback(() => {
@@ -401,6 +441,18 @@ export function useSendSession({
   React.useEffect(() => {
     canInteractRef.current = canInteractBase;
   }, [canInteractBase]);
+
+  React.useEffect(() => {
+    if (!canInteractBase) {
+      forceCutOutputs('interaction.disabled');
+    }
+  }, [canInteractBase, forceCutOutputs]);
+
+  React.useEffect(() => {
+    return () => {
+      forceCutOutputs('session.unmount');
+    };
+  }, [forceCutOutputs]);
 
   const onPressIn = React.useCallback(
     (rawTimestamp?: number) => {
@@ -463,12 +515,16 @@ export function useSendSession({
       setIgnorePress(false, 'press.cancelled', {
         cause: !canInteractBase ? 'cannotInteract' : 'replaying',
       });
+      forceCutOutputs('press.cancelled', {
+        cause: !canInteractBase ? 'cannotInteract' : 'replaying',
+      });
       pressStartRef.current = null;
       return;
     }
 
     if (ignorePressRef.current) {
       setIgnorePress(false, 'press.ignoreConsumed');
+      forceCutOutputs('press.ignoreConsumed');
       pressStartRef.current = null;
       return;
     }
@@ -490,7 +546,7 @@ export function useSendSession({
 
     lastReleaseRef.current = releaseAt;
     appendSymbol(symbol);
-  }, [canInteractBase, isReplaying, unitMs, signalTolerance, queueVerdict, appendSymbol, onUp, setIgnorePress]);
+  }, [canInteractBase, isReplaying, unitMs, signalTolerance, queueVerdict, appendSymbol, onUp, setIgnorePress, forceCutOutputs]);
 
   const handleSummaryContinue = React.useCallback(() => {
     clearAdvanceTimer();
@@ -498,7 +554,8 @@ export function useSendSession({
     clearPlaybackTimeout();
     clearVerdictTimer();
     outputs.stopMorse();
-  }, [clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout, clearVerdictTimer]);
+    forceCutOutputs('summary.continue');
+  }, [clearAdvanceTimer, clearIdleTimeout, clearPlaybackTimeout, clearVerdictTimer, outputs, forceCutOutputs]);
 
   const playCurrentTarget = React.useCallback(async () => {
     if (isReplaying) return;
@@ -537,6 +594,7 @@ export function useSendSession({
     flashOpacity,
     audioEnabled,
     audioVolumePercent,
+    outputs,
   ]);
 
   const revealState: ActionButtonState = (() => {
@@ -612,6 +670,7 @@ export function useSendSession({
     handleRevealPress,
     handleReplayPress,
     handleSummaryContinue,
+    keyerReleaseSignal,
   };
 }
 

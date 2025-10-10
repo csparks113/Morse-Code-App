@@ -12,6 +12,7 @@ type KeyerButtonProps = {
   minHeight?: number;
   label?: string;
   style?: StyleProp<ViewStyle>;
+  releaseSignal?: number;
 };
 
 const DEFAULT_LABEL = "Tap & Hold to Key";
@@ -23,9 +24,11 @@ function KeyerButton({
   minHeight,
   label = DEFAULT_LABEL,
   style,
+  releaseSignal,
 }: KeyerButtonProps) {
   const [pressed, setPressed] = React.useState(false);
   const activeRef = React.useRef(false);
+  const releaseRef = React.useRef(releaseSignal);
 
   const handleDown = React.useCallback(
     (timestamp?: number) => {
@@ -59,6 +62,19 @@ function KeyerButton({
     setPressed(false);
     onPressOut?.();
   }, [onPressOut]);
+
+  React.useEffect(() => {
+    if (releaseRef.current === releaseSignal) {
+      return;
+    }
+    releaseRef.current = releaseSignal;
+    if (!activeRef.current && !pressed) {
+      return;
+    }
+    activeRef.current = false;
+    setPressed(false);
+    onPressOut?.();
+  }, [releaseSignal, onPressOut, pressed]);
 
   const extractTimestamp = React.useCallback((event: any): number | undefined => {
     const changed = event?.changedTouches?.[0];

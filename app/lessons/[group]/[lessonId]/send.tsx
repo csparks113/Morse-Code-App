@@ -86,6 +86,7 @@ export default function SendSessionScreen() {
     flashOpacity,
     finalSummary,
     canInteract,
+    keyerReleaseSignal,
     startSession,
     onPressIn,
     onPressOut,
@@ -230,6 +231,7 @@ export default function SendSessionScreen() {
               onPressOut={onPressOut}
               disabled={!canInteract}
               minHeight={keyerMinHeight}
+              releaseSignal={keyerReleaseSignal}
             />
           </View>
         </View>
