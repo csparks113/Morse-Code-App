@@ -311,6 +311,8 @@ export default function DeveloperConsoleScreen() {
         morse: pattern,
         unitMs,
         source: 'console.replay',
+        audioEnabled: manualOptions.audioEnabled,
+        audioVolumePercent: manualOptions.audioVolumePercent,
         onSymbolStart: (symbol, durationMs, context) => {
           const requestedAtMs = resolvePlaybackRequestedAt(context);
           const metadata = buildPlaybackMetadata(context);
@@ -337,7 +339,17 @@ export default function DeveloperConsoleScreen() {
     } catch (error) {
       console.warn('Manual playMorse failed', error);
     }
-  }, [clearManualTimeout, manualFlashValue, manualOptions.hapticsEnabled, manualOptions.lightEnabled, manualPattern, outputs, unitMs]);
+  }, [
+    clearManualTimeout,
+    manualFlashValue,
+    manualOptions.audioEnabled,
+    manualOptions.audioVolumePercent,
+    manualOptions.hapticsEnabled,
+    manualOptions.lightEnabled,
+    manualPattern,
+    outputs,
+    unitMs,
+  ]);
 
   const triggerStop = React.useCallback(() => {
     clearManualTimeout();

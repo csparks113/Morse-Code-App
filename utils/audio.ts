@@ -217,7 +217,59 @@ export type PlayOpts = {
   onGap?: (gapMs: number) => void;
   hz?: number;
   unitMsOverride?: number;
+  audioVolumePercent?: number;
+  audioEnabled?: boolean;
 };
+
+const DEFAULT_AUDIO_VOLUME_PERCENT = 100;
+
+function clampVolumePercent(value?: number): number {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    return Math.max(0, Math.min(100, Math.round(numeric)));
+  }
+  const storePercent = (useSettingsStore.getState() as any)?.audioVolumePercent;
+  if (typeof storePercent === 'number' && Number.isFinite(storePercent)) {
+    return Math.max(0, Math.min(100, Math.round(storePercent)));
+  }
+  return DEFAULT_AUDIO_VOLUME_PERCENT;
+}
+
+const volumePercentToGain = (percent: number) => Math.max(0, Math.min(1, percent / 100));
+
+let silentPlaybackToken = 0;
+
+async function playMorseSilently(code: string, unitMsArg?: number, opts: PlayOpts = {}) {
+  const token = ++silentPlaybackToken;
+  const unitMs = Math.max(10, Math.floor(opts.unitMsOverride ?? unitMsArg ?? getMorseUnitMs()));
+
+  for (let i = 0; i < code.length; i += 1) {
+    if (token !== silentPlaybackToken) {
+      return;
+    }
+    const sym = code[i] as '.' | '-';
+    if (sym !== '.' && sym !== '-') {
+      const gap = unitMs * 3;
+      opts.onGap?.(gap);
+      await sleep(gap);
+      continue;
+    }
+
+    const duration = sym === '.' ? unitMs : unitMs * 3;
+    opts.onSymbolStart?.(sym, duration);
+    await sleep(duration);
+    if (token !== silentPlaybackToken) {
+      return;
+    }
+    opts.onSymbolEnd?.(sym, duration);
+
+    if (i < code.length - 1) {
+      const gap = unitMs;
+      opts.onGap?.(gap);
+      await sleep(gap);
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // WEB PATH: WebAudio
@@ -253,6 +305,8 @@ async function playMorseCodeWeb(code: string, unitMsArg?: number, opts: PlayOpts
   const { toneHz } = (useSettingsStore.getState() as any) || { toneHz: 600 };
   const unitMs = Math.max(10, Math.floor(unitMsArg ?? getMorseUnitMs()));
   const hz = Math.max(100, Math.min(2000, Math.floor(opts.hz ?? toneHz ?? 600)));
+  const volumePercent = clampVolumePercent(opts.audioVolumePercent);
+  const gain = volumePercentToGain(volumePercent);
   ensureWeb(hz);
   await webCtx!.resume();
 
@@ -270,11 +324,13 @@ async function playMorseCodeWeb(code: string, unitMsArg?: number, opts: PlayOpts
     // instant start via gain envelope
     webGain!.gain.cancelScheduledValues(webCtx!.currentTime);
     webGain!.gain.setValueAtTime(0, webCtx!.currentTime);
-    webGain!.gain.linearRampToValueAtTime(1, webCtx!.currentTime + 0.005);    await sleep(dur);
+    webGain!.gain.linearRampToValueAtTime(gain, webCtx!.currentTime + 0.005);
+    await sleep(dur);
     if (token !== webCancel) {
       // stop
       webGain!.gain.cancelScheduledValues(webCtx!.currentTime);
-      webGain!.gain.linearRampToValueAtTime(0, webCtx!.currentTime + 0.003);      opts.onSymbolEnd?.(sym, dur);
+      webGain!.gain.linearRampToValueAtTime(0, webCtx!.currentTime + 0.003);
+      opts.onSymbolEnd?.(sym, dur);
       if (i < code.length - 1) {
         const gap = unitMs;
         opts.onGap?.(gap);
@@ -352,6 +408,8 @@ async function playMorseCodeAudioApi(code: string, unitMsArg?: number, opts: Pla
   const { toneHz } = (useSettingsStore.getState() as any) || { toneHz: 600 };
   const unitMs = Math.max(10, Math.floor(unitMsArg ?? getMorseUnitMs()));
   const hz = Math.max(100, Math.min(2000, Math.floor(opts.hz ?? toneHz ?? 600)));
+  const volumePercent = clampVolumePercent(opts.audioVolumePercent);
+  const gain = volumePercentToGain(volumePercent);
 
   await configureAudioApiSession(audioApi);
   if (!ensureAudioApiGraph(audioApi, hz) || !audioApiContext || !audioApiGain) {
@@ -377,7 +435,7 @@ async function playMorseCodeAudioApi(code: string, unitMsArg?: number, opts: Pla
     opts.onSymbolStart?.(sym, duration);
     audioApiGain.gain.cancelScheduledValues(audioApiContext.currentTime);
     audioApiGain.gain.setValueAtTime(0, audioApiContext.currentTime);
-    audioApiGain.gain.linearRampToValueAtTime(1, audioApiContext.currentTime + 0.005);
+    audioApiGain.gain.linearRampToValueAtTime(gain, audioApiContext.currentTime + 0.005);
 
     await sleep(duration);
 
@@ -567,9 +625,26 @@ async function playMorseCodeExpoNative(code: string, unitMsArg?: number, opts: P
   const { toneHz } = (useSettingsStore.getState() as any) || { toneHz: 600 };
   const unitMs = Math.max(10, Math.floor(unitMsArg ?? getMorseUnitMs()));
   const hz = Math.max(100, Math.min(2000, Math.floor(opts.hz ?? toneHz ?? 600)));
+  const volumePercent = clampVolumePercent(opts.audioVolumePercent);
+  const gain = volumePercentToGain(volumePercent);
 
   await configureAudio();
   await ensureNativeTones(hz, unitMs);
+  const sounds = [dotA, dotB, dashA, dashB];
+  await Promise.all(
+    sounds.map(async (sound) => {
+      if (!sound) return;
+      try {
+        if (typeof sound.setVolumeAsync === 'function') {
+          await sound.setVolumeAsync(gain);
+        } else if (typeof sound.setStatusAsync === 'function') {
+          await sound.setStatusAsync({ volume: gain });
+        }
+      } catch {
+        // ignore volume set failures
+      }
+    }),
+  );
 
   for (let i = 0; i < code.length; i++) {
     if (my !== expoNativeToken) return;
@@ -827,6 +902,8 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
   const { toneHz } = (useSettingsStore.getState() as any) || { toneHz: NITRO_DEFAULT_TONE_HZ };
   const unitMs = Math.max(10, Math.floor(unitMsArg ?? getMorseUnitMs()));
   const hz = Math.max(100, Math.min(2000, Math.floor(opts.hz ?? toneHz ?? NITRO_DEFAULT_TONE_HZ)));
+  const volumePercent = clampVolumePercent(opts.audioVolumePercent);
+  const gain = volumePercentToGain(volumePercent);
 
   const pattern: PlaybackSymbol[] = [];
   const durations: number[] = [];
@@ -853,8 +930,8 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
   }
 
   try {
-    outputsAudio.warmup({ toneHz: hz });
-    outputsAudio.playMorse({ toneHz: hz, unitMs, pattern });
+    outputsAudio.warmup({ toneHz: hz, gain });
+    outputsAudio.playMorse({ toneHz: hz, unitMs, pattern, gain });
   } catch (error) {
     if (__DEV__) {
       console.warn('OutputsAudio.playMorse failed, falling back to Audio API:', error);
@@ -1286,20 +1363,28 @@ export function createToneController(): ToneController {
 // Public API
 // ---------------------------------------------------------------------------
 export async function playMorseCode(code: string, unitMsArg?: number, opts: PlayOpts = {}) {
+  const volumePercent = clampVolumePercent(opts.audioVolumePercent);
+  const gain = volumePercentToGain(volumePercent);
+  const audioRequested = opts.audioEnabled !== false;
+  if (!audioRequested || gain <= 0) {
+    return playMorseSilently(code, unitMsArg, { ...opts, audioEnabled: false, audioVolumePercent: volumePercent });
+  }
+  const normalizedOpts: PlayOpts = { ...opts, audioVolumePercent: volumePercent, audioEnabled: true };
+
   if (Platform.OS === 'web') {
-    return playMorseCodeWeb(code, unitMsArg, opts);
+    return playMorseCodeWeb(code, unitMsArg, normalizedOpts);
   }
 
   const outputsAudio = shouldPreferNitroOutputs() ? loadOutputsAudio() : null;
   if (outputsAudio) {
-    return playMorseCodeNitro(outputsAudio, code, unitMsArg, opts);
+    return playMorseCodeNitro(outputsAudio, code, unitMsArg, normalizedOpts);
   }
 
   if (loadAudioApi()) {
-    return playMorseCodeAudioApi(code, unitMsArg, opts);
+    return playMorseCodeAudioApi(code, unitMsArg, normalizedOpts);
   }
 
-  return playMorseCodeExpoNative(code, unitMsArg, opts);
+  return playMorseCodeExpoNative(code, unitMsArg, normalizedOpts);
 }
 
 export async function playTextAsMorse(text: string, opts: PlayOpts = {}) {
@@ -1329,6 +1414,7 @@ function stopPlaybackExpo(): void {
 }
 
 export function stopPlayback(): void {
+  silentPlaybackToken += 1;
   if (Platform.OS === 'web') {
     stopPlaybackWeb();
     return;

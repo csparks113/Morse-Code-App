@@ -44,6 +44,8 @@ export type PlayMorseOptions = {
   unitMs: number;
   source?: string;
   onSymbolStart?: (symbol: MorseSymbol, durationMs: number, context: PlaybackSymbolContext) => void;
+  audioEnabled?: boolean;
+  audioVolumePercent?: number;
 };
 
 export type KeyerOutputsOptions = {

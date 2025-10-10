@@ -45,10 +45,12 @@ type UseSendSessionArgs = {
   groupId?: string;
   lessonId?: string;
   audioEnabled: boolean;
+  audioVolumePercent: number;
   hapticsEnabled: boolean;
   lightEnabled: boolean;
   torchEnabled: boolean;
   toneHz: number;
+  flashBrightnessPercent: number;
   signalTolerancePercent: number;
   gapTolerancePercent: number;
   actionLabels: PromptActionLabels;
@@ -108,10 +110,12 @@ export function useSendSession({
   groupId,
   lessonId,
   audioEnabled,
+  audioVolumePercent,
   hapticsEnabled,
   lightEnabled,
   torchEnabled,
   toneHz,
+  flashBrightnessPercent,
   signalTolerancePercent,
   gapTolerancePercent,
   actionLabels,
@@ -148,6 +152,8 @@ export function useSendSession({
     lightEnabled,
     torchEnabled,
     toneHz,
+    audioVolumePercent,
+    flashBrightnessPercent,
   }, { source: 'session.send', pressTracker });
 
   const [feedback, setFeedback] = React.useState<FeedbackState>('idle');
@@ -251,12 +257,13 @@ export function useSendSession({
   );
 
   const hapticSymbol = React.useCallback(
-    (symbol: '.' | '-', context?: PlaybackSymbolContext) => {
+    (symbol: '.' | '-', durationMs: number, context?: PlaybackSymbolContext) => {
       const requestedAtMs = resolvePlaybackRequestedAt(context);
       const metadata = buildPlaybackMetadata(context);
       outputs.hapticSymbol({
         enabled: hapticsEnabled,
         symbol,
+        durationMs,
         source: context?.source ?? 'session.send.replay',
         requestedAtMs,
         correlationId: context?.correlationId,
@@ -505,8 +512,10 @@ export function useSendSession({
         morse,
         unitMs,
         source: 'session.send.replay',
+        audioEnabled,
+        audioVolumePercent,
         onSymbolStart: (symbol, durationMs, context) => {
-          hapticSymbol(symbol, context);
+          hapticSymbol(symbol, durationMs, context);
           flashSymbol(durationMs, context);
         },
       });
@@ -518,7 +527,17 @@ export function useSendSession({
       flashOpacity.setValue(0);
       setIsReplaying(false);
     }
-  }, [isReplaying, unitMs, hapticSymbol, flashSymbol, clearIdleTimeout, clearPlaybackTimeout, flashOpacity]);
+  }, [
+    isReplaying,
+    unitMs,
+    hapticSymbol,
+    flashSymbol,
+    clearIdleTimeout,
+    clearPlaybackTimeout,
+    flashOpacity,
+    audioEnabled,
+    audioVolumePercent,
+  ]);
 
   const revealState: ActionButtonState = (() => {
     if (isChallenge) return 'disabled';

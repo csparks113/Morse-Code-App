@@ -39,6 +39,8 @@ const createDefaultManualTriggers = (): KeyerOutputsOptions => ({
   lightEnabled: true,
   torchEnabled: false,
   toneHz: 600,
+  audioVolumePercent: 100,
+  flashBrightnessPercent: 80,
 });
 
 export const useDeveloperStore = create<DeveloperState>()(

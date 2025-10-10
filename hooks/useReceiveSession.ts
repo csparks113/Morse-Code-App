@@ -25,6 +25,8 @@ type UseReceiveSessionArgs = {
   lessonId?: string;
   lightEnabled: boolean;
   hapticsEnabled: boolean;
+  audioEnabled: boolean;
+  audioVolumePercent: number;
   flashBrightnessPercent: number;
   flashOffsetMs?: number;
   hapticOffsetMs?: number;
@@ -82,6 +84,8 @@ export function useReceiveSession({
   lessonId,
   lightEnabled,
   hapticsEnabled,
+  audioEnabled,
+  audioVolumePercent,
   flashBrightnessPercent,
   flashOffsetMs = 0,
   hapticOffsetMs = 0,
@@ -162,6 +166,7 @@ export function useReceiveSession({
         metadata,
       });
     },
+    [outputs, hapticsEnabled],
   );
   const playTarget = React.useCallback(async () => {
     if (isPlaying) return;
@@ -174,6 +179,8 @@ export function useReceiveSession({
         morse,
         unitMs: getMorseUnitMs(),
         source: 'session.receive.replay',
+        audioEnabled,
+        audioVolumePercent,
         onSymbolStart: (symbol, duration, context) => {
           if (flashOffsetMs > 0) {
             setTimeout(() => runFlash(duration, context), flashOffsetMs);
@@ -191,7 +198,7 @@ export function useReceiveSession({
     } finally {
       setIsPlaying(false);
     }
-  }, [outputs, runFlash, hapticTick, flashOffsetMs, hapticOffsetMs, isPlaying]);
+  }, [outputs, runFlash, hapticTick, flashOffsetMs, hapticOffsetMs, isPlaying, audioEnabled, audioVolumePercent]);
 
   const playTargetRef = React.useRef<() => Promise<void> | void>(() => {});
   React.useEffect(() => {

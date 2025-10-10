@@ -43,6 +43,20 @@ const clampPercentToScalar = (percent?: number) => {
   return Math.max(0, Math.min(1, numeric / 100));
 };
 
+const clampVolumePercent = (percent?: number) => {
+  const numeric = Number(percent);
+  if (!Number.isFinite(numeric)) {
+    return 100;
+  }
+  return Math.max(0, Math.min(100, Math.round(numeric)));
+};
+
+const playbackVibrationState: {
+  timeout: ReturnType<typeof setTimeout> | null;
+} = {
+  timeout: null,
+};
+
 const WATCHDOG_PRESS_TIMEOUT_MS = 4000;
 
 function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?: KeyerOutputsContext): KeyerOutputsHandle {
@@ -615,16 +629,57 @@ const defaultOutputsService: OutputsService = {
       });
     };
 
-    if (Platform.OS === 'android' && typeof durationMs === 'number') {
-      try {
-        Vibration.cancel();
-      } catch {
-        // ignore
+    if (Platform.OS === 'android') {
+      if (playbackVibrationState.timeout) {
+        clearTimeout(playbackVibrationState.timeout);
+        playbackVibrationState.timeout = null;
       }
-      const pulse = Math.max(15, Math.round(durationMs));
-      Vibration.vibrate(pulse);
-      recordOnce({ dispatch: 'vibration', pulseMs: pulse });
-      return;
+      if (typeof durationMs === 'number') {
+        const baseDuration = Math.max(20, durationMs);
+        const extra = symbol === '-' ? 40 : 20;
+        const minDuration = symbol === '-' ? 140 : 50;
+        const maxDuration = symbol === '-' ? 360 : 180;
+        const targetDuration = Math.max(
+          minDuration,
+          Math.min(Math.round(baseDuration + extra), maxDuration),
+        );
+
+        try {
+          Vibration.cancel();
+        } catch {
+          // ignore
+        }
+        let vibrated = false;
+        try {
+          Vibration.vibrate([0, targetDuration]);
+          vibrated = true;
+        } catch {
+          // ignore
+        }
+        if (!vibrated) {
+          try {
+            Vibration.vibrate(targetDuration);
+            vibrated = true;
+          } catch {
+            // ignore
+          }
+        }
+        playbackVibrationState.timeout = setTimeout(() => {
+          try {
+            Vibration.cancel();
+          } catch {
+            // ignore
+          }
+          playbackVibrationState.timeout = null;
+        }, targetDuration + 40);
+        recordOnce({
+          dispatch: 'vibration',
+          pulseMs: targetDuration,
+          symbol,
+          requestedDurationMs: durationMs,
+        });
+        return;
+      }
     }
 
     const style = symbol === '-' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light;
@@ -663,13 +718,19 @@ const defaultOutputsService: OutputsService = {
     }
   },
 
-  async playMorse({ morse, unitMs, onSymbolStart, source }: PlayMorseOptions) {
+  async playMorse({ morse, unitMs, onSymbolStart, source, audioEnabled, audioVolumePercent }: PlayMorseOptions) {
     const playbackSource = source ?? 'replay';
+    const resolvedAudioEnabled = audioEnabled ?? true;
+    const resolvedVolumePercent = clampVolumePercent(audioVolumePercent);
+    const volumeScalar = clampPercentToScalar(resolvedVolumePercent);
+    const effectiveAudioEnabled = resolvedAudioEnabled && volumeScalar > 0;
     const startedAt = nowMs();
     traceOutputs('playMorse.start', {
       unitMs,
       length: morse.length,
       source: playbackSource,
+      audioEnabled: resolvedAudioEnabled,
+      audioVolumePercent: resolvedVolumePercent,
     });
 
     let symbolIndex = 0;
@@ -703,15 +764,23 @@ const defaultOutputsService: OutputsService = {
     };
 
     try {
-      await playMorseCode(morse, unitMs, { onSymbolStart: symbolTracker });
+      await playMorseCode(morse, unitMs, {
+        onSymbolStart: symbolTracker,
+        audioEnabled: effectiveAudioEnabled,
+        audioVolumePercent: resolvedVolumePercent,
+      });
       traceOutputs('playMorse.complete', {
         durationMs: nowMs() - startedAt,
         source: playbackSource,
+        audioEnabled: resolvedAudioEnabled,
+        audioVolumePercent: resolvedVolumePercent,
       });
     } catch (error) {
       traceOutputs('playMorse.error', {
         message: error instanceof Error ? error.message : String(error),
         source: playbackSource,
+        audioEnabled: resolvedAudioEnabled,
+        audioVolumePercent: resolvedVolumePercent,
       });
       throw error;
     }
