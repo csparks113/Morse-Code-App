@@ -8,6 +8,8 @@ type FlashOverlayProps = {
   maxOpacity?: number;
   color?: string;
   style?: StyleProp<ViewStyle>;
+  zIndex?: number;
+  elevation?: number;
 };
 
 function FlashOverlay({
@@ -15,6 +17,8 @@ function FlashOverlay({
   maxOpacity = 0.28,
   color = theme.colors.textPrimary,
   style,
+  zIndex = 0,
+  elevation = 0,
 }: FlashOverlayProps) {
   const animatedOpacity = React.useMemo(
     () =>
@@ -30,7 +34,12 @@ function FlashOverlay({
       pointerEvents="none"
       style={[
         StyleSheet.absoluteFillObject,
-        { backgroundColor: color, opacity: animatedOpacity, zIndex: 10, elevation: 10 },
+        {
+          backgroundColor: color,
+          opacity: animatedOpacity,
+          zIndex,
+          elevation,
+        },
         style,
       ]}
     />

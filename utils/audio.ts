@@ -49,7 +49,9 @@ import type { OutputsAudio, PlaybackSymbol } from '@/outputs-native/audio.nitro'
 import { nowMs } from '@/utils/time';
 
 
-type NitroModulesExports = typeof import('react-native-nitro-modules');
+type NitroModulesExports = typeof import('react-native-nitro-modules') & {
+  ModuleNotFoundError?: new (...args: any[]) => Error;
+};
 
 let nitroModules: NitroModulesExports | null = null;
 let nitroModulesAttempted = false;
@@ -168,11 +170,11 @@ function loadOutputsAudio(): OutputsAudio | null {
     outputsAudioModule = null;
     return outputsAudioModule;
   }
-  const { NitroModules, ModuleNotFoundError } = nitro;
+  const { NitroModules } = nitro;
   const moduleNotFoundCtor =
-    typeof ModuleNotFoundError === 'function' ? ModuleNotFoundError : null;
+    typeof nitro.ModuleNotFoundError === 'function' ? nitro.ModuleNotFoundError : null;
   try {
-    const instance = NitroModules.createHybridObject<OutputsAudio>('OutputsAudio');
+    const instance = NitroModules.createHybridObject('OutputsAudio') as unknown as OutputsAudio | null;
     if (instance?.isSupported?.() === true) {
       outputsAudioModule = instance;
     } else {

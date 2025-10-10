@@ -90,7 +90,7 @@ export default function LessonPath({ groupId, lessons }: Props) {
   }, [lessons]);
 
   // Per-node sticky state
-  const nodeStates = React.useMemo(() => {
+  const nodeStates = React.useMemo<Array<{ key: string; receiveDone: boolean; sendDone: boolean }>>(() => {
     return derivedNodes.map((node) => {
       const key =
         node.kind === 'lesson' ? String((node as any).lessonNumber)
@@ -99,7 +99,7 @@ export default function LessonPath({ groupId, lessons }: Props) {
       const p = getEntry(key);
       return { key, receiveDone: p.receiveDone, sendDone: p.sendDone };
     });
-  }, [derivedNodes, getEntry, nodeStates]);
+  }, [derivedNodes, getEntry]);
 
   // Availability (gating)
   const availability = React.useMemo(() => {
