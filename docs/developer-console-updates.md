@@ -33,3 +33,9 @@ The developer-mode console now exposes a richer toolset for verifying the Nitro-
 - **Keyer classification**: send mode occasionally mislabels dot-leading sequences at higher WPM; pair console metrics with `keyer.classification` traces while refining thresholds.
 
 Keep this document handy when onboarding contributors or triaging output issues; everything above is in place and ready for further tuning ahead of the Outputs Service rewire.
+
+## Ignore Press Indicator (2025-10-09)
+- **Location**: Developer Console → Diagnostics block (beneath the Torch availability badge).
+- **Display**: Shows whether `ignorePressRef` is active. When active, the indicator highlights the reason (e.g., `gap.nonIntra`) and the current press ID.
+- **Telemetry hook**: The console subscribes to `session.send.ignorePress.set` traces via `traceOutputs`, which now updates a live `ignorePressState` slice in the developer store.
+- **Usage**: Lets testers confirm, at a glance, when the send keyer has entered “ignore” mode without scanning logcat. The indicator resets automatically once the session re-enables interaction.

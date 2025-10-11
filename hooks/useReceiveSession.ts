@@ -8,6 +8,7 @@ import { useOutputsService, type PlaybackSymbolContext, resolvePlaybackRequested
 import { getMorseUnitMs } from '@/utils/audio';
 import { toMorse } from '@/utils/morse';
 import { useProgressStore } from '@/store/useProgressStore';
+import { scheduleMonotonic } from '@/utils/scheduling';
 
 export const TOTAL_RECEIVE_QUESTIONS = 5;
 
@@ -182,17 +183,15 @@ export function useReceiveSession({
         audioEnabled,
         audioVolumePercent,
         onSymbolStart: (symbol, duration, context) => {
-          if (flashOffsetMs > 0) {
-            setTimeout(() => runFlash(duration, context), flashOffsetMs);
-          } else {
-            runFlash(duration, context);
-          }
-
-          if (hapticOffsetMs > 0) {
-            setTimeout(() => hapticTick(symbol, duration, context), hapticOffsetMs);
-          } else {
-            hapticTick(symbol, duration, context);
-          }
+          const playbackStart = resolvePlaybackRequestedAt(context);
+          scheduleMonotonic(
+            () => runFlash(duration, context),
+            { startMs: playbackStart, offsetMs: flashOffsetMs },
+          );
+          scheduleMonotonic(
+            () => hapticTick(symbol, duration, context),
+            { startMs: playbackStart, offsetMs: hapticOffsetMs },
+          );
         },
       });
     } finally {

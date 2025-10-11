@@ -2,6 +2,7 @@ import React from 'react';
 import { Animated } from 'react-native';
 
 import type { PressTracker } from '@/services/latency/pressTracker';
+import { toMonotonicTime } from '@/utils/time';
 import { defaultOutputsService } from './defaultOutputsService';
 
 export type MorseSymbol = '.' | '-';
@@ -37,6 +38,7 @@ export type PlaybackSymbolContext = {
   nativeDurationMs?: number | null;
   nativeOffsetMs?: number | null;
   nativeSequence?: number | null;
+  monotonicTimestampMs?: number | null;
 };
 
 export type PlayMorseOptions = {
@@ -78,8 +80,11 @@ export function resolvePlaybackRequestedAt(context?: PlaybackSymbolContext): num
   if (!context) {
     return undefined;
   }
+  if (typeof context.monotonicTimestampMs === 'number') {
+    return context.monotonicTimestampMs;
+  }
   if (typeof context.nativeTimestampMs === 'number') {
-    return context.nativeTimestampMs;
+    return toMonotonicTime(context.nativeTimestampMs);
   }
   if (typeof context.requestedAtMs === 'number') {
     return context.requestedAtMs;
@@ -103,6 +108,9 @@ export function buildPlaybackMetadata(context?: PlaybackSymbolContext): Record<s
   }
   if (typeof context.nativeSequence === 'number') {
     metadata.nativeSequence = context.nativeSequence;
+  }
+  if (typeof context.monotonicTimestampMs === 'number') {
+    metadata.monotonicTimestampMs = context.monotonicTimestampMs;
   }
   return Object.keys(metadata).length > 0 ? metadata : undefined;
 }

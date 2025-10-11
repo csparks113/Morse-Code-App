@@ -46,7 +46,7 @@ import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { AudioContext as AudioApiContext, GainNode as AudioApiGainNode, OscillatorNode as AudioApiOscillatorNode } from 'react-native-audio-api';
 import type { OutputsAudio, PlaybackSymbol } from '@/outputs-native/audio.nitro';
-import { nowMs } from '@/utils/time';
+import { nowMs, toMonotonicTime } from '@/utils/time';
 
 
 type NitroModulesExports = typeof import('react-native-nitro-modules') & {
@@ -211,6 +211,7 @@ export type NativeSymbolTimingContext = {
   nativeDurationMs: number | null;
   nativeSequence: number | null;
   nativeOffsetMs: number | null;
+  monotonicTimestampMs: number | null;
 };
 
 export type PlayOpts = {
@@ -987,8 +988,10 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
             const timestampMs = typeof info.timestampMs === 'number' ? info.timestampMs : null;
             const durationMs = typeof info.durationMs === 'number' ? info.durationMs : null;
             let offsetMs: number | null = null;
+            let monotonicTimestampMs: number | null = null;
             if (timestampMs != null) {
-              offsetMs = nowMs() - timestampMs;
+              monotonicTimestampMs = toMonotonicTime(timestampMs);
+              offsetMs = nowMs() - monotonicTimestampMs;
               nativeOffsetMs = offsetMs;
             }
             return {
@@ -996,6 +999,7 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
               nativeDurationMs: durationMs,
               nativeSequence,
               nativeOffsetMs: nativeOffsetMs ?? offsetMs,
+              monotonicTimestampMs,
             };
           }
         } catch (parseError) {
@@ -1025,10 +1029,12 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
     opts.onSymbolStart?.(symbol, duration, nativeTiming ?? undefined);
 
     const nativeTimestampMs = nativeTiming?.nativeTimestampMs ?? null;
+    const monotonicTimestampMs = nativeTiming?.monotonicTimestampMs ?? null;
     const nativeDurationMs = nativeTiming?.nativeDurationMs != null && nativeTiming.nativeDurationMs > 0
       ? nativeTiming.nativeDurationMs
       : duration;
-    const symbolEndTargetMs = nativeTimestampMs != null ? nativeTimestampMs + nativeDurationMs : null;
+    const symbolEndTargetMs =
+      monotonicTimestampMs != null ? monotonicTimestampMs + nativeDurationMs : null;
 
     if (symbolEndTargetMs != null) {
       const waitMs = symbolEndTargetMs - nowMs();

@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { playMorseCode, stopPlayback, createToneController } from '@/utils/audio';
 import type { NativeSymbolTimingContext } from '@/utils/audio';
 import { acquireTorch, releaseTorch, resetTorch, isTorchAvailable, forceTorchOff } from '@/utils/torch';
-import { nowMs } from '@/utils/time';
+import { nowMs, toMonotonicTime } from '@/utils/time';
 import { traceOutputs } from './trace';
 import { updateTorchSupport, recordTorchPulse, recordTorchFailure } from '@/store/useOutputsDiagnosticsStore';
 import { recordLatencySample } from '@/store/useOutputsLatencyStore';
@@ -59,6 +59,33 @@ const playbackVibrationState: {
 
 const WATCHDOG_PRESS_TIMEOUT_MS = 4000;
 
+const NATIVE_OFFSET_SPIKE_THRESHOLD_MS = 80;
+
+function normalizeTimelineOffset(value?: number | null): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null;
+  }
+  if (value <= 0) {
+    return null;
+  }
+  return value;
+}
+
+function applyTimelineOffset(requestedAt: number, timelineOffsetMs?: number | null): number {
+  const offset = normalizeTimelineOffset(timelineOffsetMs);
+  if (offset == null) {
+    return requestedAt;
+  }
+  return requestedAt + offset;
+}
+
+type TorchScheduleOptions = {
+  timelineOffsetMs?: number | null;
+  source?: string;
+  correlationId?: string | null;
+  torchEnabled?: boolean;
+};
+
 function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?: KeyerOutputsContext): KeyerOutputsHandle {
   let options: KeyerOutputsOptions = { ...initialOptions };
   const contextSource = context?.source ?? 'unspecified';
@@ -87,6 +114,8 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   let toneActive = false;
   let torchActive = false;
   let flashActive = false;
+  let torchTimeout: ReturnType<typeof setTimeout> | null = null;
+  let torchScheduleInfo: TorchScheduleOptions | null = null;
 
   const shouldWatchdog = contextSource.startsWith('console.');
   let pressWatchdog: ReturnType<typeof setTimeout> | null = null;
@@ -98,11 +127,20 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     }
   }
 
+  function clearTorchTimeout(): void {
+    if (torchTimeout) {
+      clearTimeout(torchTimeout);
+      torchTimeout = null;
+    }
+  }
+
   function cutActiveOutputs(
     reason = 'unspecified',
     metadata?: Record<string, string | number | boolean>,
   ): void {
     clearPressWatchdog();
+    clearTorchTimeout();
+    clearTorchTimeout();
     const forcedAt = nowMs();
     const currentPress = activePress;
     const holdMs = currentPress ? Math.max(0, forcedAt - currentPress.startedAtMs) : null;
@@ -114,7 +152,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       flashOff(forcedAt);
       stopHaptics(forcedAt);
       if (torchActive) {
-        disableTorch(forcedAt).catch(() => {});
+        disableTorch(forcedAt, { source: contextSource }).catch(() => {});
       }
       stopTone(forcedAt).catch(() => {});
       pressTracker.reset();
@@ -349,18 +387,29 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     }
   };
 
-  const enableTorch = async (startedAt: number) => {
+  const enableTorch = async (startedAt: number, options?: TorchScheduleOptions) => {
     const supported = isTorchAvailable();
     updateTorchSupport(supported);
-    if (!options.torchEnabled || torchActive || !supported) return;
+    const torchAllowed = options?.torchEnabled ?? true;
+    if (!torchAllowed || torchActive || !supported) return;
     torchActive = true;
+    torchScheduleInfo = options ?? null;
     try {
       await acquireTorch();
-      const latencyMs = nowMs() - startedAt;
+      const normalizedOffset = normalizeTimelineOffset(options?.timelineOffsetMs);
+      const effectiveStartedAt = applyTimelineOffset(startedAt, normalizedOffset);
+      const latencyMs = nowMs() - effectiveStartedAt;
       traceOutputs('keyer.torch.start', {
         latencyMs,
+        source: options?.source ?? contextSource,
+        correlationId: options?.correlationId ?? null,
+        timelineOffsetMs: normalizedOffset,
       });
-      recordChannelLatency('touchToTorch', startedAt, latencyMs);
+      recordChannelLatency('touchToTorch', effectiveStartedAt, latencyMs, {
+        source: options?.source ?? undefined,
+        correlationId: options?.correlationId ?? undefined,
+        metadata: normalizedOffset != null ? { timelineOffsetMs: normalizedOffset } : undefined,
+      });
       recordTorchPulse(latencyMs, 'keyer');
     } catch (error) {
       torchActive = false;
@@ -368,11 +417,15 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     }
   };
 
-  const disableTorch = async (endedAt: number) => {
+  const disableTorch = async (endedAt: number, options?: TorchScheduleOptions) => {
     if (!torchActive) return;
+    const scheduleInfo = options ?? torchScheduleInfo ?? null;
     torchActive = false;
+    torchScheduleInfo = null;
     let releaseFailed = false;
     let releaseMessage: string | null = null;
+    const normalizedOffset = normalizeTimelineOffset(scheduleInfo?.timelineOffsetMs);
+    const effectiveEndedAt = applyTimelineOffset(endedAt, normalizedOffset);
     try {
       await releaseTorch();
     } catch (error) {
@@ -403,12 +456,15 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     }
 
     traceOutputs('keyer.torch.stop', {
-      latencyMs: Math.max(0, nowMs() - endedAt),
+      latencyMs: Math.max(0, nowMs() - effectiveEndedAt),
       fallback: releaseFailed || forceOffFailed ? 'forceOff' : 'none',
       releaseFailed,
       releaseMessage,
       forceOffFailed,
       forceOffMessage,
+      source: scheduleInfo?.source ?? contextSource,
+      correlationId: scheduleInfo?.correlationId ?? null,
+      timelineOffsetMs: normalizedOffset,
     });
   };
 
@@ -436,6 +492,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   const teardown = async () => {
     traceOutputs('keyer.teardown');
     clearPressWatchdog();
+    clearTorchTimeout();
     stopHaptics(nowMs());
     if (hapticInterval) {
       clearInterval(hapticInterval);
@@ -460,14 +517,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     }
     flashOpacity.setValue(0);
 
-    if (torchActive) {
-      torchActive = false;
-      try {
-        await releaseTorch();
-      } catch {
-        // ignore
-      }
-    }
+    await disableTorch(nowMs(), { source: contextSource }).catch(() => {});
     try {
       await forceTorchOff();
     } catch {
@@ -494,7 +544,13 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     flashOn(startedAt);
     startHaptics(startedAt);
     if (options.torchEnabled) {
-      enableTorch(startedAt).catch(() => {});
+      const torchOptions: TorchScheduleOptions = {
+        source: contextSource,
+        correlationId: press.id,
+        torchEnabled: true,
+        timelineOffsetMs: null,
+      };
+      enableTorch(startedAt, torchOptions).catch(() => {});
     }
     startTone(startedAt).catch(() => {});
     schedulePressWatchdog(startedAt);
@@ -502,6 +558,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
 
   const pressEnd = (timestampMs?: number) => {
     clearPressWatchdog();
+    clearTorchTimeout();
     const currentPress = activePress;
     const completed = pressTracker.end(typeof timestampMs === 'number' ? timestampMs : undefined);
     activePress = null;
@@ -520,7 +577,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     flashOff(endedAt);
     stopHaptics(endedAt);
     if (torchActive) {
-      disableTorch(endedAt).catch(() => {});
+      disableTorch(endedAt, { source: contextSource, correlationId: currentPress?.id ?? null }).catch(() => {});
     }
     stopTone(endedAt).catch(() => {});
   };
@@ -546,7 +603,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       flashOpacity.setValue(0);
     }
     if (!options.torchEnabled && torchActive) {
-      disableTorch(nowMs()).catch(() => {});
+      disableTorch(nowMs(), { source: contextSource }).catch(() => {});
     }
   };
 
@@ -566,34 +623,53 @@ const defaultOutputsService: OutputsService = {
     return new Animated.Value(0);
   },
 
-  flashPulse({ enabled, durationMs, flashValue, source, requestedAtMs, correlationId, metadata }: FlashPulseOptions) {
+  flashPulse({
+    enabled,
+    durationMs,
+    flashValue,
+    source,
+    requestedAtMs,
+    timelineOffsetMs,
+    correlationId,
+    metadata,
+  }: FlashPulseOptions) {
     const eventSource = source ?? 'unspecified';
+    const normalizedTimelineOffset = normalizeTimelineOffset(timelineOffsetMs);
     traceOutputs('outputs.flashPulse', {
       enabled,
       durationMs,
       source: eventSource,
       correlationId: correlationId ?? null,
+      timelineOffsetMs: normalizedTimelineOffset,
     });
 
     if (!enabled) return;
 
     const requestedAt =
       typeof requestedAtMs === 'number' && Number.isFinite(requestedAtMs) ? requestedAtMs : nowMs();
-    const sampleMetadata = { durationMs, ...(metadata ?? {}) };
+    const effectiveRequestedAt = applyTimelineOffset(requestedAt, normalizedTimelineOffset);
+    const sampleMetadata = {
+      durationMs,
+      ...(metadata ?? {}),
+      ...(normalizedTimelineOffset != null
+        ? { timelineOffsetMs: normalizedTimelineOffset }
+        : {}),
+    };
     const { fadeMs, holdMs } = computeFlashTimings(durationMs);
 
     const startSequence = () => {
       flashValue.setValue(1);
       const commitAt = nowMs();
-      const latencyMs = Math.max(0, commitAt - requestedAt);
+      const latencyMs = Math.max(0, commitAt - effectiveRequestedAt);
       traceOutputs('outputs.flashPulse.commit', {
         durationMs,
         source: eventSource,
         correlationId: correlationId ?? null,
         latencyMs,
+        timelineOffsetMs: normalizedTimelineOffset,
       });
       recordLatencySample('touchToFlash', latencyMs, {
-        requestedAt,
+        requestedAt: effectiveRequestedAt,
         source: eventSource,
         correlationId: correlationId ?? null,
         metadata: sampleMetadata,
@@ -624,10 +700,12 @@ const defaultOutputsService: OutputsService = {
     durationMs,
     source,
     requestedAtMs,
+    timelineOffsetMs,
     correlationId,
     metadata,
   }: HapticSymbolOptions) {
     const eventSource = source ?? 'unspecified';
+    const normalizedTimelineOffset = normalizeTimelineOffset(timelineOffsetMs);
     traceOutputs('outputs.hapticSymbol', {
       enabled,
       symbol,
@@ -635,15 +713,20 @@ const defaultOutputsService: OutputsService = {
       platform: Platform.OS,
       source: eventSource,
       correlationId: correlationId ?? null,
+      timelineOffsetMs: normalizedTimelineOffset,
     });
 
     if (!enabled) return;
 
     const requestedAt =
       typeof requestedAtMs === 'number' && Number.isFinite(requestedAtMs) ? requestedAtMs : nowMs();
+    const effectiveRequestedAt = applyTimelineOffset(requestedAt, normalizedTimelineOffset);
     const baseMetadata: Record<string, string | number | boolean> = {
       ...(metadata ?? {}),
       symbol,
+      ...(normalizedTimelineOffset != null
+        ? { timelineOffsetMs: normalizedTimelineOffset }
+        : {}),
     };
 
     let recorded = false;
@@ -651,9 +734,9 @@ const defaultOutputsService: OutputsService = {
       if (recorded) return;
       recorded = true;
       const commitAt = nowMs();
-      const latencyMs = Math.max(0, commitAt - requestedAt);
+      const latencyMs = Math.max(0, commitAt - effectiveRequestedAt);
       recordLatencySample('touchToHaptic', latencyMs, {
-        requestedAt,
+        requestedAt: effectiveRequestedAt,
         source: eventSource,
         correlationId: correlationId ?? null,
         metadata: { ...baseMetadata, ...(extra ?? {}) },
@@ -771,6 +854,9 @@ const defaultOutputsService: OutputsService = {
       const nativeDurationMs = native?.nativeDurationMs ?? null;
       const nativeOffsetMs = native?.nativeOffsetMs ?? null;
       const nativeSequence = native?.nativeSequence ?? null;
+      const monotonicTimestampMs =
+        native?.monotonicTimestampMs ??
+        (nativeTimestampMs != null ? toMonotonicTime(nativeTimestampMs) : null);
       traceOutputs('playMorse.symbol', {
         symbol,
         durationMs,
@@ -781,7 +867,17 @@ const defaultOutputsService: OutputsService = {
         nativeDurationMs,
         nativeOffsetMs,
         nativeSequence,
+        monotonicTimestampMs,
       });
+      if (nativeOffsetMs != null && Math.abs(nativeOffsetMs) >= NATIVE_OFFSET_SPIKE_THRESHOLD_MS) {
+        traceOutputs('playMorse.nativeOffset.spike', {
+          source: playbackSource,
+          offsetMs: nativeOffsetMs,
+          sequence: nativeSequence,
+          unitMs,
+          correlationId: correlation.id,
+        });
+      }
       symbolIndex += 1;
       onSymbolStart?.(symbol, durationMs, {
         requestedAtMs: correlation.startedAtMs,
@@ -791,6 +887,7 @@ const defaultOutputsService: OutputsService = {
         nativeDurationMs,
         nativeOffsetMs,
         nativeSequence,
+        monotonicTimestampMs,
       });
     };
 

@@ -17,6 +17,12 @@ type DeveloperState = {
   outputsTracingEnabled: boolean;
   traces: OutputsTraceEntry[];
   nextTraceId: number;
+  ignorePressState: {
+    value: boolean;
+    reason: string | null;
+    activePressId: string | null;
+    changedAtMs: number | null;
+  };
   manualTriggers: KeyerOutputsOptions;
   manualPattern: string;
   manualWpm: number;
@@ -24,6 +30,7 @@ type DeveloperState = {
   setOutputsTracingEnabled: (enabled: boolean) => void;
   appendTrace: (entry: Omit<OutputsTraceEntry, 'id'>) => void;
   clearTraces: () => void;
+  setIgnorePressState: (state: Partial<DeveloperState['ignorePressState']>) => void;
   setManualTriggers: (partial: Partial<KeyerOutputsOptions>) => void;
   setManualPattern: (pattern: string) => void;
   setManualWpm: (wpm: number) => void;
@@ -50,6 +57,12 @@ export const useDeveloperStore = create<DeveloperState>()(
       outputsTracingEnabled: false,
       traces: [],
       nextTraceId: 1,
+      ignorePressState: {
+        value: false,
+        reason: null,
+        activePressId: null,
+        changedAtMs: null,
+      },
       manualTriggers: createDefaultManualTriggers(),
       manualPattern: DEFAULT_PATTERN,
       manualWpm: DEFAULT_WPM,
@@ -59,6 +72,7 @@ export const useDeveloperStore = create<DeveloperState>()(
             return {
               developerMode: true,
               outputsTracingEnabled: state.outputsTracingEnabled,
+              ignorePressState: state.ignorePressState,
             };
           }
 
@@ -67,6 +81,12 @@ export const useDeveloperStore = create<DeveloperState>()(
             outputsTracingEnabled: false,
             traces: [],
             nextTraceId: 1,
+            ignorePressState: {
+              value: false,
+              reason: null,
+              activePressId: null,
+              changedAtMs: null,
+            },
             manualTriggers: createDefaultManualTriggers(),
             manualPattern: DEFAULT_PATTERN,
             manualWpm: DEFAULT_WPM,
@@ -82,6 +102,12 @@ export const useDeveloperStore = create<DeveloperState>()(
             : {
                 traces: [],
                 nextTraceId: 1,
+                ignorePressState: {
+                  value: false,
+                  reason: null,
+                  activePressId: null,
+                  changedAtMs: null,
+                },
               }),
         }));
       },
@@ -114,6 +140,14 @@ export const useDeveloperStore = create<DeveloperState>()(
         });
       },
       clearTraces: () => set({ traces: [], nextTraceId: 1 }),
+      setIgnorePressState: (partial) => {
+        set((state) => ({
+          ignorePressState: {
+            ...state.ignorePressState,
+            ...partial,
+          },
+        }));
+      },
       setManualTriggers: (partial) => {
         set((state) => ({
           manualTriggers: { ...state.manualTriggers, ...partial },

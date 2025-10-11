@@ -14,6 +14,8 @@ $audioToFlash = New-Object System.Collections.Generic.List[double]
 $audioToCommit = New-Object System.Collections.Generic.List[double]
 $hapticToFlash = New-Object System.Collections.Generic.List[double]
 $flashToCommit = New-Object System.Collections.Generic.List[double]
+$audioToTone = New-Object System.Collections.Generic.List[double]
+$audioToTorchReset = New-Object System.Collections.Generic.List[double]
 
 $symbolSamples = @()
 
@@ -95,10 +97,28 @@ foreach ($line in Get-Content -Path $LogFile) {
 
     $logTime = [datetime]::ParseExact("$year $md $time", 'yyyy MM-dd HH:mm:ss.fff', [System.Globalization.CultureInfo]::InvariantCulture)
 
-    if ($tag -eq 'OutputsAudio' -and $message -match '\[outputs-audio\]\s+start') {
-        $lastAudioStart = $logTime
-        continue
+if ($tag -eq 'OutputsAudio' -and $message -match '\[outputs-audio\]\s+start') {
+    $deltaHaptic = $null
+    if ($lastHaptic) {
+        $delta = ($logTime - $lastHaptic.LogTime).TotalMilliseconds
+        if ($delta -ge 0 -and $delta -lt 5000) {
+            Add-Stat $audioToHaptic $delta
+            $deltaHaptic = $delta
+        }
     }
+    $deltaFlash = $null
+    if ($lastFlash) {
+        $deltaFlash = ($logTime - $lastFlash.LogTime).TotalMilliseconds
+        if ($deltaFlash -ge 0 -and $deltaFlash -lt 5000) {
+            Add-Stat $audioToFlash $deltaFlash
+        }
+    }
+    if ($deltaFlash -ne $null -and $deltaHaptic -ne $null) {
+        Add-Stat $hapticToFlash ($deltaFlash - $deltaHaptic)
+    }
+    $lastAudioStart = $logTime
+    continue
+}
 
     if ($tag -ne 'ReactNativeJS') { continue }
 
@@ -110,34 +130,36 @@ foreach ($line in Get-Content -Path $LogFile) {
         continue
     }
 
-    if ($message -match '\[outputs\]\s+outputs\.hapticSymbol') {
-        $timestampMs = Parse-TimestampMs $message
-        if ($lastAudioStart) {
-            Add-Stat $audioToHaptic (($logTime - $lastAudioStart).TotalMilliseconds)
-        }
-        $lastHaptic = [pscustomobject]@{ TimestampMs = $timestampMs; LogTime = $logTime }
-        continue
-    }
+if ($message -match '\[outputs\]\s+(outputs\.hapticSymbol|keyer\.haptics\.start)') {
+    $timestampMs = Parse-TimestampMs $message
+    $lastHaptic = [pscustomobject]@{ TimestampMs = $timestampMs; LogTime = $logTime }
+    continue
+}
 
-    if ($message -match '\[outputs\]\s+outputs\.flashPulse' -and $message -notmatch 'outputs\.flashPulse\.commit') {
-        $timestampMs = Parse-TimestampMs $message
-        if ($lastAudioStart) {
-            Add-Stat $audioToFlash (($logTime - $lastAudioStart).TotalMilliseconds)
-        }
-        if ($lastHaptic -and $null -ne $timestampMs -and $null -ne $lastHaptic.TimestampMs) {
-            Add-Stat $hapticToFlash ($timestampMs - $lastHaptic.TimestampMs)
-        }
-        $lastFlash = [pscustomobject]@{ TimestampMs = $timestampMs; LogTime = $logTime }
-        continue
-    }
+if ($message -match '\[outputs\]\s+(outputs\.flashPulse(?!\.commit)|keyer\.flash\.start)') {
+    $timestampMs = Parse-TimestampMs $message
+    $lastFlash = [pscustomobject]@{ TimestampMs = $timestampMs; LogTime = $logTime }
+    continue
+}
 
-    if ($message -match '\[outputs\]\s+outputs\.flashPulse\.commit') {
+    if ($message -match '\[outputs\]\s+(outputs\.flashPulse\.commit|keyer\.torch\.reset)') {
         $timestampMs = Parse-TimestampMs $message
+        $isTorchReset = $message -match 'keyer\.torch\.reset'
         if ($lastAudioStart) {
             Add-Stat $audioToCommit (($logTime - $lastAudioStart).TotalMilliseconds)
+            if ($isTorchReset) {
+                Add-Stat $audioToTorchReset (($logTime - $lastAudioStart).TotalMilliseconds)
+            }
         }
         if ($lastFlash -and $null -ne $timestampMs -and $null -ne $lastFlash.TimestampMs) {
             Add-Stat $flashToCommit ($timestampMs - $lastFlash.TimestampMs)
+        }
+        continue
+    }
+
+    if ($message -match '\[outputs\]\s+keyer\.tone\.start') {
+        if ($lastAudioStart) {
+            Add-Stat $audioToTone (($logTime - $lastAudioStart).TotalMilliseconds)
         }
         continue
     }
@@ -181,12 +203,14 @@ $stats = @()
 $stats += Get-Stats 'audio -> haptic (ms)' $audioToHaptic
 $stats += Get-Stats 'audio -> flash (ms)' $audioToFlash
 $stats += Get-Stats 'audio -> flash commit (ms)' $audioToCommit
+$stats += Get-Stats 'audio -> tone (ms)' $audioToTone
+$stats += Get-Stats 'audio -> torch reset (ms)' $audioToTorchReset
 $stats += Get-Stats 'haptic -> flash (ms)' $hapticToFlash
 $stats += Get-Stats 'flash -> commit (ms)' $flashToCommit
 
 $table = $stats | Format-Table -AutoSize | Out-String -Width 200
 Write-Host $table
-Write-Host ("Raw counts: audio->flash={0} haptic->flash={1}" -f $audioToFlash.Count, $hapticToFlash.Count)
+Write-Host ("Raw counts: audio->flash={0} haptic->flash={1} audio->tone={2} audio->torchReset={3}" -f $audioToFlash.Count, $hapticToFlash.Count, $audioToTone.Count, $audioToTorchReset.Count)
 
 $nonNullSamples = $symbolSamples | Where-Object { $_.NativeTimestampMs -ne $null }
 $nativeSymbolCount = $nonNullSamples.Count

@@ -33,6 +33,8 @@ import {
   type LatencyChannel,
 } from '@/store/useOutputsLatencyStore';
 import FlashOverlay from '@/components/session/FlashOverlay';
+import { nowMs } from '@/utils/time';
+import { scheduleMonotonic } from '@/utils/scheduling';
 
 const TIMESTAMP_DECIMALS = 1;
 const EXPORT_LIMIT = 200;
@@ -143,6 +145,7 @@ export default function DeveloperConsoleScreen() {
   const setManualPattern = useDeveloperStore((state) => state.setManualPattern);
   const manualWpm = useDeveloperStore((state) => state.manualWpm);
   const setManualWpm = useDeveloperStore((state) => state.setManualWpm);
+  const ignorePressState = useDeveloperStore((state) => state.ignorePressState);
 
   const flashOffsetMs = useSettingsStore((state) => state.flashOffsetMs);
   const setFlashOffsetMs = useSettingsStore((state) => state.setFlashOffsetMs);
@@ -197,6 +200,21 @@ export default function DeveloperConsoleScreen() {
     }),
     [toneLatencyStats, hapticLatencyStats, flashLatencyStats, torchLatencyStats],
   );
+
+  const ignorePressSummary = React.useMemo(() => {
+    if (!ignorePressState.value) {
+      return { label: 'Inactive', details: null as string | null };
+    }
+    const parts: string[] = [];
+    if (ignorePressState.reason) parts.push(ignorePressState.reason);
+    if (ignorePressState.activePressId) parts.push(`Press ${ignorePressState.activePressId}`);
+    const label = parts.length > 0 ? parts.join(' • ') : 'Active';
+    const details =
+      ignorePressState.changedAtMs != null
+        ? `Updated ${Math.round(Math.max(0, nowMs() - ignorePressState.changedAtMs))} ms ago`
+        : null;
+    return { label, details };
+  }, [ignorePressState]);
 
   const trimmedTorchFailureReason = React.useMemo(() => torchFailureReason?.trim() || null, [torchFailureReason]);
 
@@ -315,25 +333,30 @@ export default function DeveloperConsoleScreen() {
         audioVolumePercent: manualOptions.audioVolumePercent,
         onSymbolStart: (symbol, durationMs, context) => {
           const requestedAtMs = resolvePlaybackRequestedAt(context);
+          const timelineOffsetMs = context?.nativeOffsetMs ?? undefined;
           const metadata = buildPlaybackMetadata(context);
-          outputs.hapticSymbol({
-            enabled: manualOptions.hapticsEnabled,
-            symbol,
-            durationMs,
-            source: context?.source ?? 'console.replay',
-            requestedAtMs,
-            correlationId: context?.correlationId,
-            metadata,
-          });
-          outputs.flashPulse({
-            enabled: manualOptions.lightEnabled,
-            durationMs,
-            flashValue: manualFlashValue,
-            source: context?.source ?? 'console.replay',
-            requestedAtMs,
-            correlationId: context?.correlationId,
-            metadata,
-          });
+          scheduleMonotonic(() => {
+            outputs.hapticSymbol({
+              enabled: manualOptions.hapticsEnabled,
+              symbol,
+              durationMs,
+              source: context?.source ?? 'console.replay',
+              requestedAtMs,
+              timelineOffsetMs,
+              correlationId: context?.correlationId,
+              metadata,
+            });
+            outputs.flashPulse({
+              enabled: manualOptions.lightEnabled,
+              durationMs,
+              flashValue: manualFlashValue,
+              source: context?.source ?? 'console.replay',
+              requestedAtMs,
+              timelineOffsetMs,
+              correlationId: context?.correlationId,
+              metadata,
+            });
+          }, { startMs: requestedAtMs });
         },
       });
     } catch (error) {
@@ -757,6 +780,21 @@ export default function DeveloperConsoleScreen() {
                 </Text>
               </View>
 
+              <View style={styles.consoleMeta}>
+                <Text style={styles.consoleMetaLabel}>Ignore press</Text>
+                <Text
+                  style={[
+                    styles.consoleMetaValue,
+                    ignorePressState.value && styles.consoleMetaWarning,
+                  ]}
+                >
+                  {ignorePressSummary.label}
+                </Text>
+              </View>
+              {ignorePressSummary.details ? (
+                <Text style={styles.consoleMetaSubtle}>{ignorePressSummary.details}</Text>
+              ) : null}
+
               <View style={styles.manualToggleRow}>
                 <View style={styles.manualToggleItem}>
                   <Text style={styles.manualToggleLabel}>Audio</Text>
@@ -1133,6 +1171,11 @@ const styles = StyleSheet.create({
   },
   consoleMetaWarning: {
     color: theme.colors.accent,
+  },
+  consoleMetaSubtle: {
+    color: lessonColors.textDim,
+    fontSize: 12,
+    paddingBottom: spacing(0.25),
   },
   manualToggleRow: {
     flexDirection: 'row',
