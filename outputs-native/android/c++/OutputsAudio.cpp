@@ -64,7 +64,13 @@ OutputsAudio::OutputsAudio()
       mSymbolSequenceConsumed(0),
       mLatestSymbolKind(PlaybackSymbol::Dot),
       mLatestSymbolTimestampMs(0.0),
-      mLatestSymbolDurationMs(0.0) {
+      mLatestSymbolDurationMs(0.0),
+      mPatternStartTimestampMs(0.0),
+      mLatestSymbolExpectedTimestampMs(0.0),
+      mLatestSymbolStartSkewMs(0.0),
+      mLatestSymbolBatchElapsedMs(0.0),
+      mLatestSymbolExpectedSincePriorMs(0.0),
+      mLatestSymbolSincePriorMs(0.0) {
   logEvent("constructor");
 }
 
@@ -344,6 +350,12 @@ void OutputsAudio::resetSymbolInfo() {
   mLatestSymbolKind = PlaybackSymbol::Dot;
   mLatestSymbolTimestampMs = 0.0;
   mLatestSymbolDurationMs = 0.0;
+  mPatternStartTimestampMs = 0.0;
+  mLatestSymbolExpectedTimestampMs = 0.0;
+  mLatestSymbolStartSkewMs = 0.0;
+  mLatestSymbolBatchElapsedMs = 0.0;
+  mLatestSymbolExpectedSincePriorMs = 0.0;
+  mLatestSymbolSincePriorMs = 0.0;
 }
 
 void OutputsAudio::playMorse(const PlaybackRequest& request) {
@@ -396,6 +408,21 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
     }
   };
 
+  const auto toMillis = [](const std::chrono::steady_clock::time_point& timePoint) {
+    return std::chrono::duration<double, std::milli>(timePoint.time_since_epoch()).count();
+  };
+  const auto patternStart = std::chrono::steady_clock::now();
+  const double patternStartMs = toMillis(patternStart);
+  double expectedOffsetMs = 0.0;
+  double previousExpectedStartMs = patternStartMs;
+  double previousActualStartMs = patternStartMs;
+  bool isFirstSymbol = true;
+
+  {
+    std::lock_guard<std::mutex> infoLock(mSymbolInfoMutex);
+    mPatternStartTimestampMs = patternStartMs;
+  }
+
   for (std::size_t i = 0; i < pattern.size(); ++i) {
     if (mPlaybackCancel.load(std::memory_order_acquire)) {
       break;
@@ -406,12 +433,16 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
     const bool isDot = symbolValue == 0;
 
     if (!isDash && !isDot) {
-      const auto gapDeadline = std::chrono::steady_clock::now() + toMicros(unitMs * 3.0);
+      const double invalidGapMs = unitMs * 3.0;
+      expectedOffsetMs += invalidGapMs;
+      const auto gapDeadline = std::chrono::steady_clock::now() + toMicros(invalidGapMs);
       sleepUntil(gapDeadline);
       continue;
     }
 
     const double symbolDurationMs = unitMs * (isDash ? static_cast<double>(kDashUnits) : 1.0);
+    const auto expectedStartTime = patternStart + toMicros(expectedOffsetMs);
+    sleepUntil(expectedStartTime);
 
     ToneStartOptions startOptions;
     startOptions.toneHz = toneHz;
@@ -423,22 +454,54 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
     startToneInternal(startOptions, false);
 
     const auto startedAt = std::chrono::steady_clock::now();
-    const double startedAtMs = std::chrono::duration<double, std::milli>(startedAt.time_since_epoch()).count();
+    const double startedAtMs = toMillis(startedAt);
+    const double expectedStartMs = patternStartMs + expectedOffsetMs;
+    const double startSkewMs = startedAtMs - expectedStartMs;
+    const double batchElapsedMs = startedAtMs - patternStartMs;
+    const double expectedSincePriorMs =
+        isFirstSymbol ? 0.0 : (expectedStartMs - previousExpectedStartMs);
+    const double sincePriorMs = isFirstSymbol ? 0.0 : (startedAtMs - previousActualStartMs);
+    uint64_t sequenceValue = 0;
     {
       std::lock_guard<std::mutex> infoLock(mSymbolInfoMutex);
       mSymbolSequence += 1;
+      sequenceValue = mSymbolSequence;
       mLatestSymbolKind = isDash ? PlaybackSymbol::Dash : PlaybackSymbol::Dot;
       mLatestSymbolTimestampMs = startedAtMs;
       mLatestSymbolDurationMs = symbolDurationMs;
+      mPatternStartTimestampMs = patternStartMs;
+      mLatestSymbolExpectedTimestampMs = expectedStartMs;
+      mLatestSymbolStartSkewMs = startSkewMs;
+      mLatestSymbolBatchElapsedMs = batchElapsedMs;
+      mLatestSymbolExpectedSincePriorMs = expectedSincePriorMs;
+      mLatestSymbolSincePriorMs = sincePriorMs;
     }
+    logEvent("playMorse.symbol.start",
+             "sequence=%llu symbol=%c expected=%.3f actual=%.3f skew=%.3f batchElapsed=%.3f",
+             static_cast<unsigned long long>(sequenceValue),
+             isDash ? '-' : '.',
+             expectedStartMs,
+             startedAtMs,
+             startSkewMs,
+             batchElapsedMs);
+
+    previousExpectedStartMs = expectedStartMs;
+    previousActualStartMs = startedAtMs;
+    isFirstSymbol = false;
 
     const auto symbolDeadline = startedAt + toMicros(symbolDurationMs);
     sleepUntil(symbolDeadline);
 
     stopTone();
 
-    const auto gapDeadline = std::chrono::steady_clock::now() + toMicros(unitMs * kSymbolGapUnits);
-    sleepUntil(gapDeadline);
+    expectedOffsetMs += symbolDurationMs;
+
+    if (i + 1 < pattern.size()) {
+      const auto gapDeadline =
+          std::chrono::steady_clock::now() + toMicros(unitMs * static_cast<double>(kSymbolGapUnits));
+      sleepUntil(gapDeadline);
+      expectedOffsetMs += unitMs * static_cast<double>(kSymbolGapUnits);
+    }
   }
 
   stopTone();
@@ -452,25 +515,39 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
 }
 
 std::string OutputsAudio::getLatestSymbolInfo() {
+  const double fetchedAtMs =
+      std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch())
+          .count();
   std::lock_guard<std::mutex> lock(mSymbolInfoMutex);
   if (mSymbolSequenceConsumed == mSymbolSequence) {
     return {};
   }
   mSymbolSequenceConsumed = mSymbolSequence;
   const char symbolChar = mLatestSymbolKind == PlaybackSymbol::Dash ? '-' : '.';
+  const double ageMs = std::max(0.0, fetchedAtMs - mLatestSymbolTimestampMs);
   std::ostringstream stream;
   stream.setf(std::ios::fixed, std::ios::floatfield);
   stream << "{\"sequence\":" << mSymbolSequence
          << ",\"symbol\":\"" << symbolChar << "\""
          << ",\"timestampMs\":" << std::setprecision(3) << mLatestSymbolTimestampMs
          << ",\"durationMs\":" << std::setprecision(3) << mLatestSymbolDurationMs
+         << ",\"patternStartMs\":" << std::setprecision(3) << mPatternStartTimestampMs
+         << ",\"expectedTimestampMs\":" << std::setprecision(3) << mLatestSymbolExpectedTimestampMs
+         << ",\"startSkewMs\":" << std::setprecision(3) << mLatestSymbolStartSkewMs
+         << ",\"batchElapsedMs\":" << std::setprecision(3) << mLatestSymbolBatchElapsedMs
+         << ",\"expectedSincePriorMs\":" << std::setprecision(3) << mLatestSymbolExpectedSincePriorMs
+         << ",\"sincePriorMs\":" << std::setprecision(3) << mLatestSymbolSincePriorMs
+         << ",\"ageMs\":" << std::setprecision(3) << ageMs
          << "}";
   logEvent("symbol.info",
-           "sequence=%llu symbol=%c timestamp=%.3f duration=%.3f",
+           "sequence=%llu symbol=%c timestamp=%.3f duration=%.3f expected=%.3f skew=%.3f age=%.3f",
            static_cast<unsigned long long>(mSymbolSequence),
            symbolChar,
            mLatestSymbolTimestampMs,
-           mLatestSymbolDurationMs);
+           mLatestSymbolDurationMs,
+           mLatestSymbolExpectedTimestampMs,
+           mLatestSymbolStartSkewMs,
+           ageMs);
   return stream.str();
 }
 

@@ -39,6 +39,13 @@ export type PlaybackSymbolContext = {
   nativeOffsetMs?: number | null;
   nativeSequence?: number | null;
   monotonicTimestampMs?: number | null;
+  nativeExpectedTimestampMs?: number | null;
+  nativeStartSkewMs?: number | null;
+  nativeBatchElapsedMs?: number | null;
+  nativeExpectedSincePriorMs?: number | null;
+  nativeSincePriorMs?: number | null;
+  nativePatternStartMs?: number | null;
+  nativeAgeMs?: number | null;
 };
 
 export type PlayMorseOptions = {
@@ -111,6 +118,27 @@ export function buildPlaybackMetadata(context?: PlaybackSymbolContext): Record<s
   }
   if (typeof context.monotonicTimestampMs === 'number') {
     metadata.monotonicTimestampMs = context.monotonicTimestampMs;
+  }
+  if (typeof context.nativeExpectedTimestampMs === 'number') {
+    metadata.nativeExpectedTimestampMs = context.nativeExpectedTimestampMs;
+  }
+  if (typeof context.nativeStartSkewMs === 'number') {
+    metadata.nativeStartSkewMs = context.nativeStartSkewMs;
+  }
+  if (typeof context.nativeBatchElapsedMs === 'number') {
+    metadata.nativeBatchElapsedMs = context.nativeBatchElapsedMs;
+  }
+  if (typeof context.nativeExpectedSincePriorMs === 'number') {
+    metadata.nativeExpectedSincePriorMs = context.nativeExpectedSincePriorMs;
+  }
+  if (typeof context.nativeSincePriorMs === 'number') {
+    metadata.nativeSincePriorMs = context.nativeSincePriorMs;
+  }
+  if (typeof context.nativePatternStartMs === 'number') {
+    metadata.nativePatternStartMs = context.nativePatternStartMs;
+  }
+  if (typeof context.nativeAgeMs === 'number') {
+    metadata.nativeAgeMs = context.nativeAgeMs;
   }
   return Object.keys(metadata).length > 0 ? metadata : undefined;
 }

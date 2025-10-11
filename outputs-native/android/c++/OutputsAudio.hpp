@@ -84,6 +84,12 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   PlaybackSymbol mLatestSymbolKind;
   double mLatestSymbolTimestampMs;
   double mLatestSymbolDurationMs;
+  double mPatternStartTimestampMs;
+  double mLatestSymbolExpectedTimestampMs;
+  double mLatestSymbolStartSkewMs;
+  double mLatestSymbolBatchElapsedMs;
+  double mLatestSymbolExpectedSincePriorMs;
+  double mLatestSymbolSincePriorMs;
   std::thread mPlaybackThread;
   std::mutex mPlaybackMutex;
   std::atomic<bool> mPlaybackCancel;

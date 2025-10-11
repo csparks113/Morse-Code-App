@@ -12,6 +12,9 @@
 - Rebuilt `scripts/analyze-logcat.ps1` to parse the JSON payloads, correlate `playMorse.symbol` events, and compute channel deltas; fresh runs on `docs/logs/console-replay-20251011-122422-play-pattern.txt` and `docs/logs/send-freeform-20251011-133848-sweep.txt` confirm audio->flash 17 ms / 4.7 ms means with native delays staying inside 86 ms / 57 ms p95.
 - Added an 8 ms scheduling lead inside `services/outputs/defaultOutputsService.flashPulse` so developer-console flash pulses start slightly earlier on the monotonic timeline, targeting tighter audio->flash alignment.
 - Wired `audioStartMs` through the replay path so flash pulses align with the Nitro audio clock before falling back to timeline offsets.
+- Added guardrails around audio-start scheduling (minimum headroom, native skew/age checks, timeline fallback) so we only align to native audio when we have fresh headroom instead of slipping into the 16:12 regression.
+- Added a JS compensation prototype (`audioStartCompensationMs` inside `defaultOutputsService.flashPulse`) that subtracts missing headroom when the guard trips, giving timers an extra (up to 40 ms) lead while we explore native-side batching.
+- Instrumented native playback to expose `expectedTimestampMs`, `startSkewMs`, `batchElapsedMs`, and `ageMs` (see `outputs-native/android/c++/OutputsAudio.cpp` + `utils/audio.ts` + `services/outputs/defaultOutputsService.ts`) so analyzer traces can correlate spike clusters with JS timer skew.
 
 ## Completed (2025-10-09)
 
@@ -41,10 +44,10 @@
 
 ## Next Steps
 
-- Review the spike summary (`docs/logs/spike-summary-play-pattern-20251011.csv`) alongside the 14:14 regression and 14:41/14:46 recovery logs; note any shared correlation IDs that hint at scheduling drift we need to chase.
-- Investigate the 16:12 Play Pattern regression (`docs/logs/console-replay-20251011-161229-play-pattern.txt`): audioStart-driven flash scheduling pushed audio->flash means to 40 ms with 18 spikes >=80 ms and seven missing `nativeTimestampMs`; inspect the new timeline path and `scheduleSkewMs` before keeping the audio clock change.
+- Take a fresh Play Pattern sweep with the guardrails-enabled build and confirm `outputs.flashPulse` now reports `schedulingMode` / `audioStartHeadroomMs`; append the new spikes to `docs/logs/spike-summary-play-pattern-20251011.csv`.
+- Prototype a native-side batching tweak so flash/haptic pulses queue off the Nitro timeline (or hand-off expected timestamps earlier) now that the 17:18 sweep shows `scheduleSkewMs` 60-140 ms even after guardrails.
 - Keep capturing Play Pattern sweeps to confirm the ~24 ms audio->flash baseline holds and watch for new >=80 ms offset clusters.
-- Inspect the new `scheduleSkewMs` field plus the unitMs 34/40/48 spike summary rows—current skew runs ~60-70 ms on those spikes, so plan either a larger JS lead or native scheduler instrumentation to close the gap.
+- Use the new telemetry (`startSkewMs`, `batchElapsedMs`, `nativeAgeMs`) to pinpoint whether the remaining unitMs 30/34/40 spikes stay JS-driven after the native prototype; revert to JS lead experiments only if native adjustments show no gain.
 - If offsets flare again, add focused logging around the replay scheduler paths for unit lengths 60/48/40/34 to pinpoint where extra delay enters.
 - Keep running the JSON-aware analyzer (`scripts/analyze-logcat.ps1`) on each new capture and retire the pre-fix logs once the baseline metrics stay stable.
 - Spot-check future flash-commit spans above ~1 s; the recent outlier mapped to a deliberate 1.74 s hold, so flag any new cases that lack matching long presses.
@@ -126,5 +129,6 @@
 - Completed 2025-10-09: `forceCutOutputs` now runs whenever verdicts queue or sessions end, and the keyer release signal clears button state so outputs never stay latched between questions.
 - Completed 2025-10-08: Added watchdog logging when manual/dev-console handles fail to release tone/flash within expected timeouts (default outputs service records pressTimeout samples and force-cuts handles).
 - Follow up with send/practice flows to ensure the verdict timers cancel pending pressStart correlations before queuing the next prompt (verify practice/send flows honour the cutActiveOutputs path).
+
 
 

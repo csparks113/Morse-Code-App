@@ -13,18 +13,22 @@ Use this document to capture the single source of truth after each working sessi
 - **Automation & Tooling (Codex CLI harness):** Provides local execution environment, log capture scripts, and build automation support.
 
 ## Latest Update
-- **Summary:** Analyzer upgrades still emit the >=80 ms native-offset table and spike CSV, but the audio-clock flash scheduling regressed the 16:12 Play Pattern sweep (`docs/logs/console-replay-20251011-161229-play-pattern.txt`) to ~40 ms audio->flash with 18 spikes (peak 198.7 ms) and seven missing `nativeTimestampMs`. We have reverted flash scheduling back to the timeline offsets while keeping `scheduleSkewMs` and the 15:48/16:12 logs for comparison; `docs/logs/spike-summary-play-pattern-20251011.csv` now lists the new spikes.
-- **State:** Telemetry is still structured, but the latest sweep is out of band; next actions focus on debugging the `audioStartMs` flash path and restoring the ~24 ms baseline.
+- **Summary:** Guardrails now keep `flashPulse` on the timeline whenever audio-start headroom, skew, or age look unsafe (`schedulingMode` + guard metadata now log with every pulse). The latest sweeps (`...165958...`, `...171837...`, `...173500...`) still land around 25 ms audio→flash but keep surfacing unitMs 30/40 spikes (80-120 ms) with `scheduleSkewMs` >60 ms and `audioStartGuard=headroom`, so we’re moving ahead with a native batching / pre-scheduling prototype.
+- **State:** Guard instrumentation is verified, yet JS timers remain the limiting factor; next up is implementing and validating a native-driven pulse scheduler.
 
 ## Next Steps
-1. Review the 16:12 spikes (`scheduleSkewMs`, missing `nativeTimestampMs`) to inform the next adjustment (e.g., native batching/priority queue) now that flash scheduling is back on the timeline.
-2. Append the 16:12 spike rows to `docs/logs/spike-summary-play-pattern-20251011.csv` and check whether any correlation IDs overlap with earlier runs.
-3. Capture another Play Pattern sweep once guardrails/instrumentation land to verify audio->flash mean/p95 return to the mid-20 ms band and confirm `nativeTimestampMs` coverage.
-4. Keep running the JSON-aware analyzer (`scripts/analyze-logcat.ps1`) and retire pre-fix logs once stability holds.
-5. Spot-check future flash-commit spans above ~1 s; the recent 1.83 s commit mapped to a 1.74 s hold, so flag any new cases that lack matching long presses.
-6. Continue watching `playMorse.nativeOffset.spike`; the analyzer now surfaces >=80 ms entries automatically, so bundle fresh logs if clusters persist.
+1. Prototype a native batching/pre-scheduling change in `OutputsAudio` (or a JS predictor backed by native timestamps) so flash/haptic pulses queue ahead of time; rerun the analyzer to confirm unitMs 30/34/40 offsets drop below the 80 ms threshold.
+2. Capture validation sweeps after the prototype lands, verifying `schedulingMode` and `audioStartHeadroomMs` behave as expected, and append the new spike rows to `docs/logs/spike-summary-play-pattern-20251011.csv`.
+3. Keep `docs/logs/spike-summary-play-pattern-20251011.csv` current (16:59/17:18/17:35 entries logged) and add scheduling metadata as the native prototype evolves so recurring correlation IDs stay visible.
+4. Continue running the JSON-aware analyzer on every capture and archive any pre-instrumentation logs once stability holds.
+5. Spot-check future flash-commit spans above ~1 s; the recent 1.83 s commit mapped to a deliberate 1.74 s hold, so flag any new cases that lack matching long presses.
+6. Keep watching `playMorse.nativeOffset.spike`; the analyzer still surfaces >=80 ms entries automatically, so bundle fresh logs if clusters cluster.
 7. Keep torch alignment and high-WPM keyer precision on watch during upcoming sweeps, logging anomalies and proposed tweaks back into `docs/refactor-notes.md`.
 8. Run the iOS bridgeless checklist once Android validation is locked so we confirm Nitro parity across platforms.
+
+## Verification
+- `npm run lint` *(fails)* — command timed out after ESLint attempted to parse generated bundle artifacts (`..bundle.js`, `..virtual-entry.bundle.js`), which already trigger thousands of legacy lint errors.
+
 1. **Stop Metro** if it is running (`Ctrl+C` in the terminal hosting `npx expo start`).
 2. **Reinstall the dev client** (PowerShell from `C:\dev\Morse`):
    - Use **Visual Studio 2026 Developer PowerShell v18.0.0-insiders** (or manually set `VCINSTALLDIR`, `VSINSTALLDIR`, `DIA_SDK_DIR`, and prepend the MSVC `Hostx64\\x64` bin to `PATH`) before running the Expo build so Hermes can locate the DIA SDK.

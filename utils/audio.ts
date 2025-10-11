@@ -212,6 +212,13 @@ export type NativeSymbolTimingContext = {
   nativeSequence: number | null;
   nativeOffsetMs: number | null;
   monotonicTimestampMs: number | null;
+  nativeExpectedTimestampMs: number | null;
+  nativeStartSkewMs: number | null;
+  nativeBatchElapsedMs: number | null;
+  nativeExpectedSincePriorMs: number | null;
+  nativeSincePriorMs: number | null;
+  nativePatternStartMs: number | null;
+  nativeAgeMs: number | null;
 };
 
 export type PlayOpts = {
@@ -961,6 +968,13 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
             sequence?: number;
             timestampMs?: number;
             durationMs?: number;
+            patternStartMs?: number;
+            expectedTimestampMs?: number;
+            startSkewMs?: number;
+            batchElapsedMs?: number;
+            expectedSincePriorMs?: number;
+            sincePriorMs?: number;
+            ageMs?: number;
           };
           const sequence = typeof info.sequence === 'number' ? info.sequence : null;
           if (sequence != null) {
@@ -987,6 +1001,19 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
             nativeSequence = sequence;
             const timestampMs = typeof info.timestampMs === 'number' ? info.timestampMs : null;
             const durationMs = typeof info.durationMs === 'number' ? info.durationMs : null;
+            const expectedTimestampMs =
+              typeof info.expectedTimestampMs === 'number' ? info.expectedTimestampMs : null;
+            const startSkewMs =
+              typeof info.startSkewMs === 'number' ? info.startSkewMs : null;
+            const batchElapsedMs =
+              typeof info.batchElapsedMs === 'number' ? info.batchElapsedMs : null;
+            const expectedSincePriorMs =
+              typeof info.expectedSincePriorMs === 'number' ? info.expectedSincePriorMs : null;
+            const sincePriorMs =
+              typeof info.sincePriorMs === 'number' ? info.sincePriorMs : null;
+            const patternStartMs =
+              typeof info.patternStartMs === 'number' ? info.patternStartMs : null;
+            const ageMs = typeof info.ageMs === 'number' ? info.ageMs : null;
             let offsetMs: number | null = null;
             let monotonicTimestampMs: number | null = null;
             if (timestampMs != null) {
@@ -1000,6 +1027,13 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
               nativeSequence,
               nativeOffsetMs: nativeOffsetMs ?? offsetMs,
               monotonicTimestampMs,
+              nativeExpectedTimestampMs: expectedTimestampMs,
+              nativeStartSkewMs: startSkewMs,
+              nativeBatchElapsedMs: batchElapsedMs,
+              nativeExpectedSincePriorMs: expectedSincePriorMs,
+              nativeSincePriorMs: sincePriorMs,
+              nativePatternStartMs: patternStartMs,
+              nativeAgeMs: ageMs,
             };
           }
         } catch (parseError) {

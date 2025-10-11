@@ -61,6 +61,10 @@ const WATCHDOG_PRESS_TIMEOUT_MS = 4000;
 
 const NATIVE_OFFSET_SPIKE_THRESHOLD_MS = 80;
 const FLASH_TIMELINE_LEAD_MS = 8;
+const AUDIO_START_MIN_HEADROOM_MS = 12;
+const AUDIO_START_MAX_NATIVE_SKEW_MS = 25;
+const AUDIO_START_MAX_NATIVE_AGE_MS = 45;
+const AUDIO_START_FALLBACK_TIMELINE_MS = 24;
 
 let pendingFlashPulseTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -649,14 +653,15 @@ const defaultOutputsService: OutputsService = {
     metadata,
   }: FlashPulseOptions) {
     const eventSource = source ?? 'unspecified';
-    const normalizedTimelineOffset = normalizeTimelineOffset(timelineOffsetMs);
-    traceOutputs('outputs.flashPulse', {
-      enabled,
-      durationMs,
-      source: eventSource,
-      correlationId: correlationId ?? null,
-      timelineOffsetMs: normalizedTimelineOffset,
-    });
+    let normalizedTimelineOffset = normalizeTimelineOffset(timelineOffsetMs);
+    const baseMetadata: Record<string, string | number | boolean> = metadata ? { ...metadata } : {};
+    const providedTimelineOffsetMs = normalizedTimelineOffset;
+    const hasNativeExpectedTimestamp =
+      typeof baseMetadata.nativeExpectedTimestampMs === 'number' &&
+      Number.isFinite(baseMetadata.nativeExpectedTimestampMs as number);
+    if (normalizedTimelineOffset != null && hasNativeExpectedTimestamp) {
+      normalizedTimelineOffset = null;
+    }
 
     if (!enabled) {
       if (pendingFlashPulseTimeout) {
@@ -668,17 +673,112 @@ const defaultOutputsService: OutputsService = {
 
     const requestedAt =
       typeof requestedAtMs === 'number' && Number.isFinite(requestedAtMs) ? requestedAtMs : nowMs();
-    const effectiveRequestedAt = applyTimelineOffset(requestedAt, normalizedTimelineOffset);
+    let effectiveRequestedAt = applyTimelineOffset(requestedAt, normalizedTimelineOffset);
     const leadMs = FLASH_TIMELINE_LEAD_MS > 0 ? FLASH_TIMELINE_LEAD_MS : 0;
-    const sampleMetadata = {
+    const { fadeMs, holdMs } = computeFlashTimings(durationMs);
+    const getNumericMetadata = (key: string): number | null => {
+      const value = baseMetadata[key];
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+      return null;
+    };
+    let schedulingMode: 'timeline' | 'audio-start' =
+      normalizedTimelineOffset != null ? 'timeline' : 'audio-start';
+    let audioStartHeadroomMs: number | null = null;
+    let audioStartGuardReason: string | null = null;
+
+    if (normalizedTimelineOffset == null) {
+      const expectedTimestampMs = getNumericMetadata('nativeExpectedTimestampMs');
+      const nativeOffsetMs = getNumericMetadata('nativeOffsetMs');
+      const nativeStartSkewMs = getNumericMetadata('nativeStartSkewMs');
+      const nativeAgeMs = getNumericMetadata('nativeAgeMs');
+      const hasNativeTimestamp = typeof baseMetadata['nativeTimestampMs'] === 'number';
+
+      if (expectedTimestampMs != null) {
+        effectiveRequestedAt = expectedTimestampMs;
+        const targetForAudioStart = effectiveRequestedAt - leadMs;
+        audioStartHeadroomMs = targetForAudioStart - nowMs();
+        if (audioStartHeadroomMs < AUDIO_START_MIN_HEADROOM_MS) {
+          audioStartGuardReason = 'headroom';
+        } else if (
+          nativeStartSkewMs != null &&
+          Math.abs(nativeStartSkewMs) > AUDIO_START_MAX_NATIVE_SKEW_MS
+        ) {
+          audioStartGuardReason = 'skew';
+        } else if (
+          nativeAgeMs != null &&
+          nativeAgeMs > AUDIO_START_MAX_NATIVE_AGE_MS
+        ) {
+          audioStartGuardReason = 'age';
+        } else if (!hasNativeTimestamp) {
+          audioStartGuardReason = 'missing-native';
+        }
+
+        if (audioStartGuardReason) {
+          const fallbackOffset =
+            (typeof providedTimelineOffsetMs === 'number' ? providedTimelineOffsetMs : null) ??
+            nativeOffsetMs ??
+            AUDIO_START_FALLBACK_TIMELINE_MS;
+          normalizedTimelineOffset = fallbackOffset;
+          effectiveRequestedAt = applyTimelineOffset(requestedAt, normalizedTimelineOffset);
+          schedulingMode = 'timeline';
+        } else {
+          schedulingMode = 'audio-start';
+        }
+      } else if (nativeOffsetMs != null) {
+        normalizedTimelineOffset =
+          (typeof providedTimelineOffsetMs === 'number' ? providedTimelineOffsetMs : null) ??
+          nativeOffsetMs;
+        effectiveRequestedAt = applyTimelineOffset(requestedAt, normalizedTimelineOffset);
+        schedulingMode = 'timeline';
+      } else {
+        normalizedTimelineOffset =
+          (typeof providedTimelineOffsetMs === 'number' ? providedTimelineOffsetMs : null) ??
+          AUDIO_START_FALLBACK_TIMELINE_MS;
+        effectiveRequestedAt = applyTimelineOffset(requestedAt, normalizedTimelineOffset);
+        schedulingMode = 'timeline';
+      }
+    }
+
+    let targetStart = effectiveRequestedAt - leadMs;
+    let audioStartCompensationMs = 0;
+    if (audioStartGuardReason === 'headroom' && audioStartHeadroomMs != null) {
+      audioStartCompensationMs = Math.min(40, Math.max(0, -audioStartHeadroomMs));
+      targetStart -= audioStartCompensationMs;
+    }
+    targetStart = Math.max(nowMs(), targetStart);
+
+    const sampleMetadata: Record<string, string | number | boolean> = {
       durationMs,
-      ...(metadata ?? {}),
+      ...baseMetadata,
       ...(normalizedTimelineOffset != null
         ? { timelineOffsetMs: normalizedTimelineOffset }
         : {}),
       ...(leadMs > 0 ? { leadMs } : {}),
+      schedulingMode,
     };
-    const { fadeMs, holdMs } = computeFlashTimings(durationMs);
+    if (audioStartHeadroomMs != null) {
+      sampleMetadata.audioStartHeadroomMs = audioStartHeadroomMs;
+    }
+    if (audioStartGuardReason) {
+      sampleMetadata.audioStartGuard = audioStartGuardReason;
+    }
+    if (audioStartCompensationMs > 0) {
+      sampleMetadata.audioStartCompensationMs = audioStartCompensationMs;
+    }
+
+    traceOutputs('outputs.flashPulse', {
+      enabled,
+      durationMs,
+      source: eventSource,
+      correlationId: correlationId ?? null,
+      timelineOffsetMs: normalizedTimelineOffset,
+      schedulingMode,
+      ...(audioStartHeadroomMs != null ? { audioStartHeadroomMs } : {}),
+      ...(audioStartGuardReason ? { audioStartGuard: audioStartGuardReason } : {}),
+      ...(audioStartCompensationMs > 0 ? { audioStartCompensationMs } : {}),
+    });
 
     const startSequence = () => {
       flashValue.setValue(1);
@@ -693,6 +793,10 @@ const defaultOutputsService: OutputsService = {
         timelineOffsetMs: normalizedTimelineOffset,
         leadMs,
         scheduleSkewMs,
+        schedulingMode,
+        ...(audioStartHeadroomMs != null ? { audioStartHeadroomMs } : {}),
+        ...(audioStartGuardReason ? { audioStartGuard: audioStartGuardReason } : {}),
+        ...(audioStartCompensationMs > 0 ? { audioStartCompensationMs } : {}),
       });
       recordLatencySample('touchToFlash', latencyMs, {
         requestedAt: effectiveRequestedAt,
@@ -728,7 +832,6 @@ const defaultOutputsService: OutputsService = {
       pendingFlashPulseTimeout = null;
     }
 
-    const targetStart = effectiveRequestedAt - leadMs;
     const delayMs = Math.max(0, targetStart - nowMs());
 
     if (delayMs > 1) {
@@ -902,6 +1005,13 @@ const defaultOutputsService: OutputsService = {
       const nativeDurationMs = native?.nativeDurationMs ?? null;
       const nativeOffsetMs = native?.nativeOffsetMs ?? null;
       const nativeSequence = native?.nativeSequence ?? null;
+      const nativeExpectedTimestampMs = native?.nativeExpectedTimestampMs ?? null;
+      const nativeStartSkewMs = native?.nativeStartSkewMs ?? null;
+      const nativeBatchElapsedMs = native?.nativeBatchElapsedMs ?? null;
+      const nativeExpectedSincePriorMs = native?.nativeExpectedSincePriorMs ?? null;
+      const nativeSincePriorMs = native?.nativeSincePriorMs ?? null;
+      const nativePatternStartMs = native?.nativePatternStartMs ?? null;
+      const nativeAgeMs = native?.nativeAgeMs ?? null;
       const monotonicTimestampMs =
         native?.monotonicTimestampMs ??
         (nativeTimestampMs != null ? toMonotonicTime(nativeTimestampMs) : null);
@@ -916,15 +1026,32 @@ const defaultOutputsService: OutputsService = {
         nativeOffsetMs,
         nativeSequence,
         monotonicTimestampMs,
+        nativeExpectedTimestampMs,
+        nativeStartSkewMs,
+        nativeBatchElapsedMs,
+        nativeExpectedSincePriorMs,
+        nativeSincePriorMs,
+        nativePatternStartMs,
+        nativeAgeMs,
       });
       if (nativeOffsetMs != null && Math.abs(nativeOffsetMs) >= NATIVE_OFFSET_SPIKE_THRESHOLD_MS) {
-        traceOutputs('playMorse.nativeOffset.spike', {
+        const spikePayload: Record<string, unknown> = {
           source: playbackSource,
           offsetMs: nativeOffsetMs,
           sequence: nativeSequence,
           unitMs,
           correlationId: correlation.id,
-        });
+        };
+        if (nativeStartSkewMs != null) {
+          spikePayload.startSkewMs = nativeStartSkewMs;
+        }
+        if (nativeBatchElapsedMs != null) {
+          spikePayload.batchElapsedMs = nativeBatchElapsedMs;
+        }
+        if (nativeAgeMs != null) {
+          spikePayload.ageMs = nativeAgeMs;
+        }
+        traceOutputs('playMorse.nativeOffset.spike', spikePayload);
       }
       symbolIndex += 1;
       onSymbolStart?.(symbol, durationMs, {
@@ -936,6 +1063,13 @@ const defaultOutputsService: OutputsService = {
         nativeOffsetMs,
         nativeSequence,
         monotonicTimestampMs,
+        nativeExpectedTimestampMs,
+        nativeStartSkewMs,
+        nativeBatchElapsedMs,
+        nativeExpectedSincePriorMs,
+        nativeSincePriorMs,
+        nativePatternStartMs,
+        nativeAgeMs,
       });
     };
 
