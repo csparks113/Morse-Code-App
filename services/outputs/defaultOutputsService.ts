@@ -60,6 +60,9 @@ const playbackVibrationState: {
 const WATCHDOG_PRESS_TIMEOUT_MS = 4000;
 
 const NATIVE_OFFSET_SPIKE_THRESHOLD_MS = 80;
+const FLASH_TIMELINE_LEAD_MS = 8;
+
+let pendingFlashPulseTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function normalizeTimelineOffset(value?: number | null): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -655,23 +658,32 @@ const defaultOutputsService: OutputsService = {
       timelineOffsetMs: normalizedTimelineOffset,
     });
 
-    if (!enabled) return;
+    if (!enabled) {
+      if (pendingFlashPulseTimeout) {
+        clearTimeout(pendingFlashPulseTimeout);
+        pendingFlashPulseTimeout = null;
+      }
+      return;
+    }
 
     const requestedAt =
       typeof requestedAtMs === 'number' && Number.isFinite(requestedAtMs) ? requestedAtMs : nowMs();
     const effectiveRequestedAt = applyTimelineOffset(requestedAt, normalizedTimelineOffset);
+    const leadMs = FLASH_TIMELINE_LEAD_MS > 0 ? FLASH_TIMELINE_LEAD_MS : 0;
     const sampleMetadata = {
       durationMs,
       ...(metadata ?? {}),
       ...(normalizedTimelineOffset != null
         ? { timelineOffsetMs: normalizedTimelineOffset }
         : {}),
+      ...(leadMs > 0 ? { leadMs } : {}),
     };
     const { fadeMs, holdMs } = computeFlashTimings(durationMs);
 
     const startSequence = () => {
       flashValue.setValue(1);
       const commitAt = nowMs();
+      const scheduleSkewMs = commitAt - targetStart;
       const latencyMs = Math.max(0, commitAt - effectiveRequestedAt);
       traceOutputs('outputs.flashPulse.commit', {
         durationMs,
@@ -679,12 +691,17 @@ const defaultOutputsService: OutputsService = {
         correlationId: correlationId ?? null,
         latencyMs,
         timelineOffsetMs: normalizedTimelineOffset,
+        leadMs,
+        scheduleSkewMs,
       });
       recordLatencySample('touchToFlash', latencyMs, {
         requestedAt: effectiveRequestedAt,
         source: eventSource,
         correlationId: correlationId ?? null,
-        metadata: sampleMetadata,
+        metadata: {
+          ...sampleMetadata,
+          scheduleSkewMs,
+        },
       });
       Animated.sequence([
         Animated.delay(holdMs),
@@ -696,14 +713,33 @@ const defaultOutputsService: OutputsService = {
       ]).start();
     };
 
-    if (typeof flashValue.stopAnimation === 'function') {
-      flashValue.stopAnimation(() => {
+    const dispatchStart = () => {
+      if (typeof flashValue.stopAnimation === 'function') {
+        flashValue.stopAnimation(() => {
+          startSequence();
+        });
+      } else {
         startSequence();
-      });
+      }
+    };
+
+    if (pendingFlashPulseTimeout) {
+      clearTimeout(pendingFlashPulseTimeout);
+      pendingFlashPulseTimeout = null;
+    }
+
+    const targetStart = effectiveRequestedAt - leadMs;
+    const delayMs = Math.max(0, targetStart - nowMs());
+
+    if (delayMs > 1) {
+      pendingFlashPulseTimeout = setTimeout(() => {
+        pendingFlashPulseTimeout = null;
+        dispatchStart();
+      }, delayMs);
       return;
     }
 
-    startSequence();
+    dispatchStart();
   },
 
   hapticSymbol({

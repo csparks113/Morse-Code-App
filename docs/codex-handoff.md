@@ -13,21 +13,18 @@ Use this document to capture the single source of truth after each working sessi
 - **Automation & Tooling (Codex CLI harness):** Provides local execution environment, log capture scripts, and build automation support.
 
 ## Latest Update
-- **When:** 2025-10-11
-- **Summary:** Analyzer upgrades now emit a >=80 ms native-offset table and can export spike summaries. Baseline Play Pattern (`docs/logs/console-replay-20251011-133707-play-pattern.txt`) still rides around 21 ms audio->flash with only four spikes, the 14:14 capture (`docs/logs/console-replay-20251011-141417-play-pattern.txt`) drifted to 36.7 ms audio->flash (p95 110 ms) with 20 spikes, and the follow-up sweeps at 14:41 (`...144151...`), 14:46 (`...144639...`), 14:59 (`...145909...`), and 15:02 (`...150200...`) all landed back in the mid-20 ms band with only unitMs 40 offsets brushing 80-95 ms. The comparison CSV (`docs/logs/spike-summary-play-pattern-20251011.csv`) lists every correlation ID across runs.
-- **State:** Telemetry remains structured and aligned; current evidence points to the 14:14 drift being transient, but we should keep the regression artifacts handy and continue light spot checks.
+- **Summary:** Analyzer upgrades still emit the >=80 ms native-offset table and spike CSV, but the audio-clock flash scheduling regressed the 16:12 Play Pattern sweep (`docs/logs/console-replay-20251011-161229-play-pattern.txt`) to ~40 ms audio->flash with 18 spikes (peak 198.7 ms) and seven missing `nativeTimestampMs`. We have reverted flash scheduling back to the timeline offsets while keeping `scheduleSkewMs` and the 15:48/16:12 logs for comparison; `docs/logs/spike-summary-play-pattern-20251011.csv` now lists the new spikes.
+- **State:** Telemetry is still structured, but the latest sweep is out of band; next actions focus on debugging the `audioStartMs` flash path and restoring the ~24 ms baseline.
 
 ## Next Steps
-1. Review `docs/logs/spike-summary-play-pattern-20251011.csv` alongside the regression/follow-up logs so we have concrete correlation IDs if offsets flare again.
-2. Continue spot-checking future Play Pattern sweeps (current suggestion: add one or two per major change) to ensure offsets stay in the mid-20 ms band.
-3. If another drift surfaces, add focused logging around the replay scheduler for unit lengths 60/48/40/34 to locate the added delay.
-4. Keep running the JSON-aware analyzer (`scripts/analyze-logcat.ps1`) and retire pre-fix logs once we’re comfortable with the stability window.
+1. Review the 16:12 spikes (`scheduleSkewMs`, missing `nativeTimestampMs`) to inform the next adjustment (e.g., native batching/priority queue) now that flash scheduling is back on the timeline.
+2. Append the 16:12 spike rows to `docs/logs/spike-summary-play-pattern-20251011.csv` and check whether any correlation IDs overlap with earlier runs.
+3. Capture another Play Pattern sweep once guardrails/instrumentation land to verify audio->flash mean/p95 return to the mid-20 ms band and confirm `nativeTimestampMs` coverage.
+4. Keep running the JSON-aware analyzer (`scripts/analyze-logcat.ps1`) and retire pre-fix logs once stability holds.
 5. Spot-check future flash-commit spans above ~1 s; the recent 1.83 s commit mapped to a 1.74 s hold, so flag any new cases that lack matching long presses.
 6. Continue watching `playMorse.nativeOffset.spike`; the analyzer now surfaces >=80 ms entries automatically, so bundle fresh logs if clusters persist.
 7. Keep torch alignment and high-WPM keyer precision on watch during upcoming sweeps, logging anomalies and proposed tweaks back into `docs/refactor-notes.md`.
 8. Run the iOS bridgeless checklist once Android validation is locked so we confirm Nitro parity across platforms.
-
-### Rebuild + Logging Recipe (Galaxy S22+)
 1. **Stop Metro** if it is running (`Ctrl+C` in the terminal hosting `npx expo start`).
 2. **Reinstall the dev client** (PowerShell from `C:\dev\Morse`):
    - Use **Visual Studio 2026 Developer PowerShell v18.0.0-insiders** (or manually set `VCINSTALLDIR`, `VSINSTALLDIR`, `DIA_SDK_DIR`, and prepend the MSVC `Hostx64\\x64` bin to `PATH`) before running the Expo build so Hermes can locate the DIA SDK.
@@ -82,6 +79,7 @@ Use this document to capture the single source of truth after each working sessi
 - [ ] Run `npm run verify:handoff` and resolve any failures.
 
 _Tip: Keep entries terse but explicit enough that a new chat can resume work immediately._
+
 
 
 

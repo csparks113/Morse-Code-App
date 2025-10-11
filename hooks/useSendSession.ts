@@ -274,6 +274,7 @@ export function useSendSession({
         durationMs,
         flashValue: flashOpacity,
         source: context?.source ?? 'session.send.replay',
+        timelineOffsetMs: context?.nativeOffsetMs ?? undefined,
         requestedAtMs,
         correlationId: context?.correlationId,
         metadata,
@@ -715,6 +716,7 @@ export function useSendSession({
     keyerReleaseSignal,
   };
 }
+
 
 
 
