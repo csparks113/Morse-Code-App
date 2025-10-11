@@ -14,14 +14,14 @@ Use this document to capture the single source of truth after each working sessi
 
 ## Latest Update
 - **When:** 2025-10-11
-- **Summary:** Analyzer upgrades now emit a >=80 ms native-offset table and can export spike summaries. Baseline Play Pattern (`docs/logs/console-replay-20251011-133707-play-pattern.txt`) still rides around 21 ms audio->flash with only four spikes, but the 14:14 capture (`docs/logs/console-replay-20251011-141417-play-pattern.txt`) drifted to 36.7 ms audio->flash (p95 110 ms) and recorded 20 `playMorse.nativeOffset.spike` entries across unit lengths 60/48/40/34/30. The comparison CSV (`docs/logs/spike-summary-play-pattern-20251011.csv`) lists each correlation ID for native follow-up.
-- **State:** Telemetry remains structured and aligned for freeform sweeps, yet Play Pattern needs investigation: share the spike summary + regression log with native, gather a fresh sweep to confirm the drift, and add scheduler instrumentation if high offsets persist.
+- **Summary:** Analyzer upgrades now emit a >=80 ms native-offset table and can export spike summaries. Baseline Play Pattern (`docs/logs/console-replay-20251011-133707-play-pattern.txt`) still rides around 21 ms audio->flash with only four spikes, the 14:14 capture (`docs/logs/console-replay-20251011-141417-play-pattern.txt`) drifted to 36.7 ms audio->flash (p95 110 ms) with 20 spikes, and the follow-up sweeps at 14:41 (`...144151...`), 14:46 (`...144639...`), 14:59 (`...145909...`), and 15:02 (`...150200...`) all landed back in the mid-20 ms band with only unitMs 40 offsets brushing 80-95 ms. The comparison CSV (`docs/logs/spike-summary-play-pattern-20251011.csv`) lists every correlation ID across runs.
+- **State:** Telemetry remains structured and aligned; current evidence points to the 14:14 drift being transient, but we should keep the regression artifacts handy and continue light spot checks.
 
 ## Next Steps
-1. Share `docs/logs/spike-summary-play-pattern-20251011.csv` and the 14:14 regression log with native so they can review the affected outputs-audio correlations.
-2. Capture another Play Pattern sweep to see whether offsets fall back toward ~21 ms or keep clustering above 40 ms.
-3. If the regression persists, add focused native logging around the replay scheduler for unit lengths 60/48/40/34 to locate the added delay.
-4. Keep running the JSON-aware analyzer (`scripts/analyze-logcat.ps1`) and retire pre-fix logs once the new captures stay on the baseline metrics.
+1. Review `docs/logs/spike-summary-play-pattern-20251011.csv` alongside the regression/follow-up logs so we have concrete correlation IDs if offsets flare again.
+2. Continue spot-checking future Play Pattern sweeps (current suggestion: add one or two per major change) to ensure offsets stay in the mid-20 ms band.
+3. If another drift surfaces, add focused logging around the replay scheduler for unit lengths 60/48/40/34 to locate the added delay.
+4. Keep running the JSON-aware analyzer (`scripts/analyze-logcat.ps1`) and retire pre-fix logs once we’re comfortable with the stability window.
 5. Spot-check future flash-commit spans above ~1 s; the recent 1.83 s commit mapped to a 1.74 s hold, so flag any new cases that lack matching long presses.
 6. Continue watching `playMorse.nativeOffset.spike`; the analyzer now surfaces >=80 ms entries automatically, so bundle fresh logs if clusters persist.
 7. Keep torch alignment and high-WPM keyer precision on watch during upcoming sweeps, logging anomalies and proposed tweaks back into `docs/refactor-notes.md`.

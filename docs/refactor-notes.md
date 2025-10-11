@@ -39,11 +39,11 @@
 
 ## Next Steps
 
-- Share the spike summary (`docs/logs/spike-summary-play-pattern-20251011.csv`) and the 14:14 regression log with native so they can inspect the listed outputs-audio correlations.
-- Capture another Play Pattern sweep to check whether offsets settle back toward the ~21 ms baseline or keep clustering around 40+ ms.
-- If the regression holds, add focused native logging around the replay scheduler for unit lengths 60/48/40/34 to pinpoint where the extra delay enters.
-- Keep running the JSON-aware analyzer (`scripts/analyze-logcat.ps1`) on new captures and retire the pre-fix logs once the baseline metrics stay stable.
-- Spot-check future flash-commit spans above ~1 s; the 2025-10-11 sweep outlier tied back to a deliberate 1.74 s hold, so flag any new cases that lack matching long presses.
+- Review the spike summary (`docs/logs/spike-summary-play-pattern-20251011.csv`) alongside the 14:14 regression and 14:41/14:46 recovery logs; note any shared correlation IDs that hint at scheduling drift we need to chase.
+- Keep capturing Play Pattern sweeps to confirm the ~24 ms audio->flash baseline holds and watch for new >=80 ms offset clusters.
+- If offsets flare again, add focused logging around the replay scheduler paths for unit lengths 60/48/40/34 to pinpoint where extra delay enters.
+- Keep running the JSON-aware analyzer (`scripts/analyze-logcat.ps1`) on each new capture and retire the pre-fix logs once the baseline metrics stay stable.
+- Spot-check future flash-commit spans above ~1 s; the recent outlier mapped to a deliberate 1.74 s hold, so flag any new cases that lack matching long presses.
 - Continue watching `playMorse.nativeOffset.spike` traces; the analyzer now surfaces >=80 ms entries automatically, so bundle fresh logs if clusters persist.
 
 ### Deferred: Outputs Testing
