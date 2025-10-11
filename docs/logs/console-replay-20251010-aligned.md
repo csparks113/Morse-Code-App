@@ -1,11 +1,11 @@
-# Console Replay Summary â€” 2025-10-10
+# Console Replay Summary GÇö 2025-10-10
 
 - **Source**: Developer console Play Pattern (`EXPO_FORCE_NITRO_OUTPUTS=1`)
 - **Unit**: 40 ms (dots) / 120 ms (dashes)
 - **Highlights**:
-  - `outputs.flashPulse.commit` latencies track `timelineOffsetMs` within ~5â€“15 ms across the sweep.
-  - Highest observed native offset: ~90 ms (symbol index 8); corresponding commit latency 98 ms (spike trace not emittedâ€”below 100 ms threshold).
-  - Torch channel now reports `timelineOffsetMs`; `touchToTorch` latencies range 53â€“58 ms once offsets applied.
+  - `outputs.flashPulse.commit` latencies track `timelineOffsetMs` within ~5GÇô15 ms across the sweep.
+  - Highest observed native offset: ~90 ms (symbol index 8); corresponding commit latency 98 ms (spike trace not emittedGÇöbelow 100 ms threshold).
+  - Torch channel now reports `timelineOffsetMs`; `touchToTorch` latencies range 53GÇô58 ms once offsets applied.
 - **Notes**:
   - No `playMorse.nativeOffset.spike` trace fired (offsets never exceeded 100 ms). If we want to capture the 90 ms range, consider lowering the spike threshold or expanding logging when jump delta >1.
   - Sequence remained monotonic (no reset warnings) during this sweep.

@@ -13,16 +13,19 @@ Use this document to capture the single source of truth after each working sessi
 - **Automation & Tooling (Codex CLI harness):** Provides local execution environment, log capture scripts, and build automation support.
 
 ## Latest Update
-- **When:** 2025-10-09
-- **Summary:** Auto-revealed prompts now show the correct answer after wrong send submissions, backed by a 200 ms verdict buffer stored in `constants/appConfig.ts`. Torch teardown now forces an `OFF` command (`forceTorchOff`) after every release (and still logs failures), Morse signal/gap classifiers gained an extended tolerance window, the verdict buffer restarts on new presses, and presses that collide with banner rendering are ignored to prevent audio clicks. Forced output cuts, the keyer release signal, and FlashOverlay updates remain in place.
-- **State:** Outputs are stable across send/receive/practice flows. Focus shifts to validating the verdict buffer + deferred scoring + classifier adjustments on real devices while continuing Nitro replay drift and high-WPM classification follow-up.
+- **When:** 2025-10-11
+- **Summary:** Analyzer upgrades now emit a >=80 ms native-offset table and can export spike summaries. Baseline Play Pattern (`docs/logs/console-replay-20251011-133707-play-pattern.txt`) still rides around 21 ms audio->flash with only four spikes, but the 14:14 capture (`docs/logs/console-replay-20251011-141417-play-pattern.txt`) drifted to 36.7 ms audio->flash (p95 110 ms) and recorded 20 `playMorse.nativeOffset.spike` entries across unit lengths 60/48/40/34/30. The comparison CSV (`docs/logs/spike-summary-play-pattern-20251011.csv`) lists each correlation ID for native follow-up.
+- **State:** Telemetry remains structured and aligned for freeform sweeps, yet Play Pattern needs investigation: share the spike summary + regression log with native, gather a fresh sweep to confirm the drift, and add scheduler instrumentation if high offsets persist.
 
 ## Next Steps
-1. Capture a new developer-console **Play Pattern** sweep, replace the placeholder export under `docs/logs/console-replay-20251010-aligned.txt`, and note offsets in `docs/outputs-alignment-notes.md`.
-2. Run a freeform send-lesson sweep (mix WPMs, dot-led characters, challenge mode) while logging logcat; document verdict buffer, torch reset, and classifier behaviour in `docs/outputs-investigation.md`.
-3. Review any `playMorse.nativeOffset.spike` traces collected during those runs; if spikes stay above ~80 ms, package logs so we can investigate the native timeline and track the follow-up in the investigation doc.
-4. Keep torch alignment and high-WPM keyer precision on watch during the sweeps, logging anomalies and proposed tweaks back into `docs/refactor-notes.md`.
-5. Run the iOS bridgeless checklist once Android validation is locked so we confirm Nitro parity across platforms.
+1. Share `docs/logs/spike-summary-play-pattern-20251011.csv` and the 14:14 regression log with native so they can review the affected outputs-audio correlations.
+2. Capture another Play Pattern sweep to see whether offsets fall back toward ~21 ms or keep clustering above 40 ms.
+3. If the regression persists, add focused native logging around the replay scheduler for unit lengths 60/48/40/34 to locate the added delay.
+4. Keep running the JSON-aware analyzer (`scripts/analyze-logcat.ps1`) and retire pre-fix logs once the new captures stay on the baseline metrics.
+5. Spot-check future flash-commit spans above ~1 s; the recent 1.83 s commit mapped to a 1.74 s hold, so flag any new cases that lack matching long presses.
+6. Continue watching `playMorse.nativeOffset.spike`; the analyzer now surfaces >=80 ms entries automatically, so bundle fresh logs if clusters persist.
+7. Keep torch alignment and high-WPM keyer precision on watch during upcoming sweeps, logging anomalies and proposed tweaks back into `docs/refactor-notes.md`.
+8. Run the iOS bridgeless checklist once Android validation is locked so we confirm Nitro parity across platforms.
 
 ### Rebuild + Logging Recipe (Galaxy S22+)
 1. **Stop Metro** if it is running (`Ctrl+C` in the terminal hosting `npx expo start`).
@@ -79,3 +82,6 @@ Use this document to capture the single source of truth after each working sessi
 - [ ] Run `npm run verify:handoff` and resolve any failures.
 
 _Tip: Keep entries terse but explicit enough that a new chat can resume work immediately._
+
+
+

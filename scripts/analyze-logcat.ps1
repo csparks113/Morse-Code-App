@@ -18,6 +18,10 @@ $audioToTone = New-Object System.Collections.Generic.List[double]
 $audioToTorchReset = New-Object System.Collections.Generic.List[double]
 
 $symbolSamples = @()
+$symbolByCorrelation = @{}
+$symbolQueue = New-Object System.Collections.Generic.Queue[pscustomobject]
+$highOffsetEvents = New-Object System.Collections.Generic.List[pscustomobject]
+$highOffsetThresholdMs = 80.0
 
 $lastAudioStart = $null
 $lastHaptic = $null
@@ -25,8 +29,28 @@ $lastFlash = $null
 $currentRunUnit = $null
 $currentSymbol = $null
 
-function Parse-TimestampMs {
+function Try-ParseJsonPayload {
     param([string]$message)
+    $braceIndex = $message.IndexOf('{')
+    if ($braceIndex -lt 0) {
+        return $null
+    }
+    $jsonText = $message.Substring($braceIndex)
+    try {
+        return ConvertFrom-Json -InputObject $jsonText -ErrorAction Stop
+    } catch {
+        return $null
+    }
+}
+
+function Parse-TimestampMs {
+    param([string]$message, $jsonPayload)
+    if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'timestamp') {
+        $value = $jsonPayload.timestamp
+        if ($null -ne $value) {
+            return [double]$value
+        }
+    }
     $match = [regex]::Match($message, 'timestamp:\s*([0-9\.]+)')
     if ($match.Success) {
         return [double]$match.Groups[1].Value
@@ -35,7 +59,13 @@ function Parse-TimestampMs {
 }
 
 function Parse-UnitMs {
-    param([string]$message)
+    param([string]$message, $jsonPayload)
+    if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'unitMs') {
+        $value = $jsonPayload.unitMs
+        if ($null -ne $value) {
+            return [double]$value
+        }
+    }
     $match = [regex]::Match($message, 'unitMs:\s*([0-9\.]+)')
     if ($match.Success) {
         return [double]$match.Groups[1].Value
@@ -44,8 +74,15 @@ function Parse-UnitMs {
 }
 
 function Parse-NativeField {
-    param([string]$message, [string]$field)
-    $pattern = "${field}:\\s*(?<value>null|[-0-9\.]+)"
+    param([string]$message, $jsonPayload, [string]$field)
+    if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains $field) {
+        $value = $jsonPayload.$field
+        if ($null -ne $value -and $value -ne 'null') {
+            return [double]$value
+        }
+        return $null
+    }
+    $pattern = "${field}:\s*(?<value>null|[-0-9\.]+)"
     $match = [regex]::Match($message, $pattern)
     if ($match.Success) {
         $value = $match.Groups['value'].Value
@@ -96,54 +133,200 @@ foreach ($line in Get-Content -Path $LogFile) {
     $message = $match.Groups['message'].Value
 
     $logTime = [datetime]::ParseExact("$year $md $time", 'yyyy MM-dd HH:mm:ss.fff', [System.Globalization.CultureInfo]::InvariantCulture)
+    $jsonPayload = Try-ParseJsonPayload $message
 
-if ($tag -eq 'OutputsAudio' -and $message -match '\[outputs-audio\]\s+start') {
-    $deltaHaptic = $null
-    if ($lastHaptic) {
-        $delta = ($logTime - $lastHaptic.LogTime).TotalMilliseconds
-        if ($delta -ge 0 -and $delta -lt 5000) {
-            Add-Stat $audioToHaptic $delta
-            $deltaHaptic = $delta
-        }
+if ($tag -eq 'OutputsAudio') {
+    if ($message -match '\[outputs-audio\]\s+start') {
+        $lastAudioStart = $logTime
     }
-    $deltaFlash = $null
-    if ($lastFlash) {
-        $deltaFlash = ($logTime - $lastFlash.LogTime).TotalMilliseconds
-        if ($deltaFlash -ge 0 -and $deltaFlash -lt 5000) {
-            Add-Stat $audioToFlash $deltaFlash
-        }
-    }
-    if ($deltaFlash -ne $null -and $deltaHaptic -ne $null) {
-        Add-Stat $hapticToFlash ($deltaFlash - $deltaHaptic)
-    }
-    $lastAudioStart = $logTime
     continue
 }
 
     if ($tag -ne 'ReactNativeJS') { continue }
 
     if ($message -match '\[outputs\]\s+playMorse\.start') {
-        $parsedUnit = Parse-UnitMs $message
+        $parsedUnit = Parse-UnitMs $message $jsonPayload
         if ($parsedUnit -ne $null) {
             $currentRunUnit = $parsedUnit
         }
         continue
     }
 
-if ($message -match '\[outputs\]\s+(outputs\.hapticSymbol|keyer\.haptics\.start)') {
-    $timestampMs = Parse-TimestampMs $message
-    $lastHaptic = [pscustomobject]@{ TimestampMs = $timestampMs; LogTime = $logTime }
-    continue
-}
+    if ($message -match '\[outputs\]\s+(outputs\.hapticSymbol|keyer\.haptics\.start)') {
+        $timestampMs = Parse-TimestampMs $message $jsonPayload
+        $correlationId = $null
+        if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'correlationId') {
+            $value = $jsonPayload.correlationId
+            if ($value -ne $null -and $value -ne '') {
+                $correlationId = [string]$value
+            }
+        }
+        $symbolInfo = $null
+        if ($correlationId -and $symbolByCorrelation.ContainsKey($correlationId)) {
+            $symbolInfo = $symbolByCorrelation[$correlationId]
+        } else {
+            while ($symbolQueue.Count -gt 0) {
+                $candidate = $symbolQueue.Peek()
+                if (-not $candidate.UsedForHaptic) {
+                    $symbolInfo = $candidate
+                    break
+                }
+                if ($candidate.UsedForHaptic -and $candidate.UsedForFlash) {
+                    $removed = $symbolQueue.Dequeue()
+                    if ($removed.CorrelationId) {
+                        $symbolByCorrelation.Remove($removed.CorrelationId) | Out-Null
+                    }
+                    continue
+                }
+                break
+            }
+        }
+        $delta = $null
+        if ($symbolInfo -and $null -ne $timestampMs) {
+            if ($symbolInfo.NativeTimestampMs -ne $null) {
+                $delta = $timestampMs - $symbolInfo.NativeTimestampMs
+            } elseif ($symbolInfo.JsTimestampMs -ne $null) {
+                $delta = $timestampMs - $symbolInfo.JsTimestampMs
+            }
+        }
+        if ($delta -eq $null) {
+            $timelineOffset = Parse-NativeField $message $jsonPayload 'timelineOffsetMs'
+            if ($timelineOffset -ne $null) {
+                $delta = $timelineOffset
+            }
+        }
+        if ($delta -eq $null -and $jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'latencyMs') {
+            $value = $jsonPayload.latencyMs
+            if ($null -ne $value -and $value -ne 'null') {
+                $delta = [double]$value
+            }
+        }
+        if ($delta -eq $null -and $lastAudioStart) {
+            $delta = ($logTime - $lastAudioStart).TotalMilliseconds
+        }
+        if ($delta -ne $null) {
+            Add-Stat $audioToHaptic $delta
+        }
+        if ($symbolInfo) {
+            $symbolInfo.UsedForHaptic = $true
+            if ($null -ne $timestampMs) {
+                $symbolInfo.HapticTimestampMs = $timestampMs
+            }
+        }
+        $lastHaptic = [pscustomobject]@{
+            TimestampMs = $timestampMs
+            LogTime = $logTime
+            CorrelationId = $correlationId
+        }
+        while ($symbolQueue.Count -gt 0) {
+            $front = $symbolQueue.Peek()
+            if ($front.UsedForHaptic -and $front.UsedForFlash) {
+                $removed = $symbolQueue.Dequeue()
+                if ($removed.CorrelationId) {
+                    $symbolByCorrelation.Remove($removed.CorrelationId) | Out-Null
+                }
+                continue
+            }
+            break
+        }
+        continue
+    }
 
-if ($message -match '\[outputs\]\s+(outputs\.flashPulse(?!\.commit)|keyer\.flash\.start)') {
-    $timestampMs = Parse-TimestampMs $message
-    $lastFlash = [pscustomobject]@{ TimestampMs = $timestampMs; LogTime = $logTime }
-    continue
-}
+    if ($message -match '\[outputs\]\s+(outputs\.flashPulse(?!\.commit)|keyer\.flash\.start)') {
+        $timestampMs = Parse-TimestampMs $message $jsonPayload
+        $correlationId = $null
+        if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'correlationId') {
+            $value = $jsonPayload.correlationId
+            if ($value -ne $null -and $value -ne '') {
+                $correlationId = [string]$value
+            }
+        }
+        $symbolInfo = $null
+        if ($correlationId -and $symbolByCorrelation.ContainsKey($correlationId)) {
+            $symbolInfo = $symbolByCorrelation[$correlationId]
+        } else {
+            while ($symbolQueue.Count -gt 0) {
+                $candidate = $symbolQueue.Peek()
+                if (-not $candidate.UsedForFlash) {
+                    $symbolInfo = $candidate
+                    break
+                }
+                if ($candidate.UsedForHaptic -and $candidate.UsedForFlash) {
+                    $removed = $symbolQueue.Dequeue()
+                    if ($removed.CorrelationId) {
+                        $symbolByCorrelation.Remove($removed.CorrelationId) | Out-Null
+                    }
+                    continue
+                }
+                break
+            }
+        }
+        $delta = $null
+        if ($symbolInfo -and $null -ne $timestampMs) {
+            if ($symbolInfo.NativeTimestampMs -ne $null) {
+                $delta = $timestampMs - $symbolInfo.NativeTimestampMs
+            } elseif ($symbolInfo.JsTimestampMs -ne $null) {
+                $delta = $timestampMs - $symbolInfo.JsTimestampMs
+            }
+        }
+        if ($delta -eq $null) {
+            $timelineOffset = Parse-NativeField $message $jsonPayload 'timelineOffsetMs'
+            if ($timelineOffset -ne $null) {
+                $delta = $timelineOffset
+            }
+        }
+        if ($delta -eq $null -and $jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'latencyMs') {
+            $value = $jsonPayload.latencyMs
+            if ($null -ne $value -and $value -ne 'null') {
+                $delta = [double]$value
+            }
+        }
+        if ($delta -eq $null -and $lastAudioStart) {
+            $delta = ($logTime - $lastAudioStart).TotalMilliseconds
+        }
+        if ($delta -ne $null) {
+            Add-Stat $audioToFlash $delta
+        }
+        if ($symbolInfo) {
+            $symbolInfo.UsedForFlash = $true
+            if ($null -ne $timestampMs) {
+                $symbolInfo.FlashTimestampMs = $timestampMs
+            }
+        }
+        if ($lastHaptic) {
+            $deltaHF = $null
+            if ($symbolInfo -and $symbolInfo.HapticTimestampMs -ne $null -and $null -ne $timestampMs) {
+                $deltaHF = $timestampMs - $symbolInfo.HapticTimestampMs
+            } elseif ($null -ne $timestampMs -and $null -ne $lastHaptic.TimestampMs -and $lastHaptic.CorrelationId -eq $correlationId) {
+                $deltaHF = $timestampMs - $lastHaptic.TimestampMs
+            } elseif ($lastHaptic.LogTime) {
+                $deltaHF = ($logTime - $lastHaptic.LogTime).TotalMilliseconds
+            }
+            if ($deltaHF -ne $null -and [math]::Abs($deltaHF) -le 500) {
+                Add-Stat $hapticToFlash $deltaHF
+            }
+        }
+        $lastFlash = [pscustomobject]@{
+            TimestampMs = $timestampMs
+            LogTime = $logTime
+            CorrelationId = $correlationId
+        }
+        while ($symbolQueue.Count -gt 0) {
+            $front = $symbolQueue.Peek()
+            if ($front.UsedForHaptic -and $front.UsedForFlash) {
+                $removed = $symbolQueue.Dequeue()
+                if ($removed.CorrelationId) {
+                    $symbolByCorrelation.Remove($removed.CorrelationId) | Out-Null
+                }
+                continue
+            }
+            break
+        }
+        continue
+    }
 
     if ($message -match '\[outputs\]\s+(outputs\.flashPulse\.commit|keyer\.torch\.reset)') {
-        $timestampMs = Parse-TimestampMs $message
+        $timestampMs = Parse-TimestampMs $message $jsonPayload
         $isTorchReset = $message -match 'keyer\.torch\.reset'
         if ($lastAudioStart) {
             Add-Stat $audioToCommit (($logTime - $lastAudioStart).TotalMilliseconds)
@@ -165,35 +348,72 @@ if ($message -match '\[outputs\]\s+(outputs\.flashPulse(?!\.commit)|keyer\.flash
     }
 
     if ($message -match '\[outputs\]\s+playMorse\.symbol') {
-        $jsTimestamp = Parse-TimestampMs $message
-        $currentSymbol = [pscustomobject]@{
+        $jsTimestamp = Parse-TimestampMs $message $jsonPayload
+        $nativeTimestamp = Parse-NativeField $message $jsonPayload 'nativeTimestampMs'
+        $nativeOffset = Parse-NativeField $message $jsonPayload 'nativeOffsetMs'
+        $nativeDuration = Parse-NativeField $message $jsonPayload 'nativeDurationMs'
+        $symbolIndex = $null
+        $correlationId = $null
+        if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'correlationId') {
+            $value = $jsonPayload.correlationId
+            if ($value -ne $null -and $value -ne '') {
+                $correlationId = [string]$value
+            }
+        }
+        if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'index') {
+            $symbolIndex = [int]$jsonPayload.index
+        }
+        if ($nativeOffset -ne $null -and $nativeOffset -ge $highOffsetThresholdMs) {
+            $highOffsetEvents.Add([pscustomobject]@{
+                UnitMs = $currentRunUnit
+                Index = $symbolIndex
+                NativeOffsetMs = [math]::Round($nativeOffset, 3)
+                CorrelationId = $correlationId
+                NativeSequence = Parse-NativeField $message $jsonPayload 'nativeSequence'
+            })
+        }
+        $symbolInfo = [pscustomobject]@{
             UnitMs = $currentRunUnit
             JsTimestampMs = $jsTimestamp
-            NativeTimestampMs = $null
-            NativeOffsetMs = $null
-            NativeDurationMs = $null
+            NativeTimestampMs = $nativeTimestamp
+            NativeOffsetMs = $nativeOffset
+            NativeDurationMs = $nativeDuration
+            CorrelationId = $correlationId
+            UsedForHaptic = $false
+            UsedForFlash = $false
+            HapticTimestampMs = $null
+            FlashTimestampMs = $null
         }
-        $symbolSamples += $currentSymbol
+        $symbolSamples += $symbolInfo
+        if ($correlationId) {
+            $symbolByCorrelation[$correlationId] = $symbolInfo
+        }
+        $symbolQueue.Enqueue($symbolInfo)
         continue
     }
 
     if ($currentSymbol) {
-        $nativeTimestamp = Parse-NativeField $message 'nativeTimestampMs'
+        $nativeTimestamp = Parse-NativeField $message $jsonPayload 'nativeTimestampMs'
         if ($nativeTimestamp -ne $null) {
             $currentSymbol.NativeTimestampMs = $nativeTimestamp
         }
 
-        $nativeDuration = Parse-NativeField $message 'nativeDurationMs'
+        $nativeDuration = Parse-NativeField $message $jsonPayload 'nativeDurationMs'
         if ($nativeDuration -ne $null) {
             $currentSymbol.NativeDurationMs = $nativeDuration
         }
 
-        $nativeOffset = Parse-NativeField $message 'nativeOffsetMs'
+        $nativeOffset = Parse-NativeField $message $jsonPayload 'nativeOffsetMs'
         if ($nativeOffset -ne $null) {
             $currentSymbol.NativeOffsetMs = $nativeOffset
         }
 
-        if ($message -match 'nativeSequence:\s*(\d+)') {
+        $correlationId = $currentSymbol.CorrelationId
+        if ($correlationId -and $symbolByCorrelation.ContainsKey($correlationId)) {
+            $symbolByCorrelation[$correlationId] = $currentSymbol
+        }
+
+        if (($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'nativeSequence') -or ($message -match 'nativeSequence:\s*(\d+)')) {
             $currentSymbol = $null
         }
     }
@@ -260,4 +480,15 @@ if ($delaySamples.Count -gt 0) {
 } else {
     Write-Host ''
     Write-Host 'Native alignment: no samples with both JS and native timestamps.'
+}
+
+if ($highOffsetEvents.Count -gt 0) {
+    Write-Host ''
+    Write-Host ("High native offsets (>= {0} ms):" -f $highOffsetThresholdMs) -ForegroundColor Yellow
+    Write-Host (
+        $highOffsetEvents |
+        Sort-Object NativeOffsetMs -Descending |
+        Format-Table -AutoSize |
+        Out-String -Width 200
+    )
 }

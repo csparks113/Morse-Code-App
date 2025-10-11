@@ -246,6 +246,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     traceOutputs('keyer.flash.start', {
       latencyMs,
       intensity,
+      monotonicTimestampMs: startedAt,
     });
     recordChannelLatency('touchToFlash', startedAt, latencyMs, {
       metadata: { intensity },
@@ -262,6 +263,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     }).start();
     traceOutputs('keyer.flash.stop', {
       latencyMs: nowMs() - endedAt,
+      monotonicTimestampMs: endedAt,
     });
   };
 
@@ -284,6 +286,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       traceOutputs('keyer.haptics.start', {
         platform: 'android',
         latencyMs,
+        monotonicTimestampMs: startedAt,
       });
       recordChannelLatency('touchToHaptic', startedAt, latencyMs);
       return;
@@ -307,6 +310,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     traceOutputs('keyer.haptics.start', {
       platform: 'ios',
       latencyMs,
+      monotonicTimestampMs: startedAt,
     });
     recordChannelLatency('touchToHaptic', startedAt, latencyMs);
   };
@@ -324,6 +328,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       traceOutputs('keyer.haptics.stop', {
         platform: 'android',
         latencyMs: nowMs() - endedAt,
+        monotonicTimestampMs: endedAt,
       });
       return;
     }
@@ -335,6 +340,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     traceOutputs('keyer.haptics.stop', {
       platform: 'ios',
       latencyMs: nowMs() - endedAt,
+      monotonicTimestampMs: endedAt,
     });
   };
 
@@ -352,6 +358,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
         volume,
         latencyMs,
         backend: toneController.backend,
+        monotonicTimestampMs: startedAt,
       });
       recordChannelLatency('touchToTone', startedAt, latencyMs, {
         metadata: { backend: toneController.backend, hz, volume },
@@ -376,6 +383,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
         traceOutputs('keyer.tone.stop', {
           latencyMs: nowMs() - endedAt,
           backend: toneController.backend,
+          monotonicTimestampMs: endedAt,
         });
       }
     } catch (error) {
@@ -404,6 +412,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
         source: options?.source ?? contextSource,
         correlationId: options?.correlationId ?? null,
         timelineOffsetMs: normalizedOffset,
+        monotonicTimestampMs: effectiveStartedAt,
       });
       recordChannelLatency('touchToTorch', effectiveStartedAt, latencyMs, {
         source: options?.source ?? undefined,
@@ -465,6 +474,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       source: scheduleInfo?.source ?? contextSource,
       correlationId: scheduleInfo?.correlationId ?? null,
       timelineOffsetMs: normalizedOffset,
+      monotonicTimestampMs: effectiveEndedAt,
     });
   };
 
@@ -540,6 +550,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
         torch: options.torchEnabled,
         toneHz: resolveToneHz(),
       },
+      monotonicTimestampMs: startedAt,
     });
     flashOn(startedAt);
     startHaptics(startedAt);
@@ -573,6 +584,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       holdMs,
       source: contextSource,
       correlationId: currentPress?.id ?? null,
+      monotonicTimestampMs: endedAt,
     });
     flashOff(endedAt);
     stopHaptics(endedAt);

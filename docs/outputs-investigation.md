@@ -1,6 +1,6 @@
 # Outputs Diagnostics Log
 
-## Current Status (2025-10-10)
+## Current Status (2025-10-11)
 - `forceCutOutputs` now runs on every verdict queue/complete transition, session start/stop, and interaction disable so tone/flash/haptics release immediately even if a release handler misses.
 - Flash overlay sits behind send/receive/practice UI layers while remaining visible on every surface; brightness tuning may still be needed for low-luminance devices.
 - Send prompt card now auto-reveals the answer after wrong submissions, and a 200 ms verdict buffer (from `constants/appConfig.ts`) keeps judgement aligned with the banner animation.
@@ -10,19 +10,18 @@
 - Send verdict scoring now happens at banner display: we schedule the verdict but re-read the full input just before showing the banner so extra dots/dashes can no longer sneak through.
 - Developer console now surfaces the live `ignorePressRef` indicator (reason + press ID) via the outputs trace stream, so testers can catch ignore-mode transitions without scanning logcat.
 - Developer console replay pulses now schedule against the Nitro monotonic timeline (`monotonicTimestampMs` + native offsets), so JS dispatch no longer inflates latency metrics.
+- Live keyer telemetry (`keyer.flash|haptics|tone|press|torch start/stop`) now emits `monotonicTimestampMs`, keeping device sweeps aligned with replay traces and the updated analyzer.
 - Torch scheduling/telemetry now use the same monotonic baseline (`timelineOffsetMs`) as flash/haptic, keeping `touchToTorch` latency samples aligned with Nitro offsets (~50-60 ms after adjustment).
 - Manual validation now centers on Play Pattern captures plus the freeform send-lesson sweep; see **Testing Recipes** below for the streamlined workflow.
+- Analyzer backs out high-offset regressions automatically: `scripts/analyze-logcat.ps1` prints a >=80 ms native-offset table for every run and can export spike summaries (see `docs/logs/spike-summary-play-pattern-20251011.csv` for the 13:37 vs 14:14 comparison).
 
-## Latest Observations (2025-10-09 device run)
-- `keyer.forceCut` now fires for every verdict transition, and the new keyer release signal resets the button + outputs between questions.
-- Receive/practice/send screens all respect the background flash layer; overlay opacity matches brightness settings.
-- Nitro logcat stream is quiet once Hermes build prerequisites (DIA SDK) are satisfied.
-- Verdict buffer keeps tone/flash cuts synced with the verdict banner on Pixel 7; need additional device checks for WPM extremes.
-- Torch reset fallback continues to clear hardware state after forced cuts; keep spot-checking mis-timed releases, but no regressions observed after the timeline alignment.
-- Console replay (2025-10-10) shows `outputs.flashPulse.commit` latency closely tracking native offsets (~50-110 ms) while `timelineOffsetMs` is logged; persistent spikes (>150 ms) correlate with Nitro-reported offsets rather than JS delay.
-- New `playMorse.nativeOffset.spike` traces surface Nitro offset jumps (>=80 ms) so we can inspect sequence resets without digging through raw symbol logs.
-- Archived console replay summary (`docs/logs/console-replay-20251010-aligned.md`) captures the timeline-aligned sweep; replace the placeholder TXT with the actual logcat export when available.
-- Torch latency samples in the same sweep track the timeline offsets (~53-58 ms after adjustment), confirming `touchToTorch` now honors the monotonic schedule.
+## Latest Observations (2025-10-11 device run)
+- Updated JSON analyzer (`scripts/analyze-logcat.ps1`) now digests the restored `[outputs]` payloads and should be treated as the baseline for future captures.
+- Play Pattern replay (`docs/logs/console-replay-20251011-122422-play-pattern.txt`): audio->flash mean 17.1 ms (p95 69.3 ms), audio->haptic mean 17.0 ms (p95 68.7 ms), audio->tone mean 0.72 ms, torch reset mean 176.7 ms (p95 352 ms). Native alignment spans 193 symbols (mean 29.4 ms, p95 86.0 ms) with nativeOffset mean/max 28.9 / 123.0 ms and no spike traces.
+- Reprocessed Play Pattern capture (`docs/logs/console-replay-20251011-133707-play-pattern.txt`) aligns with Nitro (audio->flash mean 20.8 ms, audio->haptic mean 20.3 ms, native delay mean 32.2 ms, p95 90.6 ms) but still surfaced four `playMorse.nativeOffset.spike` events between 80-100 ms (unitMs 48/34/30); keep the log flagged while we monitor for clusters.
+- Regression Play Pattern capture (`docs/logs/console-replay-20251011-141417-play-pattern.txt`) shows the drift: audio->flash mean 36.7 ms (p95 110.3 ms), audio->haptic mean 35.4 ms (p95 109.6 ms), flash commit mean 435.8 ms, native alignment mean 42.6 ms (p95 117.2 ms), and 20 correlations above 80 ms (unit lengths 60/48/40/34/30). The spike summary CSV lists each correlation ID for native follow-up.
+- Freeform send sweep (`docs/logs/send-freeform-20251011-133848-sweep.txt`): audio->flash mean 4.7 ms (p95 18.8 ms), audio->haptic mean 5.5 ms (p95 15.6 ms), tone mean 0.65 ms, torch reset mean 163.7 ms (p95 369 ms). Haptic->flash spans continue to average ~210 ms (p95 462 ms), and the lone 1.83 s flash-commit window matched a deliberate 1.74 s press hold (torch reset at 5,385,125 ms).
+- Prior 2025-10-09 runs still validate the forced-cut + verdict-buffer flow; keep using them as comparison points for high-WPM sweeps until more 2025-10-11 logs accumulate.
 
 ## Attempt History
 | Date | Change / Experiment | Scope | Result | Notes |
@@ -69,6 +68,11 @@
 3. Trigger the console **Play Pattern** sweep (cover the usual WPM presets) while the capture runs.
 4. Stop the capture (`Ctrl+C`) and save the full logcat output to `docs/logs/console-replay-<timestamp>.txt`.
 5. Run `scripts\analyze-logcat.ps1 -LogFile <path>` to summarize tone/flash/haptic/torch deltas and native offsets, then record highlights in this file and `docs/outputs-alignment-notes.md`.
+- 2025-10-11 12:24:22 capture (`docs/logs/console-replay-20251011-122422-play-pattern.txt`): audio->flash mean 17.1 ms (p95 69.3 ms), audio->haptic mean 17.0 ms (p95 68.7 ms), audio->tone mean 0.72 ms, torch reset mean 176.7 ms (p95 352 ms); native alignment mean 29.4 ms (p95 86.0 ms) with nativeOffset mean/max 28.9 / 123.0 ms and no spike traces.
+- 2025-10-11 13:37:07 capture (`docs/logs/console-replay-20251011-133707-play-pattern.txt`): audio->flash mean 25.6 ms (p95 75.3 ms), audio->haptic mean 24.4 ms (p95 74.5 ms), flash commit mean 78.6 ms (p95 134 ms); native delay mean 23.4 ms (p95 73.6 ms) plus four `playMorse.nativeOffset.spike` events (80-99 ms) to keep on the watchlist.
+- 2025-10-11 14:14:17 capture (`docs/logs/console-replay-20251011-141417-play-pattern.txt`): audio->flash mean 39.5 ms (p95 116.6 ms), audio->haptic mean 45.8 ms (p95 122.9 ms), flash commit mean 223.6 ms (p95 969 ms); native delay mean 42.1 ms (p95 122.1 ms) with offsets peaking at 167.4 ms. Thirteen `playMorse.nativeOffset.spike` events fired (unitMs 60/48/40/34), so bundle this log if the spike cluster persists.
+- High-offset correlation summary for both runs lives at `docs/logs/spike-summary-play-pattern-20251011.csv`; analyzer now prints the same table at the end of each invocation.
+- 2025-10-11 14:41:51 capture (`docs/logs/console-replay-20251011-144151-play-pattern.txt`): metrics returned to form—audio->flash mean 23.4 ms (p95 60.1 ms), audio->haptic mean 22.3 ms (p95 59.5 ms), flash commit mean 77.3 ms (p95 117 ms); native delay mean 21.3 ms (p95 59.0 ms) with only three offsets ≥80 ms (all unitMs 40, max 121.8 ms). Keeps the spike summary CSV up to date with the reduced set.
 
 ### Freeform Send-Lesson Sweep
 1. Start from a clean logcat buffer:  
@@ -80,3 +84,4 @@
    - Note any torch lag or lingering audio/flash pulses.
 4. Stop the capture and save it to `docs/logs/send-freeform-<timestamp>.txt`, then run `scripts\analyze-logcat.ps1` on the file.
 5. Append a short Markdown summary here (verdict timing, classifier notes, anomalies) and mirror key findings in `docs/refactor-notes.md`.
+- 2025-10-11 13:38:48 sweep (`docs/logs/send-freeform-20251011-133848-sweep.txt`): audio->flash mean 4.7 ms (p95 18.8 ms), audio->haptic mean 5.5 ms (p95 15.6 ms), tone mean 0.65 ms (p95 1 ms), torch reset mean 163.7 ms (p95 369 ms); haptic->flash mean 210 ms (p95 462 ms) and the lone 1.83 s flash-commit mapped to a deliberate 1.74 s hold.

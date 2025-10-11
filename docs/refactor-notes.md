@@ -5,6 +5,12 @@
 - When you pick up a task, copy the relevant bullet into your working notes and expand it with acceptance criteria, links, or test plans.
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
+## Completed (2025-10-11)
+
+- Restored structured `[outputs]` logging in `services/outputs/trace.ts` so every trace lands as a single-line JSON payload for the analyzer.
+- Threaded `monotonicTimestampMs` through live keyer events in `services/outputs/defaultOutputsService.ts`, keeping flash/haptic/tone/torch telemetry aligned with Nitro offsets during sweeps.
+- Rebuilt `scripts/analyze-logcat.ps1` to parse the JSON payloads, correlate `playMorse.symbol` events, and compute channel deltas; fresh runs on `docs/logs/console-replay-20251011-122422-play-pattern.txt` and `docs/logs/send-freeform-20251011-133848-sweep.txt` confirm audio->flash 17 ms / 4.7 ms means with native delays staying inside 86 ms / 57 ms p95.
+
 ## Completed (2025-10-09)
 
 - Integrated the forced `forceCutOutputs` + release signal flow across `useSendSession`, `useKeyerOutputs`, and `KeyerButton` so any queued verdict or interaction disable clears active tone/flash/haptic outputs.
@@ -33,9 +39,12 @@
 
 ## Next Steps
 
-- Capture a fresh developer-console **Play Pattern** run, replace `docs/logs/console-replay-20251010-aligned.txt` with the real logcat export, and summarize the offsets in `docs/outputs-alignment-notes.md`.
-- Run a freeform send-lesson sweep (mix WPMs, dot-led characters, challenge mode) while logging logcat, then document verdict buffer/torch/classifier findings in `docs/outputs-investigation.md`.
-- Review recent `playMorse.nativeOffset.spike` traces; if spikes stay above ~80 ms, package representative logs so we can dig into the native timeline and track follow-up in the investigation notes.
+- Share the spike summary (`docs/logs/spike-summary-play-pattern-20251011.csv`) and the 14:14 regression log with native so they can inspect the listed outputs-audio correlations.
+- Capture another Play Pattern sweep to check whether offsets settle back toward the ~21 ms baseline or keep clustering around 40+ ms.
+- If the regression holds, add focused native logging around the replay scheduler for unit lengths 60/48/40/34 to pinpoint where the extra delay enters.
+- Keep running the JSON-aware analyzer (`scripts/analyze-logcat.ps1`) on new captures and retire the pre-fix logs once the baseline metrics stay stable.
+- Spot-check future flash-commit spans above ~1 s; the 2025-10-11 sweep outlier tied back to a deliberate 1.74 s hold, so flag any new cases that lack matching long presses.
+- Continue watching `playMorse.nativeOffset.spike` traces; the analyzer now surfaces >=80 ms entries automatically, so bundle fresh logs if clusters persist.
 
 ### Deferred: Outputs Testing
 
@@ -58,7 +67,7 @@
 ### Outputs Alignment Monitoring
 
 1. Keep Nitro timestamp threading in place (monotonic timeline, torch scheduling) and validate via the Play Pattern captures.
-2. Watch for recurring `playMorse.nativeOffset.spike` events; if they cluster, document hypotheses plus log snippets we can revisit when tuning the native timeline.
+2. Watch for recurring ``playMorse.nativeOffset.spike`` events; if they cluster, document hypotheses plus log snippets we can revisit when tuning the native timeline.
 3. After each meaningful change, archive the relevant logcat file and refresh both the alignment and investigation docs with the deltas.
 
 ### Operational Follow-ups
@@ -113,3 +122,4 @@
 - Completed 2025-10-09: `forceCutOutputs` now runs whenever verdicts queue or sessions end, and the keyer release signal clears button state so outputs never stay latched between questions.
 - Completed 2025-10-08: Added watchdog logging when manual/dev-console handles fail to release tone/flash within expected timeouts (default outputs service records pressTimeout samples and force-cuts handles).
 - Follow up with send/practice flows to ensure the verdict timers cancel pending pressStart correlations before queuing the next prompt (verify practice/send flows honour the cutActiveOutputs path).
+

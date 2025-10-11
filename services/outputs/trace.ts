@@ -37,10 +37,12 @@ export function traceOutputs(event: string, payload?: TracePayload): void {
     payload: details,
   });
 
-  // eslint-disable-next-line no-console
-  console.log(`[outputs] ${event}`, {
+  const logEntry = {
     timestamp,
     wallClock,
     ...(details ?? {}),
-  });
+  };
+
+  // eslint-disable-next-line no-console
+  console.log(`[outputs] ${event} ${JSON.stringify(logEntry)}`);
 }
