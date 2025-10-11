@@ -97,20 +97,20 @@
 
 
 
-## Follow-up Session (2025-10-05 – Output Timing Audit)
+## Follow-up Session (2025-10-05 - Output Timing Audit)
 
 - Commands: `adb logcat ReactNativeJS:D OutputsAudio:D ReactNative:W *:S` (120 s capture) while running **Play Pattern** to trigger flash/haptic/audio timelines.
 - Archived log: `docs/logs/logcat-play-pattern-20251005-221619-post-timestamp-prototype.txt`.
 - Nitro audio leads the React flashes/haptics by roughly 0.1 s; flashes occasionally trail by >250 ms while audio stays on time.
-- Keyer prepare spans remain ~50–60 ms during console playback; tone durations hold near 125 ms with occasional longer presses.
+- Keyer prepare spans remain ~50-60 ms during console playback; tone durations hold near 125 ms with occasional longer presses.
 
-**Timing Metrics** (derived via `docs/outputs-log-monitoring.md` helpers)
-- `audio_start ? haptic`: count 101 · min 1 ms · max 625 ms · mean 96.39 ms · p95 251 ms
-- `audio_start ? flash`: count 101 · min 1 ms · max 630 ms · mean 97.36 ms · p95 257 ms
-- `haptic ? flash`: count 245 · min 0.62 ms · max 748.24 ms · mean 15.80 ms · p95 146.97 ms
-- `flash ? commit`: count 245 · min 11.61 ms · max 316.57 ms · mean 67.30 ms · p95 86.08 ms
-- `keyer.prepare duration`: count 41 · min 39.78 ms · max 83.45 ms · mean 48.49 ms · p95 59.17 ms
-- `keyer tone duration`: count 28 · min 89.96 ms · max 190.27 ms · mean 125.35 ms · p95 161.18 ms
+**Timing Metrics** (via `scripts/analyze-logcat.ps1` on the archived capture)
+- `audio_start ? haptic`: count 101 | min 1 ms | max 625 ms | mean 96.39 ms | p95 251 ms
+- `audio_start ? flash`: count 101 | min 1 ms | max 630 ms | mean 97.36 ms | p95 257 ms
+- `haptic ? flash`: count 245 | min 0.62 ms | max 748.24 ms | mean 15.80 ms | p95 146.97 ms
+- `flash ? commit`: count 245 | min 11.61 ms | max 316.57 ms | mean 67.30 ms | p95 86.08 ms
+- `keyer.prepare duration`: count 41 | min 39.78 ms | max 83.45 ms | mean 48.49 ms | p95 59.17 ms
+- `keyer tone duration`: count 28 | min 89.96 ms | max 190.27 ms | mean 125.35 ms | p95 161.18 ms
 
 **Follow-ups**
 - Prototype emitting Nitro's native start timestamp alongside `outputs.playMorse.symbol` so the React layer can align flash/haptic cues with the audio baseline.
@@ -120,10 +120,10 @@
 ## Follow-up Session (2025-10-05 Wrap-up)
 
 - Attempted to launch a 180 s Play Pattern capture via the PowerShell job script inside Codex CLI; the harness timed out after 10 s so no new log was recorded.
-- Updated docs/outputs-log-monitoring.md so the logcat recipe keeps OutputsAudio:D lines alongside the JS events.
+- Documented the refined logcat capture recipe inside `docs/outputs-investigation.md` so the capture keeps OutputsAudio:D lines alongside the JS events.
 - Recommended to re-run the capture from a local shell (outside the CLI timeout) once the native timestamp plumbing lands, then archive the log under docs/logs/ for diffing.
 - Re-ran Play Pattern capture on 2025-10-06 21:13 and archived the log at `docs/logs/logcat-play-pattern-20251006-2113-native-symbols.txt` using the updated PowerShell capture script.
 - Native timestamp propagation works end-to-end: JS `playMorse.symbol` events now carry `nativeTimestampMs`/`nativeOffsetMs`, and the latest run shows mean JS delay versus native tone start ranging from ~40 ms (`unitMs` 24) up to ~150 ms (`unitMs` 120) with P95 roughly 86-323 ms (native offsets match those numbers).
-- 2025-10-06 21:36 capture after native-aligned playback loop: archived at `docs/logs/logcat-play-pattern-20251006-2136-native-sync.txt`. Overall JS delay vs native audio now averages ~33 ms with P95 ˜88 ms across 540 symbols; per-unit runs range from ~15-49 ms mean and 28-123 ms P95 (unitMs 24–120).
+- 2025-10-06 21:36 capture after native-aligned playback loop: archived at `docs/logs/logcat-play-pattern-20251006-2136-native-sync.txt`. Overall JS delay vs native audio now averages ~33 ms with P95 ~88 ms across 540 symbols; per-unit runs range from ~15-49 ms mean and 28-123 ms P95 (unitMs 24-120).
 - Outstanding integration tasks: finish the OutputsAudio.cpp reset handling, tighten pollNextNativeSymbol guards in utils/audio.ts, and confirm the NativeSymbolTimingContext import stays DCE-safe for web/iOS builds.
 

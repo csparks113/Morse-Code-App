@@ -33,55 +33,53 @@
 
 ## Next Steps
 
-- Replace the placeholder raw log (`docs/logs/console-replay-20251010-aligned.txt`) with the actual Play Pattern logcat export and keep the summary in sync.
-- Review the new `playMorse.nativeOffset.spike` traces (threshold now 80 ms) to determine whether native smoothing or clock calibration is needed.
-- Spot-check torch alignment across send/practice flows post-fix and capture a follow-up logcat bundle if anything drifts.
+- Capture a fresh developer-console **Play Pattern** run, replace `docs/logs/console-replay-20251010-aligned.txt` with the real logcat export, and summarize the offsets in `docs/outputs-alignment-notes.md`.
+- Run a freeform send-lesson sweep (mix WPMs, dot-led characters, challenge mode) while logging logcat, then document verdict buffer/torch/classifier findings in `docs/outputs-investigation.md`.
+- Review recent `playMorse.nativeOffset.spike` traces; if spikes stay above ~80 ms, package representative logs so we can dig into the native timeline and track follow-up in the investigation notes.
 
 ### Deferred: Outputs Testing
 
-- Device-verify the 200 ms verdict buffer, deferred verdict scoring, relaxed classifiers, and torch force-off fallback across low/high WPM drills; log findings in `docs/outputs-investigation.md`.
-- Run the send-lesson regression sweep via `node scripts/run-send-regression.js`, execute the matrix in `docs/outputs-investigation.md`, and capture scenario findings plus device logs in the investigation log.
-- Capture and archive a fresh logcat bundle with the verdict buffer + torch reset enabled for regression comparisons.
-- Optional: Add automated checks or unit coverage around the developer console ignore-press indicator once the manual validation pass locks behaviour in.
+- Extend the freeform sweeps to high-WPM stress cases and confirm the relaxed classifiers still hold; log any misreads or latency drifts in `docs/outputs-investigation.md`.
+- Archive a dated logcat bundle once the verdict buffer and torch reset are validated; keep the summary table in sync with `docs/android-dev-client-testing.md`.
+- Add an automated or logged guard for the developer console `ignorePressRef` indicator after the manual validation pass beds in.
 
 ### Console Replay Alignment
 
-1. Instrument developer console **Play Pattern** runs to capture tone vs flash/haptic/torch offsets and log the deltas in `docs/android-dev-client-testing.md`.
-2. Iterate on the Nitro replay scheduler and timeline offsets until drift stays under ~5 ms across the WPM range.
-3. Validate fixes via developer console exports and attach representative traces (latency tables + `[outputs-audio]`) to the investigation log.
+1. Use the console **Play Pattern** button as the primary replay test, capturing offsets for tone, flash, haptic, and torch after each change.
+2. Record key findings (offset deltas, spike timestamps) in `docs/outputs-alignment-notes.md` and link to the archived log under `docs/logs/`.
+3. If alignment regresses, triage with the new spike traces and escalate to native with concrete samples.
 
 ### Keyer Precision
 
-1. Audit high-WPM dot/dash thresholds; correlate latency samples with `keyer.classification` traces to isolate failure cases.
-2. Prototype adaptive thresholds or hysteresis that protect dot-leading sequences, then document the new rules in `services/outputs` helpers.
-3. Add a regression guard (unit test or log assertion) once the heuristics stabilize.
+1. During freeform sweeps, log dot-led phrases and high-WPM retries to verify the updated tolerances and deferred verdict logic.
+2. Capture examples of any lingering misclassifications with `keyer.classification` traces and outline proposed tuning in `docs/outputs-investigation.md`.
+3. Once a tuning change lands, back it with either unit coverage or a watchdog log so we can detect regressions automatically.
 
-### Outputs Alignment (Incremental Plan)
+### Outputs Alignment Monitoring
 
-1. Finish integrating native keyer press tracking so rapid dots use monotonic timestamps; update telemetry and regression guards once the module lands.
-2. Wire Nitro symbol timestamps through JS consumers (OutputsService, flash/torch controllers) and retime the replay/console paths around the native start time (flash/haptic done; torch scheduling still pending).
-3. If flash/haptic drift persists, add native-driven flash/torch triggers as the next increment and benchmark the results.
-4. After each increment, archive fresh logcat captures under `docs/logs/`, compare them against prior runs, and summarize the deltas here.
+1. Keep Nitro timestamp threading in place (monotonic timeline, torch scheduling) and validate via the Play Pattern captures.
+2. Watch for recurring `playMorse.nativeOffset.spike` events; if they cluster, document hypotheses plus log snippets we can revisit when tuning the native timeline.
+3. After each meaningful change, archive the relevant logcat file and refresh both the alignment and investigation docs with the deltas.
 
 ### Operational Follow-ups
 
 1. Keep `README.md` and `docs/living-spec.md` fresh whenever architecture or known issues shift.
 2. Schedule console/outputs telemetry reviews after dependency bumps (Expo SDK, Nitro modules, Hermes) to catch regressions quickly.
 
-### Lessons Tab Restructure
+### Lessons Tab Restructure (see docs/lessons-structure-plan.md)
 
 1. Design section/subsection data model and update navigation routes to support the new hierarchy (see docs/lessons-structure-plan.md).
 2. Redesign the lessons entry point into a sections overview with progress bars and accordion subsections.
 3. Ensure lesson path screens receive section/subsection context while keeping existing header styling.
 4. Update progress analytics and storage to track section + subsection completion.
 
-### Practice-Tab Groundwork
+### Practice-Tab Groundwork (see docs/practice-revamp-plan.md)
 
 1. Inventory the shared components the practice tab will reuse (keyboards, summary cards, toggles) and confirm each has tokens/theming hooks.
 2. Define navigation and data scaffolding for practice flows so future tasks are additive rather than structural.
 3. Collect and log practice-content ideas/TODOs in a dedicated subsection of this file or companion doc.
 
-### Practice Modes Revamp
+### Practice Modes Revamp (see docs/practice-revamp-plan.md)
 
 1. Ship the new Practice tab card layout with themed modes (Timing/Target/Custom).
 2. Build setup flows for each mode (configuration screens -> start session).
@@ -89,7 +87,7 @@
 4. Reuse lesson send/receive shells for Target/Custom modes with mode-specific styling.
 5. Introduce a mode registry/config so future practice modes are plug-and-play (see docs/practice-revamp-plan.md).
 
-### Multi-language Expansion
+### Multi-language Expansion (see docs/multilanguage-plan.md)
 
 1. Finish i18n sweep so all UI/lesson copy lives in resource bundles and is language-switchable.
 2. Build per-language keyboard layouts and wire them into lessons/keyer flows.

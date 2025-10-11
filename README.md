@@ -47,7 +47,7 @@ EXPO_USE_NEW_ARCHITECTURE=1 npx expo start --dev-client
 - Android dev client log: `docs/android-dev-client-testing.md`.
 - Nitro prep checklist: `docs/nitro-integration-prep.md`.
 - Developer console updates: `docs/developer-console-updates.md`.
-- Outputs rewire plan: `docs/outputs-rewire-plan.md`.
+- Outputs diagnostics: `docs/outputs-investigation.md`.
 
 ## Folder Structure (excerpt)
 ```text

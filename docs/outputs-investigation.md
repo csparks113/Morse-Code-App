@@ -10,7 +10,8 @@
 - Send verdict scoring now happens at banner display: we schedule the verdict but re-read the full input just before showing the banner so extra dots/dashes can no longer sneak through.
 - Developer console now surfaces the live `ignorePressRef` indicator (reason + press ID) via the outputs trace stream, so testers can catch ignore-mode transitions without scanning logcat.
 - Developer console replay pulses now schedule against the Nitro monotonic timeline (`monotonicTimestampMs` + native offsets), so JS dispatch no longer inflates latency metrics.
-- Torch scheduling/telemetry now use the same monotonic baseline (`timelineOffsetMs`) as flash/haptic, keeping `touchToTorch` latency samples aligned with Nitro offsets (~50–60 ms after adjustment).
+- Torch scheduling/telemetry now use the same monotonic baseline (`timelineOffsetMs`) as flash/haptic, keeping `touchToTorch` latency samples aligned with Nitro offsets (~50-60 ms after adjustment).
+- Manual validation now centers on Play Pattern captures plus the freeform send-lesson sweep; see **Testing Recipes** below for the streamlined workflow.
 
 ## Latest Observations (2025-10-09 device run)
 - `keyer.forceCut` now fires for every verdict transition, and the new keyer release signal resets the button + outputs between questions.
@@ -19,7 +20,7 @@
 - Verdict buffer keeps tone/flash cuts synced with the verdict banner on Pixel 7; need additional device checks for WPM extremes.
 - Torch reset fallback continues to clear hardware state after forced cuts; keep spot-checking mis-timed releases, but no regressions observed after the timeline alignment.
 - Console replay (2025-10-10) shows `outputs.flashPulse.commit` latency closely tracking native offsets (~50-110 ms) while `timelineOffsetMs` is logged; persistent spikes (>150 ms) correlate with Nitro-reported offsets rather than JS delay.
-- New `playMorse.nativeOffset.spike` traces surface Nitro offset jumps (>=80 ms) so native folks can inspect sequence resets without digging through raw symbol logs.
+- New `playMorse.nativeOffset.spike` traces surface Nitro offset jumps (>=80 ms) so we can inspect sequence resets without digging through raw symbol logs.
 - Archived console replay summary (`docs/logs/console-replay-20251010-aligned.md`) captures the timeline-aligned sweep; replace the placeholder TXT with the actual logcat export when available.
 - Torch latency samples in the same sweep track the timeline offsets (~53-58 ms after adjustment), confirming `touchToTorch` now honors the monotonic schedule.
 
@@ -43,15 +44,11 @@
 | 2025-10-10 | Align torch scheduling with monotonic timeline offsets | services/outputs/defaultOutputsService.ts | Confirmed | Torch start/stop traces fire immediately; `touchToTorch` samples track offsets (~55 ms) |
 
 ## Next Diagnostics
-1. Run the send lesson regression sweep via `node scripts/run-send-regression.js`, logging every matrix scenario below and archiving supporting device captures.
-2. Validate the 200 ms verdict buffer across low/high WPM drills while running the sweep, ensuring banner timing still matches perceived output stops.
-3. Stress-test dot-led characters (A, F, R, etc.) at multiple WPMs to confirm the relaxed classifier and deferred verdict logic eliminate premature cut-offs; capture latency + classification traces.
-4. Re-run manual/dev-console watchdogs to confirm the new force-cut path still logs `pressTimeout` samples and never leaves Nitro running.
-5. Replace the placeholder console replay log (`docs/logs/console-replay-20251010-aligned.txt`) with the actual logcat export for future diffs.
-6. Capture a fresh logcat bundle with the verdict buffer + torch reset enabled and the new timeline scheduling, then diff against pre-fix traces.
-7. Review the new `playMorse.nativeOffset.spike` traces (or lack thereof) to confirm offset magnitudes and share any recurrent patterns with the native team; adjust the spike threshold if offsets stay below 80 ms but still worth tracking.
-8. Review regression findings, file any new issues, and mirror key updates back into this log and `docs/refactor-notes.md`.
-9. Optional: Add automated checks or unit coverage around the developer console ignore-press indicator once the manual pass confirms behaviour.
+1. Replace the placeholder console replay export (`docs/logs/console-replay-20251010-aligned.txt`) with a fresh developer-console **Play Pattern** capture and log the offsets in this document plus `docs/outputs-alignment-notes.md`.
+2. Run a freeform send-lesson sweep (vary WPM and dot-led characters, include challenge mode) while capturing logcat; note verdict buffer timing, torch resets, and classifier behaviour below.
+3. Watch the new `playMorse.nativeOffset.spike` traces; if spikes stay above ~80 ms, bundle representative logs so we can inspect the native timeline together.
+4. Verify the forced-cut + watchdog path still records `pressTimeout` lines and never leaves Nitro running after long holds or banner collisions.
+5. Optional: once manual validation locks in, add a lightweight automated check (unit test or log assertion) for the developer console `ignorePressRef` indicator.
 ## Open Questions
 - Do we want to increase `flashMaxOpacity` on low-brightness devices now that the overlay sits behind UI?
 - Does the 200 ms verdict buffer hold across extreme WPM speeds, or do we need a dynamic scale/override?
@@ -62,35 +59,24 @@
 - Primary: Codex session + engineering buddy hand-off.
 - Mirror updates back into `docs/refactor-notes.md` once resolved.
 
-## Send Lesson Regression Matrix (Draft - 2025-10-09)
-Run each scenario with device logging enabled (see **Log Capture Recipe** below). For every row record whether the verdict buffer timing felt correct, whether any outputs latched, and any audible/visual glitches (especially keyer “clicks”). Add observations beneath the table or inline in the “Notes” column.
+## Testing Recipes
 
-| Scenario ID | Prompt Pattern | User Input Pattern | WPM | Notes to Capture |
-|-------------|----------------|--------------------|-----|------------------|
-| S1 | Expected `A (.-)` | User taps `A` correctly | 12 | Baseline: confirm banner timing + outputs cut |
-| S2 | Expected `N (-.)` | User taps `A (.-)` | 12 | Validate verdict delay + no premature cut-off |
-| S3 | Expected `A (.-)` | User taps `N (-.)` | 12 | Confirm buffer restarts when finishing wrong pattern |
-| S4 | Expected `A (.-)` | User taps `A`, then immediate retry (tap Start -> `A` again) | 12 | Watch for lingering press state |
-| S5 | Expected alternating prompts (`A`, `N`, `R`) | User intentionally alternates (`A↔N`) | 20 | High WPM stress test |
-| S6 | Expected practice set with longer glyphs (`K`, `R`, `F`) | User performs rapid retries (`A` twice, `N`, `A`) | 20 | Ensure classifier tolerances hold at high speed |
-| S7 | Challenge mode prompt | User intentionally fails hearts (wrong answer) | 12 | Confirm verdict finalization + heart decrement + torch off |
-| S8 | Challenge mode prompt | User answers correctly after reveal | 12 | Validate auto-reveal path + outputs |
+### Developer Console Play Pattern
+1. With Metro running, clear the log buffer:  
+   `adb logcat -c`
+2. Start a filtered capture that retains native offsets alongside JS traces:  
+   `adb logcat ReactNativeJS:D OutputsAudio:D ReactNative:W *:S ^| findstr /R /C:"keyer\." /C:"outputs" /C:"[outputs-audio]" /C:"playMorse.nativeOffset"`
+3. Trigger the console **Play Pattern** sweep (cover the usual WPM presets) while the capture runs.
+4. Stop the capture (`Ctrl+C`) and save the full logcat output to `docs/logs/console-replay-<timestamp>.txt`.
+5. Run `scripts\analyze-logcat.ps1 -LogFile <path>` to summarize tone/flash/haptic/torch deltas and native offsets, then record highlights in this file and `docs/outputs-alignment-notes.md`.
 
-Document any new issues in this section and mirror them into `docs/refactor-notes.md` / `Next Diagnostics` as appropriate.
-
-## Log Capture Recipe (Send Lesson Regression)
-1. (Optional) Run `node scripts/run-send-regression.js` for an interactive checklist that tags logcat and records scenario notes.
-2. Connect device and clear existing buffers:
-   ```powershell
-   adb logcat -c
-   ```
-3. Start focused capture filtering for keyer/outputs events while preserving full logs for later diffing:
-   ```powershell
-   adb logcat ReactNativeJS:D ReactNative:W *:S ^| findstr /R /C:"keyer\." /C:"outputs" /C:"[outputs-audio]" /C:"torch"
-   ```
-4. Run the regression matrix scenarios above. After each scenario, note timestamps and verdict observations in this document.
-5. When finished, stop the capture (`Ctrl+C`) and save the log to `docs/logs/send-regression-20251009.txt` (create new filename per run):
-   ```powershell
-   adb logcat -d > docs/logs/send-regression-20251009.txt
-   ```
-6. Attach a short summary (scenario IDs covered, anomalies) under **Send Lesson Regression Matrix**.
+### Freeform Send-Lesson Sweep
+1. Start from a clean logcat buffer:  
+   `adb logcat -c`
+2. Launch the same filtered capture as above so `[outputs-audio]`, `keyer.*`, and torch traces stay visible.
+3. Work through send lessons manually:
+   - Mix WPMs (e.g., 12, 18, 22) and include dot-led glyphs (`A`, `F`, `R`) plus challenge mode hearts.
+   - Alternate correct and intentionally wrong answers, trigger reveals, and observe the 200 ms verdict buffer.
+   - Note any torch lag or lingering audio/flash pulses.
+4. Stop the capture and save it to `docs/logs/send-freeform-<timestamp>.txt`, then run `scripts\analyze-logcat.ps1` on the file.
+5. Append a short Markdown summary here (verdict timing, classifier notes, anomalies) and mirror key findings in `docs/refactor-notes.md`.

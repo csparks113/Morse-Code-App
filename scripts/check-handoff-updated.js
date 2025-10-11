@@ -62,8 +62,8 @@ function main() {
     problems.push('docs/refactor-notes.md must be updated when non-doc files change.');
   }
 
-  if (requiresOutputsPlan(changedFiles) && !changedFiles.includes('docs/outputs-rewire-plan.md')) {
-    problems.push('docs/outputs-rewire-plan.md must reflect outputs-related changes.');
+  if (requiresOutputsPlan(changedFiles) && !changedFiles.includes('docs/outputs-investigation.md')) {
+    problems.push('docs/outputs-investigation.md must reflect outputs-related changes.');
   }
 
   if (problems.length > 0) {

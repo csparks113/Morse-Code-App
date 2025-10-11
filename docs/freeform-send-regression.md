@@ -1,6 +1,6 @@
 # Freeform Send-Lesson Regression Sweep
 
-Detailed checklist for running the manual “freeform” regression validation on a connected Android device. Follow the steps in order so every chat session has the same context, artifacts, and cleanup routine.
+Detailed checklist for running the manual "freeform" regression validation on a connected Android device. Follow the steps in order so every chat session has the same context, artifacts, and cleanup routine.
 
 ## Prerequisites
 
@@ -35,12 +35,12 @@ Detailed checklist for running the manual “freeform” regression validation o
 
 _Work from a second shell or the device itself while the capture runs._
 
-1. Alternate lesson speeds (e.g., 12 → 18 → 22 WPM) and glyph types (A/N/R plus challenge mode).
+1. Alternate lesson speeds (e.g., 12???18???22 WPM) and glyph types (A/N/R plus challenge mode).
 2. Mix correctness: intentionally miss patterns, trigger force-cutoffs, complete reveals, etc.
 3. Note timestamps or scenario highlights as you go (optional but helpful). Example template:
    ```markdown
-   - 20:05:12Z – 18 WPM alternating A/N/R, 70% accuracy, torch behaved correctly.
-   - 20:07:40Z – Challenge mode, forced two heart drops, torch reset slow (~350 ms).
+   - 20:05:12Z – 18?WPM alternating A/N/R, 70% accuracy, torch behaved correctly.
+   - 20:07:40Z – Challenge mode, forced two heart drops, torch reset slow (~350?ms).
    ```
 
 ## 3. Stop Capture
@@ -54,8 +54,8 @@ _Work from a second shell or the device itself while the capture runs._
    ```powershell
    scripts\analyze-logcat.ps1 -LogFile $env:REGRESSION_LOG
    ```
-2. Review the printed table. Expect audio to lead haptic/flash/tone by only a few milliseconds and torch resets in ~150–350 ms.
-3. Check the “Raw counts” and the `[outputs-audio]` total to ensure the sweep covered enough samples.
+2. Review the printed table. Expect audio to lead haptic/flash/tone by only a few milliseconds and torch resets in ~150–350?ms.
+3. Check the "Raw counts" and the `[outputs-audio]` total to ensure the sweep covered enough samples.
 
 ## 5. Summarize in this Repository
 
@@ -84,4 +84,4 @@ _Work from a second shell or the device itself while the capture runs._
 
 ---
 
-Following this checklist ensures every freeform sweep captures the right signals, produces consistent analyzer output, and leaves the workspace clean for the next session. When starting a new chat, reference this document so the agent can jump directly into Step 1 with full context.
+Following this checklist ensures every freeform sweep captures the right signals, produces consistent analyzer output, and leaves the workspace clean for the next session. When starting a new chat, reference this document so the agent can jump directly into Step?1 with full context.

@@ -7,18 +7,22 @@ Use this document to capture the single source of truth after each working sessi
 - **Objective:** Lock in the stabilized outputs pipeline while validating the new send-session UX (auto reveal + verdict buffer) and continuing replay drift + classification follow-up.
 - **Owner:** Codex pairing session (update with your initials if another contributor takes over).
 
+## Roles & Responsibilities
+- **Product & Device Validation (cspar):** Drives priorities, runs on-device Play Pattern / freeform sweeps, and captures logcat artifacts.
+- **Hands-on Implementation (ChatGPT via Codex CLI):** Implements native/JS fixes, updates documentation, and maintains the outputs backlog.
+- **Automation & Tooling (Codex CLI harness):** Provides local execution environment, log capture scripts, and build automation support.
+
 ## Latest Update
 - **When:** 2025-10-09
 - **Summary:** Auto-revealed prompts now show the correct answer after wrong send submissions, backed by a 200 ms verdict buffer stored in `constants/appConfig.ts`. Torch teardown now forces an `OFF` command (`forceTorchOff`) after every release (and still logs failures), Morse signal/gap classifiers gained an extended tolerance window, the verdict buffer restarts on new presses, and presses that collide with banner rendering are ignored to prevent audio clicks. Forced output cuts, the keyer release signal, and FlashOverlay updates remain in place.
 - **State:** Outputs are stable across send/receive/practice flows. Focus shifts to validating the verdict buffer + deferred scoring + classifier adjustments on real devices while continuing Nitro replay drift and high-WPM classification follow-up.
 
 ## Next Steps
-1. Device-verify the auto-reveal flow, 200 ms verdict buffer (now restarts on each press), deferred verdict scoring, torch force-off fallback, and relaxed classifiers across low/high WPM drills; capture findings in `docs/outputs-investigation.md` and archive fresh logcat traces.
-2. Add a developer console indicator for `ignorePressRef` / active press IDs so future stuck presses surface without raw log dives.
-3. Profile developer console **Play Pattern** runs, capture `[outputs-audio]` and `keyer.*` logs, and record tone vs flash/haptic/torch offsets in `docs/android-dev-client-testing.md`.
-4. Tune Nitro replay scheduling and timeline offsets until drift stays within ~5 ms; document before/after traces in the investigation log.
-5. Audit dot/dash thresholds at higher WPM, correlate new tolerance behaviour with `keyer.classification` traces, and decide if per-mode overrides are needed.
-6. Run the iOS bridgeless checklist to confirm Nitro registration, latency logging, and parity with Android.
+1. Capture a new developer-console **Play Pattern** sweep, replace the placeholder export under `docs/logs/console-replay-20251010-aligned.txt`, and note offsets in `docs/outputs-alignment-notes.md`.
+2. Run a freeform send-lesson sweep (mix WPMs, dot-led characters, challenge mode) while logging logcat; document verdict buffer, torch reset, and classifier behaviour in `docs/outputs-investigation.md`.
+3. Review any `playMorse.nativeOffset.spike` traces collected during those runs; if spikes stay above ~80 ms, package logs so we can investigate the native timeline and track the follow-up in the investigation doc.
+4. Keep torch alignment and high-WPM keyer precision on watch during the sweeps, logging anomalies and proposed tweaks back into `docs/refactor-notes.md`.
+5. Run the iOS bridgeless checklist once Android validation is locked so we confirm Nitro parity across platforms.
 
 ### Rebuild + Logging Recipe (Galaxy S22+)
 1. **Stop Metro** if it is running (`Ctrl+C` in the terminal hosting `npx expo start`).
@@ -63,7 +67,7 @@ Use this document to capture the single source of truth after each working sessi
 ## Reference Docs
 - `docs/android-dev-client-testing.md` - investigation log and known issues.
 - `docs/refactor-notes.md` - master backlog and daily log.
-- `docs/outputs-rewire-plan.md` - outputs strategy and milestones.
+- `docs/outputs-investigation.md` - active diagnostics notes and testing recipes.
 - `docs/developer-console-updates.md` - console instrumentation history.
 - `docs/nitro-integration-prep.md` - New Architecture + Nitrogen setup checklist.
 
