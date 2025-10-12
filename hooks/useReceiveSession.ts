@@ -4,7 +4,7 @@ import type { Animated } from 'react-native';
 
 import type { ActionButtonState } from '@/components/session/ActionButton';
 import type { PromptActionLabels, PromptActionConfig, SessionActionIconName } from '@/hooks/sessionActionTypes';
-import { useOutputsService, type PlaybackSymbolContext, resolvePlaybackRequestedAt, buildPlaybackMetadata } from '@/services/outputs/OutputsService';
+import { useOutputsService, type PlaybackSymbolContext, resolvePlaybackRequestedAt, resolvePlaybackTimelineOffset, buildPlaybackMetadata } from '@/services/outputs/OutputsService';
 import { getMorseUnitMs } from '@/utils/audio';
 import { toMorse } from '@/utils/morse';
 import { useProgressStore } from '@/store/useProgressStore';
@@ -134,7 +134,7 @@ export function useReceiveSession({
   const runFlash = React.useCallback(
     (durationMs: number, context?: PlaybackSymbolContext) => {
       const requestedAtMs = resolvePlaybackRequestedAt(context);
-      const timelineOffsetMs = context?.nativeOffsetMs ?? undefined;
+      const timelineOffsetMs = resolvePlaybackTimelineOffset(context);
       const metadata = buildPlaybackMetadata(context);
       outputs.flashPulse({
         enabled: lightEnabled,
@@ -154,7 +154,7 @@ export function useReceiveSession({
   const hapticTick = React.useCallback(
     (symbol: '.' | '-', durationMs: number, context?: PlaybackSymbolContext) => {
       const requestedAtMs = resolvePlaybackRequestedAt(context);
-      const timelineOffsetMs = context?.nativeOffsetMs ?? undefined;
+      const timelineOffsetMs = resolvePlaybackTimelineOffset(context);
       const metadata = buildPlaybackMetadata(context);
       outputs.hapticSymbol({
         enabled: hapticsEnabled,

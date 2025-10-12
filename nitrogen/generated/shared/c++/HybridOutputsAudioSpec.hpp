@@ -59,6 +59,7 @@ namespace margelo::nitro::morse {
       virtual void stopTone() = 0;
       virtual void playMorse(const PlaybackRequest& request) = 0;
       virtual std::string getLatestSymbolInfo() = 0;
+      virtual std::string getScheduledSymbols() = 0;
       virtual void teardown() = 0;
 
     protected:

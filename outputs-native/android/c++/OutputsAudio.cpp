@@ -34,6 +34,8 @@ constexpr double kTwoPi = 6.283185307179586476925286766559;
 constexpr std::chrono::milliseconds kSleepQuantum(1);
 constexpr int kDashUnits = 3;
 constexpr int kSymbolGapUnits = 1;
+constexpr double kToneStartLeadMs = 20.0;
+constexpr double kMinDispatchOffsetMs = 12.0;
 
 inline float clampGain(float value) {
   return std::clamp(value, kMinGain, kMaxGain);
@@ -42,6 +44,10 @@ inline float clampGain(float value) {
 inline std::chrono::microseconds toMicros(double milliseconds) {
   return std::chrono::duration_cast<std::chrono::microseconds>(
       std::chrono::duration<double, std::milli>(milliseconds));
+}
+
+inline double toMillis(const std::chrono::steady_clock::time_point& timePoint) {
+  return std::chrono::duration<double, std::milli>(timePoint.time_since_epoch()).count();
 }
 } // namespace
 
@@ -61,16 +67,13 @@ OutputsAudio::OutputsAudio()
       mPlaybackCancel(false),
       mPlaybackRunning(false),
       mSymbolSequence(0),
-      mSymbolSequenceConsumed(0),
-      mLatestSymbolKind(PlaybackSymbol::Dot),
-      mLatestSymbolTimestampMs(0.0),
-      mLatestSymbolDurationMs(0.0),
       mPatternStartTimestampMs(0.0),
-      mLatestSymbolExpectedTimestampMs(0.0),
-      mLatestSymbolStartSkewMs(0.0),
-      mLatestSymbolBatchElapsedMs(0.0),
-      mLatestSymbolExpectedSincePriorMs(0.0),
-      mLatestSymbolSincePriorMs(0.0) {
+      mToneActive(false),
+      mToneStartLogged(false),
+      mToneSteadyLogged(false),
+      mToneStopLogged(false),
+      mToneStartRequestedMs(0.0),
+      mToneActualStartMs(0.0) {
   logEvent("constructor");
 }
 
@@ -253,6 +256,13 @@ void OutputsAudio::startToneInternal(const ToneStartOptions& options, bool cance
     cancelPlaybackThread(true);
   }
 
+  const double requestedAtMs = toMillis(std::chrono::steady_clock::now());
+  mToneStartRequestedMs.store(requestedAtMs, std::memory_order_relaxed);
+  mToneActualStartMs.store(0.0, std::memory_order_relaxed);
+  mToneStartLogged.store(false, std::memory_order_relaxed);
+  mToneSteadyLogged.store(false, std::memory_order_relaxed);
+  mToneStopLogged.store(false, std::memory_order_relaxed);
+
   std::lock_guard<std::mutex> lock(mStreamMutex);
   ensureStreamLocked(options.toneHz);
   if (!mStreamReady.load(std::memory_order_acquire)) {
@@ -272,12 +282,17 @@ void OutputsAudio::startToneInternal(const ToneStartOptions& options, bool cance
   mGainStepDown.store(rampDownStep, std::memory_order_relaxed);
   mFrequency.store(options.toneHz, std::memory_order_relaxed);
   mTargetGain.store(gain, std::memory_order_release);
+  mToneActive.store(true, std::memory_order_release);
 
   logEvent("start", "hz=%.1f gain=%.3f attack=%.2f release=%.2f",
            options.toneHz,
            gain,
            envelope.attackMs,
            envelope.releaseMs);
+  logEvent("tone.request", "hz=%.1f gain=%.3f requestedAt=%.3f",
+           options.toneHz,
+           gain,
+           requestedAtMs);
 }
 
 void OutputsAudio::warmup(const ToneStartOptions& options) {
@@ -313,6 +328,9 @@ void OutputsAudio::stopTone() {
   const float rampDownStep = computeRampStep(std::max(current, 0.0f), mEnvelopeConfig.releaseMs);
   mGainStepDown.store(rampDownStep, std::memory_order_relaxed);
   mTargetGain.store(0.0f, std::memory_order_release);
+  mToneActive.store(false, std::memory_order_release);
+  mToneSteadyLogged.store(false, std::memory_order_relaxed);
+  mToneStopLogged.store(false, std::memory_order_relaxed);
   logEvent("stop", "gain=%.3f release=%.2f", current, mEnvelopeConfig.releaseMs);
 }
 
@@ -344,18 +362,16 @@ void OutputsAudio::cancelPlaybackThread(bool join) {
 }
 
 void OutputsAudio::resetSymbolInfo() {
-  std::lock_guard<std::mutex> lock(mSymbolInfoMutex);
-  mSymbolSequence = 0;
-  mSymbolSequenceConsumed = 0;
-  mLatestSymbolKind = PlaybackSymbol::Dot;
-  mLatestSymbolTimestampMs = 0.0;
-  mLatestSymbolDurationMs = 0.0;
-  mPatternStartTimestampMs = 0.0;
-  mLatestSymbolExpectedTimestampMs = 0.0;
-  mLatestSymbolStartSkewMs = 0.0;
-  mLatestSymbolBatchElapsedMs = 0.0;
-  mLatestSymbolExpectedSincePriorMs = 0.0;
-  mLatestSymbolSincePriorMs = 0.0;
+  {
+    std::lock_guard<std::mutex> lock(mSymbolInfoMutex);
+    mSymbolSequence = 0;
+    mPatternStartTimestampMs = 0.0;
+    mSymbolSnapshots.clear();
+  }
+  {
+    std::lock_guard<std::mutex> scheduleLock(mScheduleMutex);
+    mScheduledSymbols.clear();
+  }
 }
 
 void OutputsAudio::playMorse(const PlaybackRequest& request) {
@@ -378,6 +394,48 @@ void OutputsAudio::playMorse(const PlaybackRequest& request) {
     }
   }
 
+  const auto patternStart = std::chrono::steady_clock::now();
+  const double patternStartMs = toMillis(patternStart);
+  std::vector<ScheduledSymbol> scheduledSymbols;
+  scheduledSymbols.reserve(request.pattern.size());
+  double expectedOffsetMs = 0.0;
+  uint64_t scheduledSequence = 0;
+  for (std::size_t i = 0; i < request.pattern.size(); ++i) {
+    const PlaybackSymbol symbol = request.pattern[i];
+    const int symbolValue = static_cast<int>(symbol);
+    const bool isDash = symbolValue == 1;
+    const bool isDot = symbolValue == 0;
+
+    if (!isDash && !isDot) {
+      expectedOffsetMs += request.unitMs * 3.0;
+      continue;
+    }
+
+    const double symbolDurationMs =
+        request.unitMs * (isDash ? static_cast<double>(kDashUnits) : 1.0);
+
+    ScheduledSymbol info;
+    info.sequence = ++scheduledSequence;
+    info.symbol = symbol;
+    info.expectedTimestampMs = patternStartMs + expectedOffsetMs;
+    info.durationMs = symbolDurationMs;
+    info.offsetMs = expectedOffsetMs;
+    scheduledSymbols.push_back(info);
+
+    expectedOffsetMs += symbolDurationMs;
+    if (i + 1 < request.pattern.size()) {
+      expectedOffsetMs += request.unitMs * static_cast<double>(kSymbolGapUnits);
+    }
+  }
+  {
+    std::lock_guard<std::mutex> scheduleLock(mScheduleMutex);
+    mScheduledSymbols = std::move(scheduledSymbols);
+  }
+  {
+    std::lock_guard<std::mutex> infoLock(mSymbolInfoMutex);
+    mPatternStartTimestampMs = patternStartMs;
+  }
+
   cancelPlaybackThread(true);
 
   {
@@ -389,8 +447,9 @@ void OutputsAudio::playMorse(const PlaybackRequest& request) {
          pattern = request.pattern,
          toneHz = request.toneHz,
          gain,
-         unitMs = request.unitMs]() mutable {
-          runPattern(std::move(pattern), toneHz, gain, unitMs);
+         unitMs = request.unitMs,
+         patternStart]() mutable {
+          runPattern(std::move(pattern), toneHz, gain, unitMs, patternStart);
         });
   }
 }
@@ -398,7 +457,8 @@ void OutputsAudio::playMorse(const PlaybackRequest& request) {
 void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
                               double toneHz,
                               float gain,
-                              double unitMs) {
+                              double unitMs,
+                              std::chrono::steady_clock::time_point patternStart) {
   logEvent("playMorse.start", "count=%zu unit=%.1f", pattern.size(), unitMs);
 
   const auto sleepUntil = [&](const std::chrono::steady_clock::time_point& deadline) {
@@ -407,15 +467,11 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
       std::this_thread::sleep_for(kSleepQuantum);
     }
   };
-
-  const auto toMillis = [](const std::chrono::steady_clock::time_point& timePoint) {
-    return std::chrono::duration<double, std::milli>(timePoint.time_since_epoch()).count();
-  };
-  const auto patternStart = std::chrono::steady_clock::now();
   const double patternStartMs = toMillis(patternStart);
   double expectedOffsetMs = 0.0;
   double previousExpectedStartMs = patternStartMs;
   double previousActualStartMs = patternStartMs;
+  double previousExpectedEndOffsetMs = 0.0;
   bool isFirstSymbol = true;
 
   {
@@ -441,8 +497,25 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
     }
 
     const double symbolDurationMs = unitMs * (isDash ? static_cast<double>(kDashUnits) : 1.0);
-    const auto expectedStartTime = patternStart + toMicros(expectedOffsetMs);
-    sleepUntil(expectedStartTime);
+    const double expectedStartOffsetMs = expectedOffsetMs;
+    const double availableGapLead = std::max(0.0, expectedStartOffsetMs - previousExpectedEndOffsetMs);
+    const double maxLeadFromGap = std::max(0.0, availableGapLead - kMinDispatchOffsetMs);
+    double leadCandidate = std::min(kToneStartLeadMs, expectedStartOffsetMs);
+    leadCandidate = std::min(leadCandidate, maxLeadFromGap);
+    const double leadMs = std::max(0.0, leadCandidate);
+    const double dispatchOffsetMs = expectedStartOffsetMs - leadMs;
+    const auto dispatchTime = patternStart + toMicros(dispatchOffsetMs);
+    const double dispatchTimestampMs = patternStartMs + dispatchOffsetMs;
+    const uint64_t upcomingSequence = mSymbolSequence + 1;
+    logEvent("playMorse.dispatch",
+             "sequence=%llu symbol=%c offset=%.3f lead=%.3f dispatchAt=%.3f gapLead=%.3f",
+             static_cast<unsigned long long>(upcomingSequence),
+             isDash ? '-' : '.',
+             expectedStartOffsetMs,
+             leadMs,
+             dispatchTimestampMs,
+             availableGapLead);
+    sleepUntil(dispatchTime);
 
     ToneStartOptions startOptions;
     startOptions.toneHz = toneHz;
@@ -455,53 +528,65 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
 
     const auto startedAt = std::chrono::steady_clock::now();
     const double startedAtMs = toMillis(startedAt);
-    const double expectedStartMs = patternStartMs + expectedOffsetMs;
-    const double startSkewMs = startedAtMs - expectedStartMs;
-    const double batchElapsedMs = startedAtMs - patternStartMs;
+    const double expectedStartMs = patternStartMs + expectedStartOffsetMs;
+    const double audioStartMs = startedAtMs + leadMs;
+    const double startSkewMs = audioStartMs - expectedStartMs;
+    const double batchElapsedMs = audioStartMs - patternStartMs;
     const double expectedSincePriorMs =
         isFirstSymbol ? 0.0 : (expectedStartMs - previousExpectedStartMs);
-    const double sincePriorMs = isFirstSymbol ? 0.0 : (startedAtMs - previousActualStartMs);
+    const double sincePriorMs = isFirstSymbol ? 0.0 : (audioStartMs - previousActualStartMs);
     uint64_t sequenceValue = 0;
     {
       std::lock_guard<std::mutex> infoLock(mSymbolInfoMutex);
       mSymbolSequence += 1;
       sequenceValue = mSymbolSequence;
-      mLatestSymbolKind = isDash ? PlaybackSymbol::Dash : PlaybackSymbol::Dot;
-      mLatestSymbolTimestampMs = startedAtMs;
-      mLatestSymbolDurationMs = symbolDurationMs;
-      mPatternStartTimestampMs = patternStartMs;
-      mLatestSymbolExpectedTimestampMs = expectedStartMs;
-      mLatestSymbolStartSkewMs = startSkewMs;
-      mLatestSymbolBatchElapsedMs = batchElapsedMs;
-      mLatestSymbolExpectedSincePriorMs = expectedSincePriorMs;
-      mLatestSymbolSincePriorMs = sincePriorMs;
+      SymbolSnapshot snapshot;
+      snapshot.sequence = sequenceValue;
+      snapshot.symbol = isDash ? PlaybackSymbol::Dash : PlaybackSymbol::Dot;
+      snapshot.timestampMs = audioStartMs;
+      snapshot.durationMs = symbolDurationMs;
+      snapshot.patternStartMs = patternStartMs;
+      snapshot.expectedTimestampMs = expectedStartMs;
+      snapshot.startSkewMs = startSkewMs;
+      snapshot.batchElapsedMs = batchElapsedMs;
+      snapshot.expectedSincePriorMs = expectedSincePriorMs;
+      snapshot.sincePriorMs = sincePriorMs;
+      mSymbolSnapshots.emplace_back(std::move(snapshot));
+      constexpr std::size_t kMaxSnapshots = 64;
+      while (mSymbolSnapshots.size() > kMaxSnapshots) {
+        mSymbolSnapshots.pop_front();
+      }
     }
     logEvent("playMorse.symbol.start",
              "sequence=%llu symbol=%c expected=%.3f actual=%.3f skew=%.3f batchElapsed=%.3f",
              static_cast<unsigned long long>(sequenceValue),
              isDash ? '-' : '.',
              expectedStartMs,
-             startedAtMs,
+             audioStartMs,
              startSkewMs,
              batchElapsedMs);
 
     previousExpectedStartMs = expectedStartMs;
-    previousActualStartMs = startedAtMs;
+    previousActualStartMs = audioStartMs;
     isFirstSymbol = false;
 
-    const auto symbolDeadline = startedAt + toMicros(symbolDurationMs);
+    const auto symbolDeadline = startedAt + toMicros(leadMs + symbolDurationMs);
     sleepUntil(symbolDeadline);
 
     stopTone();
 
+    const double expectedEndOffsetMs = expectedStartOffsetMs + symbolDurationMs;
     expectedOffsetMs += symbolDurationMs;
-
     if (i + 1 < pattern.size()) {
-      const auto gapDeadline =
-          std::chrono::steady_clock::now() + toMicros(unitMs * static_cast<double>(kSymbolGapUnits));
-      sleepUntil(gapDeadline);
       expectedOffsetMs += unitMs * static_cast<double>(kSymbolGapUnits);
+      const double gapTargetMs = patternStartMs + expectedOffsetMs;
+      logEvent("playMorse.gap",
+               "sequence=%llu nextOffset=%.3f gapTarget=%.3f",
+               static_cast<unsigned long long>(sequenceValue),
+               expectedOffsetMs,
+               gapTargetMs);
     }
+    previousExpectedEndOffsetMs = expectedEndOffsetMs;
   }
 
   stopTone();
@@ -519,35 +604,62 @@ std::string OutputsAudio::getLatestSymbolInfo() {
       std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch())
           .count();
   std::lock_guard<std::mutex> lock(mSymbolInfoMutex);
-  if (mSymbolSequenceConsumed == mSymbolSequence) {
+  if (mSymbolSnapshots.empty()) {
     return {};
   }
-  mSymbolSequenceConsumed = mSymbolSequence;
-  const char symbolChar = mLatestSymbolKind == PlaybackSymbol::Dash ? '-' : '.';
-  const double ageMs = std::max(0.0, fetchedAtMs - mLatestSymbolTimestampMs);
+  const SymbolSnapshot snapshot = mSymbolSnapshots.front();
+  mSymbolSnapshots.pop_front();
+  const char symbolChar = snapshot.symbol == PlaybackSymbol::Dash ? '-' : '.';
+  const double ageMs = std::max(0.0, fetchedAtMs - snapshot.timestampMs);
   std::ostringstream stream;
   stream.setf(std::ios::fixed, std::ios::floatfield);
-  stream << "{\"sequence\":" << mSymbolSequence
+  stream << "{\"sequence\":" << snapshot.sequence
          << ",\"symbol\":\"" << symbolChar << "\""
-         << ",\"timestampMs\":" << std::setprecision(3) << mLatestSymbolTimestampMs
-         << ",\"durationMs\":" << std::setprecision(3) << mLatestSymbolDurationMs
-         << ",\"patternStartMs\":" << std::setprecision(3) << mPatternStartTimestampMs
-         << ",\"expectedTimestampMs\":" << std::setprecision(3) << mLatestSymbolExpectedTimestampMs
-         << ",\"startSkewMs\":" << std::setprecision(3) << mLatestSymbolStartSkewMs
-         << ",\"batchElapsedMs\":" << std::setprecision(3) << mLatestSymbolBatchElapsedMs
-         << ",\"expectedSincePriorMs\":" << std::setprecision(3) << mLatestSymbolExpectedSincePriorMs
-         << ",\"sincePriorMs\":" << std::setprecision(3) << mLatestSymbolSincePriorMs
+         << ",\"timestampMs\":" << std::setprecision(3) << snapshot.timestampMs
+         << ",\"durationMs\":" << std::setprecision(3) << snapshot.durationMs
+         << ",\"patternStartMs\":" << std::setprecision(3) << snapshot.patternStartMs
+         << ",\"expectedTimestampMs\":" << std::setprecision(3) << snapshot.expectedTimestampMs
+         << ",\"startSkewMs\":" << std::setprecision(3) << snapshot.startSkewMs
+         << ",\"batchElapsedMs\":" << std::setprecision(3) << snapshot.batchElapsedMs
+         << ",\"expectedSincePriorMs\":" << std::setprecision(3) << snapshot.expectedSincePriorMs
+         << ",\"sincePriorMs\":" << std::setprecision(3) << snapshot.sincePriorMs
          << ",\"ageMs\":" << std::setprecision(3) << ageMs
          << "}";
   logEvent("symbol.info",
            "sequence=%llu symbol=%c timestamp=%.3f duration=%.3f expected=%.3f skew=%.3f age=%.3f",
-           static_cast<unsigned long long>(mSymbolSequence),
+           static_cast<unsigned long long>(snapshot.sequence),
            symbolChar,
-           mLatestSymbolTimestampMs,
-           mLatestSymbolDurationMs,
-           mLatestSymbolExpectedTimestampMs,
-           mLatestSymbolStartSkewMs,
+           snapshot.timestampMs,
+           snapshot.durationMs,
+           snapshot.expectedTimestampMs,
+           snapshot.startSkewMs,
            ageMs);
+  return stream.str();
+}
+
+std::string OutputsAudio::getScheduledSymbols() {
+  std::lock_guard<std::mutex> lock(mScheduleMutex);
+  if (mScheduledSymbols.empty()) {
+    return {};
+  }
+
+  std::ostringstream stream;
+  stream.setf(std::ios::fixed, std::ios::floatfield);
+  stream << "[";
+  for (std::size_t i = 0; i < mScheduledSymbols.size(); ++i) {
+    const auto& entry = mScheduledSymbols[i];
+    const char symbolChar = entry.symbol == PlaybackSymbol::Dash ? '-' : '.';
+    stream << "{\"sequence\":" << entry.sequence
+           << ",\"symbol\":\"" << symbolChar << "\""
+           << ",\"expectedTimestampMs\":" << std::setprecision(3) << entry.expectedTimestampMs
+           << ",\"offsetMs\":" << std::setprecision(3) << entry.offsetMs
+           << ",\"durationMs\":" << std::setprecision(3) << entry.durationMs
+           << "}";
+    if (i + 1 < mScheduledSymbols.size()) {
+      stream << ",";
+    }
+  }
+  stream << "]";
   return stream.str();
 }
 
@@ -568,12 +680,48 @@ oboe::DataCallbackResult OutputsAudio::onAudioReady(oboe::AudioStream* stream,
   const float rampUp = mGainStepUp.load(std::memory_order_relaxed);
   const float rampDown = mGainStepDown.load(std::memory_order_relaxed);
   const double phaseIncrement = kTwoPi * frequency / std::max(sampleRate, 1.0);
+  const bool toneActive = mToneActive.load(std::memory_order_acquire);
+  bool toneStartLogged = mToneStartLogged.load(std::memory_order_relaxed);
+  bool toneSteadyLogged = mToneSteadyLogged.load(std::memory_order_relaxed);
+  bool toneStopLogged = mToneStopLogged.load(std::memory_order_relaxed);
 
   for (int32_t frame = 0; frame < numFrames; ++frame) {
     if (gain < targetGain) {
       gain = std::min(targetGain, gain + rampUp);
     } else if (gain > targetGain) {
       gain = std::max(targetGain, gain - rampDown);
+    }
+
+    if (toneActive && !toneStartLogged && gain > 0.0005f) {
+      const double actualStartMs = toMillis(std::chrono::steady_clock::now());
+      mToneActualStartMs.store(actualStartMs, std::memory_order_relaxed);
+      mToneStartLogged.store(true, std::memory_order_relaxed);
+      toneStartLogged = true;
+      const double requestedMs = mToneStartRequestedMs.load(std::memory_order_relaxed);
+      logEvent("tone.start.actual",
+               "actual=%.3f requested=%.3f delta=%.3f",
+               actualStartMs,
+               requestedMs,
+               actualStartMs - requestedMs);
+    }
+
+    if (toneActive && !toneSteadyLogged && std::abs(gain - targetGain) <= 0.0005f) {
+      const double steadyMs = toMillis(std::chrono::steady_clock::now());
+      const double actualStartMs = mToneActualStartMs.load(std::memory_order_relaxed);
+      mToneSteadyLogged.store(true, std::memory_order_relaxed);
+      toneSteadyLogged = true;
+      logEvent("tone.gain.steady",
+               "target=%.3f reachedAt=%.3f delta=%.3f",
+               targetGain,
+               steadyMs,
+               actualStartMs > 0.0 ? (steadyMs - actualStartMs) : 0.0);
+    }
+
+    if (!toneActive && !toneStopLogged && gain <= 0.0005f && targetGain <= 0.0005f) {
+      const double stopMs = toMillis(std::chrono::steady_clock::now());
+      mToneStopLogged.store(true, std::memory_order_relaxed);
+      toneStopLogged = true;
+      logEvent("tone.stop.actual", "stoppedAt=%.3f", stopMs);
     }
 
     const float sample = gain * static_cast<float>(std::sin(phase));

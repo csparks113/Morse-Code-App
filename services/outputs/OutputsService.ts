@@ -99,6 +99,21 @@ export function resolvePlaybackRequestedAt(context?: PlaybackSymbolContext): num
   return undefined;
 }
 
+export function resolvePlaybackTimelineOffset(context?: PlaybackSymbolContext): number | undefined {
+  if (!context) {
+    return undefined;
+  }
+  const expectedTimestamp = context.nativeExpectedTimestampMs;
+  if (typeof expectedTimestamp === 'number' && Number.isFinite(expectedTimestamp)) {
+    return undefined;
+  }
+  const offset = context.nativeOffsetMs;
+  if (typeof offset === 'number' && Number.isFinite(offset)) {
+    return offset;
+  }
+  return undefined;
+}
+
 export function buildPlaybackMetadata(context?: PlaybackSymbolContext): Record<string, number> | undefined {
   if (!context) {
     return undefined;

@@ -5,7 +5,7 @@ import type { ActionButtonState } from '@/components/session/ActionButton';
 import type { PromptActionLabels, PromptActionConfig, SessionActionIconName } from '@/hooks/sessionActionTypes';
 import { useSessionFlow } from '@/hooks/useSessionFlow';
 import { useKeyerOutputs } from '@/hooks/useKeyerOutputs';
-import { useOutputsService, type PlaybackSymbolContext, resolvePlaybackRequestedAt, buildPlaybackMetadata } from '@/services/outputs/OutputsService';
+import { useOutputsService, type PlaybackSymbolContext, resolvePlaybackRequestedAt, resolvePlaybackTimelineOffset, buildPlaybackMetadata } from '@/services/outputs/OutputsService';
 import { createPressTracker } from '@/services/latency/pressTracker';
 import { traceOutputs } from '@/services/outputs/trace';
 import { useProgressStore } from '@/store/useProgressStore';
@@ -268,13 +268,14 @@ export function useSendSession({
   const flashSymbol = React.useCallback(
     (durationMs: number, context?: PlaybackSymbolContext) => {
       const requestedAtMs = resolvePlaybackRequestedAt(context);
+      const timelineOffsetMs = resolvePlaybackTimelineOffset(context);
       const metadata = buildPlaybackMetadata(context);
       outputs.flashPulse({
         enabled: lightEnabled,
         durationMs,
         flashValue: flashOpacity,
         source: context?.source ?? 'session.send.replay',
-        timelineOffsetMs: context?.nativeOffsetMs ?? undefined,
+        timelineOffsetMs,
         requestedAtMs,
         correlationId: context?.correlationId,
         metadata,
@@ -286,6 +287,7 @@ export function useSendSession({
   const hapticSymbol = React.useCallback(
     (symbol: '.' | '-', durationMs: number, context?: PlaybackSymbolContext) => {
       const requestedAtMs = resolvePlaybackRequestedAt(context);
+      const timelineOffsetMs = resolvePlaybackTimelineOffset(context);
       const metadata = buildPlaybackMetadata(context);
       outputs.hapticSymbol({
         enabled: hapticsEnabled,
@@ -294,6 +296,7 @@ export function useSendSession({
         source: context?.source ?? 'session.send.replay',
         requestedAtMs,
         correlationId: context?.correlationId,
+        timelineOffsetMs,
         metadata,
       });
     },

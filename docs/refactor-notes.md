@@ -5,6 +5,13 @@
 - When you pick up a task, copy the relevant bullet into your working notes and expand it with acceptance criteria, links, or test plans.
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
+## Completed (2025-10-12)
+
+- Trimmed `OutputsAudio` tone lead to 20 ms with a 12 ms gap cushion so tones no longer start far ahead of their slots at higher WPM.
+- Reworked the flash/haptic dispatcher to remain in audio-start mode with zero headroom and drive pulses via `requestAnimationFrame`, eliminating `audioStartCompensationMs` in the latest sweeps.
+- Taught the analyzer to read UTF-16 logcat captures (`Get-Content -Encoding Unicode`) so reported latencies reflect the on-device behaviour.
+- Captured the 13:39/14:39 Play Pattern sweeps showing audio→flash ≈35–40 ms means with audible gaps restored at ≥15 WPM; remaining spikes now stem from JS timer jitter, not guard fallback.
+
 ## Completed (2025-10-11)
 
 - Restored structured `[outputs]` logging in `services/outputs/trace.ts` so every trace lands as a single-line JSON payload for the analyzer.
@@ -13,7 +20,8 @@
 - Added an 8 ms scheduling lead inside `services/outputs/defaultOutputsService.flashPulse` so developer-console flash pulses start slightly earlier on the monotonic timeline, targeting tighter audio->flash alignment.
 - Wired `audioStartMs` through the replay path so flash pulses align with the Nitro audio clock before falling back to timeline offsets.
 - Added guardrails around audio-start scheduling (minimum headroom, native skew/age checks, timeline fallback) so we only align to native audio when we have fresh headroom instead of slipping into the 16:12 regression.
-- Added a JS compensation prototype (`audioStartCompensationMs` inside `defaultOutputsService.flashPulse`) that subtracts missing headroom when the guard trips, giving timers an extra (up to 40 ms) lead while we explore native-side batching.
+- Extended the JS-side guard with `audioStartCompensationMs` (now up to ~160 ms) plus a `requestAnimationFrame` scheduler so short-delay pulses fire closer to their native targets while we prototype native batching.
+- Pre-scheduled Nitro playback symbols in `OutputsAudio` (`getScheduledSymbols`) and surfaced them through `utils/audio.ts`, giving JS consumers the full native timeline ahead of dispatch.
 - Instrumented native playback to expose `expectedTimestampMs`, `startSkewMs`, `batchElapsedMs`, and `ageMs` (see `outputs-native/android/c++/OutputsAudio.cpp` + `utils/audio.ts` + `services/outputs/defaultOutputsService.ts`) so analyzer traces can correlate spike clusters with JS timer skew.
 
 ## Completed (2025-10-09)
@@ -44,14 +52,12 @@
 
 ## Next Steps
 
-- Take a fresh Play Pattern sweep with the guardrails-enabled build and confirm `outputs.flashPulse` now reports `schedulingMode` / `audioStartHeadroomMs`; append the new spikes to `docs/logs/spike-summary-play-pattern-20251011.csv`.
-- Prototype a native-side batching tweak so flash/haptic pulses queue off the Nitro timeline (or hand-off expected timestamps earlier) now that the 17:18 sweep shows `scheduleSkewMs` 60-140 ms even after guardrails.
-- Keep capturing Play Pattern sweeps to confirm the ~24 ms audio->flash baseline holds and watch for new >=80 ms offset clusters.
-- Use the new telemetry (`startSkewMs`, `batchElapsedMs`, `nativeAgeMs`) to pinpoint whether the remaining unitMs 30/34/40 spikes stay JS-driven after the native prototype; revert to JS lead experiments only if native adjustments show no gain.
-- If offsets flare again, add focused logging around the replay scheduler paths for unit lengths 60/48/40/34 to pinpoint where extra delay enters.
-- Keep running the JSON-aware analyzer (`scripts/analyze-logcat.ps1`) on each new capture and retire the pre-fix logs once the baseline metrics stay stable.
-- Spot-check future flash-commit spans above ~1 s; the recent outlier mapped to a deliberate 1.74 s hold, so flag any new cases that lack matching long presses.
-- Continue watching `playMorse.nativeOffset.spike` traces; the analyzer now surfaces >=80 ms entries automatically, so bundle fresh logs if clusters persist.
+- Quantify the remaining `scheduleSkewMs` (~60–100 ms outliers) and experiment with shorter tone lead or additional jitter smoothing so audio→flash stays <35 ms across sweeps.
+- Evaluate moving replay/receive scheduling fully onto `scheduleMonotonic` (or the native queue) to remove the last JS timer spikes.
+- Continue weekly SOS→40 WPM sweeps (UTF‑16 analyzer) to ensure the ~35–40 ms baseline holds and to catch regressions after dependency bumps.
+- Use the telemetry (`startSkewMs`, `batchElapsedMs`, `nativeAgeMs`) to document any residual spikes and feed hypotheses back into the backlog.
+- Flag future flash-commit spans >1 s or clustered spikes in `docs/outputs-investigation.md`; archive the corresponding logcat snippets for comparison.
+- Retire older compensation-heavy logs once the new baseline has a week of coverage and update the spike summary CSV accordingly.
 
 ### Deferred: Outputs Testing
 

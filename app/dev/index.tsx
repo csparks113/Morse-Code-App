@@ -24,7 +24,7 @@ import {
   type OutputsTraceEntry,
 } from '@/store/useDeveloperStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { useOutputsService, type KeyerOutputsOptions, resolvePlaybackRequestedAt, buildPlaybackMetadata } from '@/services/outputs/OutputsService';
+import { useOutputsService, type KeyerOutputsOptions, resolvePlaybackRequestedAt, resolvePlaybackTimelineOffset, buildPlaybackMetadata } from '@/services/outputs/OutputsService';
 import { createPressTracker } from '@/services/latency/pressTracker';
 import { useOutputsDiagnosticsStore } from '@/store/useOutputsDiagnosticsStore';
 import {
@@ -333,7 +333,7 @@ export default function DeveloperConsoleScreen() {
         audioVolumePercent: manualOptions.audioVolumePercent,
         onSymbolStart: (symbol, durationMs, context) => {
           const requestedAtMs = resolvePlaybackRequestedAt(context);
-          const timelineOffsetMs = context?.nativeOffsetMs ?? undefined;
+          const timelineOffsetMs = resolvePlaybackTimelineOffset(context);
           const metadata = buildPlaybackMetadata(context);
           scheduleMonotonic(() => {
             outputs.hapticSymbol({

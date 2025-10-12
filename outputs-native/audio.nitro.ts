@@ -25,6 +25,7 @@ export interface OutputsAudio {
   stopTone(): void;
   playMorse(request: PlaybackRequest): void;
   getLatestSymbolInfo?(): string | null;
+  getScheduledSymbols?(): string | null;
   teardown(): void;
 }
 

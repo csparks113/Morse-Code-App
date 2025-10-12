@@ -47,6 +47,9 @@ import * as FileSystem from 'expo-file-system/legacy';
 import type { AudioContext as AudioApiContext, GainNode as AudioApiGainNode, OscillatorNode as AudioApiOscillatorNode } from 'react-native-audio-api';
 import type { OutputsAudio, PlaybackSymbol } from '@/outputs-native/audio.nitro';
 import { nowMs, toMonotonicTime } from '@/utils/time';
+import type { PlaybackSymbolContext } from '@/services/outputs/OutputsService';
+import { traceOutputs } from '@/services/outputs/trace';
+import { scheduleMonotonic } from '@/utils/scheduling';
 
 
 type NitroModulesExports = typeof import('react-native-nitro-modules') & {
@@ -117,6 +120,31 @@ const isTruthy = (value?: string) => {
   const normalized = value.trim().toLowerCase();
   return normalized === '1' || normalized === 'true' || normalized === 'yes';
 };
+
+type PlaybackCorrelation = {
+  id: string;
+  source: string;
+  startedAtMs: number;
+};
+
+const CORRELATION_SOURCE_SANITIZE = /[^a-zA-Z0-9]/g;
+
+function createPlaybackCorrelation(source: string, rawTimestamp?: number | null): PlaybackCorrelation {
+  const base = source || 'playback';
+  const normalized = base.replace(CORRELATION_SOURCE_SANITIZE, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').toLowerCase();
+  const token = Math.random().toString(36).slice(2, 10);
+  const startedAtMs = typeof rawTimestamp === 'number' ? toMonotonicTime(rawTimestamp) : nowMs();
+  return {
+    id: `${normalized || 'playback'}:${token}`,
+    source: base,
+    startedAtMs,
+  };
+}
+
+// Back-compat shim: older bundles referenced `createPressCorrelation`, so keep the alias alive.
+function createPressCorrelation(source: string, rawTimestamp?: number | null): PlaybackCorrelation {
+  return createPlaybackCorrelation(source, rawTimestamp);
+}
 
 function evaluateNitroPreference(): NitroPreference {
   if (Platform.OS !== 'android') {
@@ -229,6 +257,7 @@ export type PlayOpts = {
   unitMsOverride?: number;
   audioVolumePercent?: number;
   audioEnabled?: boolean;
+  source?: string;
 };
 
 const DEFAULT_AUDIO_VOLUME_PERCENT = 100;
@@ -248,6 +277,8 @@ function clampVolumePercent(value?: number): number {
 const volumePercentToGain = (percent: number) => Math.max(0, Math.min(1, percent / 100));
 
 let silentPlaybackToken = 0;
+const NATIVE_OFFSET_SPIKE_THRESHOLD_MS = 80;
+const SCHEDULE_DISPATCH_LEAD_MS = 64;
 
 async function playMorseSilently(code: string, unitMsArg?: number, opts: PlayOpts = {}) {
   const token = ++silentPlaybackToken;
@@ -914,10 +945,14 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
   const hz = Math.max(100, Math.min(2000, Math.floor(opts.hz ?? toneHz ?? NITRO_DEFAULT_TONE_HZ)));
   const volumePercent = clampVolumePercent(opts.audioVolumePercent);
   const gain = volumePercentToGain(volumePercent);
+  const playbackSource = typeof opts.source === 'string' && opts.source.length > 0 ? opts.source : 'replay';
+  const onSymbolStart = opts.onSymbolStart;
 
   const pattern: PlaybackSymbol[] = [];
   const durations: number[] = [];
   const token = ++nitroPlaybackToken;
+  const supportsNativeTimeline =
+    typeof (outputsAudio as any).getLatestSymbolInfo === 'function';
 
   for (let i = 0; i < code.length; i += 1) {
     const symbol = code[i] as PlaybackSymbol | ' ';
@@ -950,157 +985,479 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
     return;
   }
 
-  const supportsNativeTimeline = typeof (outputsAudio as any).getLatestSymbolInfo === 'function';
-  let nativeSequence = 0;
-  let nativeOffsetMs: number | null = null;
-
-  const pollNextNativeSymbol = async (): Promise<NativeSymbolTimingContext | null> => {
-    if (!supportsNativeTimeline || token !== nitroPlaybackToken) {
-      return null;
-    }
-    const timeoutMs = Math.min(Math.max(unitMs * 2, 150), 400);
-    const deadline = nowMs() + timeoutMs;
-    while (token === nitroPlaybackToken && nowMs() <= deadline) {
-      const payload = (outputsAudio as any).getLatestSymbolInfo?.();
-      if (payload) {
-        try {
-          const info = JSON.parse(payload) as {
-            sequence?: number;
-            timestampMs?: number;
-            durationMs?: number;
-            patternStartMs?: number;
-            expectedTimestampMs?: number;
-            startSkewMs?: number;
-            batchElapsedMs?: number;
-            expectedSincePriorMs?: number;
-            sincePriorMs?: number;
-            ageMs?: number;
-          };
-          const sequence = typeof info.sequence === 'number' ? info.sequence : null;
-          if (sequence != null) {
-            if (sequence <= nativeSequence) {
-              const resetDetected = sequence <= 1 && nativeSequence > 1;
-              if (resetDetected) {
-                nativeSequence = 0;
-                nativeOffsetMs = null;
-                continue;
-              }
-              continue;
-            }
-            const jump = sequence - nativeSequence;
-            if (jump > 1) {
-              if (__DEV__) {
-                console.warn('[outputs-audio] native sequence jump', {
-                  previous: nativeSequence,
-                  next: sequence,
-                  delta: jump,
-                });
-              }
-              nativeOffsetMs = null;
-            }
-            nativeSequence = sequence;
-            const timestampMs = typeof info.timestampMs === 'number' ? info.timestampMs : null;
-            const durationMs = typeof info.durationMs === 'number' ? info.durationMs : null;
-            const expectedTimestampMs =
-              typeof info.expectedTimestampMs === 'number' ? info.expectedTimestampMs : null;
-            const startSkewMs =
-              typeof info.startSkewMs === 'number' ? info.startSkewMs : null;
-            const batchElapsedMs =
-              typeof info.batchElapsedMs === 'number' ? info.batchElapsedMs : null;
-            const expectedSincePriorMs =
-              typeof info.expectedSincePriorMs === 'number' ? info.expectedSincePriorMs : null;
-            const sincePriorMs =
-              typeof info.sincePriorMs === 'number' ? info.sincePriorMs : null;
-            const patternStartMs =
-              typeof info.patternStartMs === 'number' ? info.patternStartMs : null;
-            const ageMs = typeof info.ageMs === 'number' ? info.ageMs : null;
-            let offsetMs: number | null = null;
-            let monotonicTimestampMs: number | null = null;
-            if (timestampMs != null) {
-              monotonicTimestampMs = toMonotonicTime(timestampMs);
-              offsetMs = nowMs() - monotonicTimestampMs;
-              nativeOffsetMs = offsetMs;
-            }
-            return {
-              nativeTimestampMs: timestampMs,
-              nativeDurationMs: durationMs,
-              nativeSequence,
-              nativeOffsetMs: nativeOffsetMs ?? offsetMs,
-              monotonicTimestampMs,
-              nativeExpectedTimestampMs: expectedTimestampMs,
-              nativeStartSkewMs: startSkewMs,
-              nativeBatchElapsedMs: batchElapsedMs,
-              nativeExpectedSincePriorMs: expectedSincePriorMs,
-              nativeSincePriorMs: sincePriorMs,
-              nativePatternStartMs: patternStartMs,
-              nativeAgeMs: ageMs,
-            };
-          }
-        } catch (parseError) {
-          if (__DEV__) {
-            console.warn('Failed to parse OutputsAudio symbol info:', parseError);
-          }
-        }
+  const scheduledTimeouts: Array<ReturnType<typeof setTimeout>> = [];
+  const clearScheduledTimeouts = () => {
+    while (scheduledTimeouts.length > 0) {
+      const handle = scheduledTimeouts.pop();
+      if (handle != null) {
+        clearTimeout(handle);
       }
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
-    return null;
   };
 
-  for (let i = 0; i < pattern.length; i += 1) {
-    if (token !== nitroPlaybackToken) {
-      return;
-    }
+  try {
+    type ScheduledEntry = {
+      sequence: number;
+      symbol: PlaybackSymbol;
+      durationMs: number;
+      expectedTimestampMs: number;
+      offsetMs: number;
+      correlation: PlaybackCorrelation;
+      scheduledContext: PlaybackSymbolContext;
+      scheduledDispatched: boolean;
+      actualized: boolean;
+    };
 
-    const symbol = pattern[i];
-    const duration = durations[i];
+    const scheduledBySequence = new Map<number, ScheduledEntry>();
+    const scheduledQueue: ScheduledEntry[] = [];
+    const scheduledSymbolsRaw =
+      typeof (outputsAudio as any).getScheduledSymbols === 'function'
+        ? (outputsAudio as any).getScheduledSymbols()
+        : null;
 
-    let nativeTiming: NativeSymbolTimingContext | null = null;
-    if (supportsNativeTimeline) {
-      nativeTiming = await pollNextNativeSymbol();
-    }
-
-    opts.onSymbolStart?.(symbol, duration, nativeTiming ?? undefined);
-
-    const nativeTimestampMs = nativeTiming?.nativeTimestampMs ?? null;
-    const monotonicTimestampMs = nativeTiming?.monotonicTimestampMs ?? null;
-    const nativeDurationMs = nativeTiming?.nativeDurationMs != null && nativeTiming.nativeDurationMs > 0
-      ? nativeTiming.nativeDurationMs
-      : duration;
-    const symbolEndTargetMs =
-      monotonicTimestampMs != null ? monotonicTimestampMs + nativeDurationMs : null;
-
-    if (symbolEndTargetMs != null) {
-      const waitMs = symbolEndTargetMs - nowMs();
-      if (waitMs > 0) {
-        await sleep(waitMs);
-      }
-    } else {
-      await sleep(nativeDurationMs);
-    }
-
-    if (token !== nitroPlaybackToken) {
-      return;
-    }
-
-    opts.onSymbolEnd?.(symbol, duration);
-
-    if (i < pattern.length - 1) {
-      const gap = unitMs;
-      opts.onGap?.(gap);
-      const nextSymbolTargetMs = symbolEndTargetMs != null ? symbolEndTargetMs + gap : null;
-      if (nextSymbolTargetMs != null) {
-        const gapWaitMs = nextSymbolTargetMs - nowMs();
-        if (gapWaitMs > 0) {
-          await sleep(gapWaitMs);
+    if (typeof scheduledSymbolsRaw === 'string' && scheduledSymbolsRaw.length > 0) {
+      try {
+        const parsed = JSON.parse(scheduledSymbolsRaw) as Array<{
+          sequence?: number;
+          symbol?: string;
+          expectedTimestampMs?: number;
+          durationMs?: number;
+          offsetMs?: number;
+        }>;
+        for (const entry of parsed) {
+          const sequence =
+            typeof entry.sequence === 'number' && Number.isFinite(entry.sequence)
+              ? entry.sequence
+              : null;
+          const symbol =
+            entry.symbol === '.' || entry.symbol === '-' ? (entry.symbol as PlaybackSymbol) : null;
+          const expectedTimestampMs =
+            typeof entry.expectedTimestampMs === 'number' && Number.isFinite(entry.expectedTimestampMs)
+              ? entry.expectedTimestampMs
+              : null;
+          const durationMs =
+            typeof entry.durationMs === 'number' && Number.isFinite(entry.durationMs)
+              ? entry.durationMs
+              : null;
+          const offsetMs =
+            typeof entry.offsetMs === 'number' && Number.isFinite(entry.offsetMs)
+              ? entry.offsetMs
+              : null;
+          if (
+            sequence == null ||
+            !symbol ||
+            expectedTimestampMs == null ||
+            durationMs == null ||
+            offsetMs == null
+          ) {
+            continue;
+          }
+          const expectedMonotonicMs = toMonotonicTime(expectedTimestampMs);
+          const correlation = createPlaybackCorrelation(playbackSource);
+          correlation.startedAtMs = expectedMonotonicMs;
+          const patternStartMs = expectedTimestampMs - offsetMs;
+          const scheduledContext: PlaybackSymbolContext = {
+            requestedAtMs: expectedMonotonicMs,
+            correlationId: correlation.id,
+            source: playbackSource,
+            nativeTimestampMs: expectedTimestampMs,
+            nativeDurationMs: durationMs,
+            nativeOffsetMs: offsetMs,
+            nativeSequence: sequence,
+            monotonicTimestampMs: expectedMonotonicMs,
+            nativeExpectedTimestampMs: expectedTimestampMs,
+            nativeStartSkewMs: null,
+            nativeBatchElapsedMs: null,
+            nativeExpectedSincePriorMs: null,
+            nativeSincePriorMs: null,
+            nativePatternStartMs: patternStartMs,
+            nativeAgeMs: null,
+          };
+          scheduledBySequence.set(sequence, {
+            sequence,
+            symbol,
+            durationMs,
+            expectedTimestampMs,
+            offsetMs,
+            correlation,
+            scheduledContext,
+            scheduledDispatched: false,
+            actualized: false,
+          });
+          scheduledQueue.push(scheduledBySequence.get(sequence)!);
         }
-      } else {
-        await sleep(gap);
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[outputs-audio] failed to parse scheduled symbols', error);
+        }
       }
+    }
+
+    const dispatchScheduledEntry = (entry: ScheduledEntry) => {
+      if (entry.scheduledDispatched) {
+        return;
+      }
+      entry.scheduledDispatched = true;
+      traceOutputs('playMorse.symbol.schedule', {
+        symbol: entry.symbol,
+        durationMs: entry.durationMs,
+        sequence: entry.sequence,
+        source: playbackSource,
+        correlationId: entry.correlation.id,
+        expectedTimestampMs: entry.expectedTimestampMs,
+        offsetMs: entry.offsetMs,
+      });
+      onSymbolStart?.(entry.symbol, entry.durationMs, entry.scheduledContext);
+    };
+
+    const takeNextPendingEntry = (): ScheduledEntry | undefined => {
+      while (scheduledQueue.length > 0) {
+        const head = scheduledQueue[0];
+        if (head.actualized) {
+          scheduledQueue.shift();
+          scheduledBySequence.delete(head.sequence);
+          continue;
+        }
+        return head;
+      }
+      return undefined;
+    };
+
+    const markActualized = (entry: ScheduledEntry) => {
+      entry.actualized = true;
+      scheduledBySequence.delete(entry.sequence);
+      if (scheduledQueue[0] === entry) {
+        scheduledQueue.shift();
+      }
+    };
+
+    if (scheduledBySequence.size > 0) {
+      const ordered = [...scheduledBySequence.values()].sort(
+        (a, b) => a.expectedTimestampMs - b.expectedTimestampMs,
+      );
+      for (const entry of ordered) {
+        if (entry.scheduledDispatched) {
+          continue;
+        }
+        const targetMs =
+          entry.scheduledContext.monotonicTimestampMs ??
+          toMonotonicTime(entry.expectedTimestampMs);
+        const timeout = scheduleMonotonic(() => {
+          if (token !== nitroPlaybackToken) {
+            return;
+          }
+          dispatchScheduledEntry(entry);
+        }, { startMs: targetMs, offsetMs: -SCHEDULE_DISPATCH_LEAD_MS });
+        if (timeout != null) {
+          scheduledTimeouts.push(timeout);
+        }
+      }
+    }
+
+    const supportsNativeTimeline = typeof (outputsAudio as any).getLatestSymbolInfo === 'function';
+    let nativeSequence = 0;
+    let nativeOffsetMs: number | null = null;
+
+    const pollNextNativeSymbol = async (): Promise<NativeSymbolTimingContext | null> => {
+      if (!supportsNativeTimeline || token !== nitroPlaybackToken) {
+        return null;
+      }
+      const timeoutMs = Math.min(Math.max(unitMs * 2, 150), 400);
+      const deadline = nowMs() + timeoutMs;
+      while (token === nitroPlaybackToken && nowMs() <= deadline) {
+        const payload = (outputsAudio as any).getLatestSymbolInfo?.();
+        if (payload) {
+          try {
+            const info = JSON.parse(payload) as {
+              sequence?: number;
+              timestampMs?: number;
+              durationMs?: number;
+              patternStartMs?: number;
+              expectedTimestampMs?: number;
+              startSkewMs?: number;
+              batchElapsedMs?: number;
+              expectedSincePriorMs?: number;
+              sincePriorMs?: number;
+              ageMs?: number;
+            };
+            const sequence = typeof info.sequence === 'number' ? info.sequence : null;
+            if (sequence != null) {
+              if (sequence <= nativeSequence) {
+                const resetDetected = sequence <= 1 && nativeSequence > 1;
+                if (resetDetected) {
+                  nativeSequence = 0;
+                  nativeOffsetMs = null;
+                  continue;
+                }
+                continue;
+              }
+              const jump = sequence - nativeSequence;
+              if (jump > 1) {
+                if (__DEV__) {
+                  console.warn('[outputs-audio] native sequence jump', {
+                    previous: nativeSequence,
+                    next: sequence,
+                    delta: jump,
+                  });
+                }
+                nativeOffsetMs = null;
+              }
+              nativeSequence = sequence;
+              const timestampMs = typeof info.timestampMs === 'number' ? info.timestampMs : null;
+              const durationMs = typeof info.durationMs === 'number' ? info.durationMs : null;
+              const expectedTimestampMs =
+                typeof info.expectedTimestampMs === 'number' ? info.expectedTimestampMs : null;
+              const startSkewMs =
+                typeof info.startSkewMs === 'number' ? info.startSkewMs : null;
+              const batchElapsedMs =
+                typeof info.batchElapsedMs === 'number' ? info.batchElapsedMs : null;
+              const expectedSincePriorMs =
+                typeof info.expectedSincePriorMs === 'number' ? info.expectedSincePriorMs : null;
+              const sincePriorMs =
+                typeof info.sincePriorMs === 'number' ? info.sincePriorMs : null;
+              const patternStartMs =
+                typeof info.patternStartMs === 'number' ? info.patternStartMs : null;
+              const ageMs = typeof info.ageMs === 'number' ? info.ageMs : null;
+              let offsetMs: number | null = null;
+              let monotonicTimestampMs: number | null = null;
+              if (timestampMs != null) {
+                monotonicTimestampMs = toMonotonicTime(timestampMs);
+                offsetMs = nowMs() - monotonicTimestampMs;
+                nativeOffsetMs = offsetMs;
+              }
+              return {
+                nativeTimestampMs: timestampMs,
+                nativeDurationMs: durationMs,
+                nativeSequence,
+                nativeOffsetMs: nativeOffsetMs ?? offsetMs,
+                monotonicTimestampMs,
+                nativeExpectedTimestampMs: expectedTimestampMs,
+                nativeStartSkewMs: startSkewMs,
+                nativeBatchElapsedMs: batchElapsedMs,
+                nativeExpectedSincePriorMs: expectedSincePriorMs,
+                nativeSincePriorMs: sincePriorMs,
+                nativePatternStartMs: patternStartMs,
+                nativeAgeMs: ageMs,
+              };
+            }
+          } catch (parseError) {
+            if (__DEV__) {
+              console.warn('Failed to parse OutputsAudio symbol info:', parseError);
+            }
+          }
+        }
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      }
+      return null;
+    };
+
+    let symbolIndex = 0;
+    const handleActualSymbol = (
+      symbol: PlaybackSymbol,
+      durationMs: number,
+      native?: NativeSymbolTimingContext,
+    ) => {
+    const sequence =
+      typeof native?.nativeSequence === 'number' && Number.isFinite(native.nativeSequence)
+        ? native.nativeSequence
+        : null;
+    let scheduledEntry = sequence != null ? scheduledBySequence.get(sequence) : undefined;
+    if (!scheduledEntry) {
+      scheduledEntry = takeNextPendingEntry();
+    }
+    if (scheduledEntry && !scheduledEntry.scheduledDispatched) {
+      dispatchScheduledEntry(scheduledEntry);
+    }
+
+    const scheduledMonotonic = scheduledEntry?.scheduledContext.monotonicTimestampMs ?? null;
+    const expectedTimestampMs =
+      native?.nativeExpectedTimestampMs ?? scheduledEntry?.expectedTimestampMs ?? null;
+    const nativeTimestampMsRaw = native?.nativeTimestampMs ?? null;
+    const nativeDurationResolved =
+      native?.nativeDurationMs != null && native.nativeDurationMs > 0
+        ? native.nativeDurationMs
+        : durationMs;
+    const fallbackMonotonicFromNative =
+      nativeTimestampMsRaw != null ? toMonotonicTime(nativeTimestampMsRaw) : null;
+    const resolvedMonotonic =
+      native?.monotonicTimestampMs ??
+      scheduledMonotonic ??
+      fallbackMonotonicFromNative ??
+      (expectedTimestampMs != null ? toMonotonicTime(expectedTimestampMs) : null);
+    const resolvedNativeTimestampMs =
+      nativeTimestampMsRaw ??
+      scheduledEntry?.scheduledContext.nativeTimestampMs ??
+      expectedTimestampMs ??
+      null;
+    const nativeOffsetValue =
+      native?.nativeOffsetMs ??
+      scheduledEntry?.scheduledContext.nativeOffsetMs ??
+      scheduledEntry?.offsetMs ??
+      null;
+    const correlation: PlaybackCorrelation =
+      scheduledEntry?.correlation ?? createPlaybackCorrelation(playbackSource, resolvedNativeTimestampMs);
+    const patternStartMs =
+      native?.nativePatternStartMs ??
+      (scheduledEntry ? scheduledEntry.expectedTimestampMs - scheduledEntry.offsetMs : null);
+    traceOutputs('playMorse.symbol', {
+      symbol,
+      durationMs,
+      index: symbolIndex,
+      source: playbackSource,
+      correlationId: correlation.id,
+      nativeTimestampMs: resolvedNativeTimestampMs,
+      nativeDurationMs: nativeDurationResolved,
+      nativeOffsetMs: nativeOffsetValue,
+      nativeSequence: sequence,
+      monotonicTimestampMs: resolvedMonotonic,
+      nativeExpectedTimestampMs: expectedTimestampMs,
+      nativeStartSkewMs: native?.nativeStartSkewMs ?? null,
+      nativeBatchElapsedMs: native?.nativeBatchElapsedMs ?? null,
+      nativeExpectedSincePriorMs: native?.nativeExpectedSincePriorMs ?? null,
+      nativeSincePriorMs: native?.nativeSincePriorMs ?? null,
+        nativePatternStartMs: patternStartMs,
+        nativeAgeMs: native?.nativeAgeMs ?? null,
+      });
+
+      if (
+        nativeOffsetValue != null &&
+        Math.abs(nativeOffsetValue) >= NATIVE_OFFSET_SPIKE_THRESHOLD_MS
+      ) {
+        traceOutputs('playMorse.nativeOffset.spike', {
+          source: playbackSource,
+          offsetMs: nativeOffsetValue,
+          sequence,
+          unitMs,
+          correlationId: correlation.id,
+        });
+      }
+
+      symbolIndex += 1;
+
+      const alreadyScheduled = scheduledEntry?.scheduledDispatched ?? false;
+      if (!alreadyScheduled) {
+      const fallbackMonotonic =
+        resolvedMonotonic ??
+        scheduledMonotonic ??
+        (resolvedNativeTimestampMs != null ? toMonotonicTime(resolvedNativeTimestampMs) : null);
+      if (fallbackMonotonic != null) {
+        correlation.startedAtMs = fallbackMonotonic;
+      }
+      const fallbackContext: PlaybackSymbolContext = {
+        requestedAtMs: fallbackMonotonic ?? nowMs(),
+        correlationId: correlation.id,
+        source: playbackSource,
+        nativeTimestampMs: resolvedNativeTimestampMs,
+        nativeDurationMs: nativeDurationResolved,
+        nativeOffsetMs: nativeOffsetValue,
+        nativeSequence: sequence,
+        monotonicTimestampMs: fallbackMonotonic,
+        nativeExpectedTimestampMs: expectedTimestampMs,
+        nativeStartSkewMs: native?.nativeStartSkewMs ?? null,
+        nativeBatchElapsedMs: native?.nativeBatchElapsedMs ?? null,
+        nativeExpectedSincePriorMs: native?.nativeExpectedSincePriorMs ?? null,
+        nativeSincePriorMs: native?.nativeSincePriorMs ?? null,
+          nativePatternStartMs: patternStartMs,
+          nativeAgeMs: native?.nativeAgeMs ?? null,
+        };
+        onSymbolStart?.(symbol, durationMs, fallbackContext);
+        if (scheduledEntry) {
+          markActualized(scheduledEntry);
+        } else if (sequence != null) {
+          scheduledBySequence.set(sequence, {
+            sequence,
+            symbol,
+            durationMs: nativeDurationResolved,
+            expectedTimestampMs: expectedTimestampMs ?? fallbackContext.requestedAtMs,
+            offsetMs: nativeOffsetValue ?? 0,
+            correlation,
+            scheduledContext: fallbackContext,
+            scheduledDispatched: true,
+            actualized: true,
+          });
+        }
+        return;
+      }
+
+      if (scheduledEntry) {
+        const context = scheduledEntry.scheduledContext;
+        context.nativeTimestampMs = resolvedNativeTimestampMs;
+        context.nativeDurationMs = nativeDurationResolved;
+        context.nativeOffsetMs = nativeOffsetValue;
+        context.nativeSequence = sequence;
+        context.monotonicTimestampMs = resolvedMonotonic;
+        context.nativeExpectedTimestampMs = expectedTimestampMs;
+        context.nativeStartSkewMs = native?.nativeStartSkewMs ?? null;
+        context.nativeBatchElapsedMs = native?.nativeBatchElapsedMs ?? null;
+        context.nativeExpectedSincePriorMs = native?.nativeExpectedSincePriorMs ?? null;
+        context.nativeSincePriorMs = native?.nativeSincePriorMs ?? null;
+        context.nativePatternStartMs = patternStartMs;
+        context.nativeAgeMs = native?.nativeAgeMs ?? null;
+        markActualized(scheduledEntry);
+      }
+
+      if (scheduledEntry) {
+        return;
+      }
+    };
+
+    for (let i = 0; i < pattern.length; i += 1) {
       if (token !== nitroPlaybackToken) {
         return;
       }
+
+      const symbol = pattern[i];
+      const duration = durations[i];
+
+      let nativeTiming: NativeSymbolTimingContext | null = null;
+      if (supportsNativeTimeline) {
+        nativeTiming = await pollNextNativeSymbol();
+      }
+
+      handleActualSymbol(symbol, duration, nativeTiming ?? undefined);
+
+      const nativeTimestampMs = nativeTiming?.nativeTimestampMs ?? null;
+      const monotonicTimestampMs = nativeTiming?.monotonicTimestampMs ?? null;
+      const nativeDurationMs = nativeTiming?.nativeDurationMs != null && nativeTiming.nativeDurationMs > 0
+        ? nativeTiming.nativeDurationMs
+        : duration;
+      const symbolEndTargetMs =
+        monotonicTimestampMs != null ? monotonicTimestampMs + nativeDurationMs : null;
+
+      if (symbolEndTargetMs != null) {
+        const waitMs = symbolEndTargetMs - nowMs();
+        if (waitMs > 0) {
+          await sleep(waitMs);
+        }
+      } else {
+        await sleep(nativeDurationMs);
+      }
+
+      if (token !== nitroPlaybackToken) {
+        return;
+      }
+
+      opts.onSymbolEnd?.(symbol, duration);
+
+      if (i < pattern.length - 1) {
+        const gap = unitMs;
+        opts.onGap?.(gap);
+        const nextSymbolTargetMs = symbolEndTargetMs != null ? symbolEndTargetMs + gap : null;
+        if (nextSymbolTargetMs != null) {
+          const gapWaitMs = nextSymbolTargetMs - nowMs();
+          if (gapWaitMs > 0) {
+            await sleep(gapWaitMs);
+          }
+        } else {
+          await sleep(gap);
+        }
+        if (token !== nitroPlaybackToken) {
+          return;
+        }
+      }
     }
+  } finally {
+    clearScheduledTimeouts();
   }
 }
 function createAudioApiToneController(audioApi: AudioApiModule): ToneController {

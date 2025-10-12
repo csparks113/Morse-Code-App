@@ -13,13 +13,13 @@ Use this document to capture the single source of truth after each working sessi
 - **Automation & Tooling (Codex CLI harness):** Provides local execution environment, log capture scripts, and build automation support.
 
 ## Latest Update
-- **Summary:** Guardrails now keep `flashPulse` on the timeline whenever audio-start headroom, skew, or age look unsafe (`schedulingMode` + guard metadata now log with every pulse). The latest sweeps (`...165958...`, `...171837...`, `...173500...`) still land around 25 ms audio→flash but keep surfacing unitMs 30/40 spikes (80-120 ms) with `scheduleSkewMs` >60 ms and `audioStartGuard=headroom`, so we’re moving ahead with a native batching / pre-scheduling prototype.
-- **State:** Guard instrumentation is verified, yet JS timers remain the limiting factor; next up is implementing and validating a native-driven pulse scheduler.
+- **Summary:** Native `OutputsAudio` now precomputes the playback schedule (`getScheduledSymbols`), and the Nitro JS path parses those entries while logging `playMorse.symbol.schedule`. JS guardrails (160 ms compensation + requestAnimationFrame) remain, but the latest sweeps (`...175743...`, `...180457...`, `...181428...`) still show unitMs 34/40/48 spikes lingering around 80–110 ms with `audioStartGuard=headroom`, so we need to wire the scheduled timestamps straight through to flash/haptic consumers.
+- **State:** Native scheduling scaffolding is ready, yet send/receive/console flows still lean on timeline offsets; the next push is integrating the scheduled contexts and then trimming the JS compensation path once high-WPM timing holds.
 
 ## Next Steps
-1. Prototype a native batching/pre-scheduling change in `OutputsAudio` (or a JS predictor backed by native timestamps) so flash/haptic pulses queue ahead of time; rerun the analyzer to confirm unitMs 30/34/40 offsets drop below the 80 ms threshold.
-2. Capture validation sweeps after the prototype lands, verifying `schedulingMode` and `audioStartHeadroomMs` behave as expected, and append the new spike rows to `docs/logs/spike-summary-play-pattern-20251011.csv`.
-3. Keep `docs/logs/spike-summary-play-pattern-20251011.csv` current (16:59/17:18/17:35 entries logged) and add scheduling metadata as the native prototype evolves so recurring correlation IDs stay visible.
+1. Wire the scheduled symbol contexts into send/receive replays and the developer console so flash/haptic pulses schedule directly from `nativeExpectedTimestampMs` (no timeline-offset fallback).
+2. Capture new SOS→40 WPM sweeps after wiring, verify `audioStartCompensationMs` ~0 and unitMs 30/34/40 spikes fall below 80 ms, and append the results to `docs/logs/spike-summary-play-pattern-20251011.csv`.
+3. Once native scheduling holds, reduce or remove the JS compensation guard, update documentation, and keep the spike summary/analyzer telemetry current.
 4. Continue running the JSON-aware analyzer on every capture and archive any pre-instrumentation logs once stability holds.
 5. Spot-check future flash-commit spans above ~1 s; the recent 1.83 s commit mapped to a deliberate 1.74 s hold, so flag any new cases that lack matching long presses.
 6. Keep watching `playMorse.nativeOffset.spike`; the analyzer still surfaces >=80 ms entries automatically, so bundle fresh logs if clusters cluster.
@@ -46,12 +46,12 @@ Use this document to capture the single source of truth after each working sessi
 4. **Capture Nitro logs** (new PowerShell window):
    ```powershell
    adb logcat -c
-   adb logcat ReactNativeJS:D ReactNative:W *:S | findstr /R /C:"keyer.prepare" /C:"keyer.tone"
+   adb logcat ReactNativeJS:D OutputsAudio:D ReactNative:W *:S | findstr /R /C:"keyer.prepare" /C:"keyer.tone"
    ```
    Trigger the Developer Console latency tests, then `Ctrl+C` to stop the log stream.
    To inspect Nitro playback details, run a second tail:
    ```powershell
-   adb logcat ReactNativeJS:D ReactNative:W *:S | findstr /C:"[outputs-audio]"
+   adb logcat ReactNativeJS:D OutputsAudio:D ReactNative:W *:S | findstr /C:"outputs-audio"
    ```
 
 ## Device Smoke Test Checklist

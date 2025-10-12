@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <deque>
 #include <thread>
 #include <string>
 #include <vector>
@@ -31,6 +32,7 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   void stopTone() override;
   void playMorse(const PlaybackRequest& request) override;
   std::string getLatestSymbolInfo() override;
+  std::string getScheduledSymbols() override;
   void teardown() override;
 
   oboe::DataCallbackResult onAudioReady(oboe::AudioStream* stream,
@@ -49,6 +51,27 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   };
   using StreamPtr = std::unique_ptr<oboe::AudioStream, StreamDeleter>;
 
+  struct ScheduledSymbol {
+    uint64_t sequence;
+    PlaybackSymbol symbol;
+    double expectedTimestampMs;
+    double durationMs;
+    double offsetMs;
+  };
+
+  struct SymbolSnapshot {
+    uint64_t sequence;
+    PlaybackSymbol symbol;
+    double timestampMs;
+    double durationMs;
+    double patternStartMs;
+    double expectedTimestampMs;
+    double startSkewMs;
+    double batchElapsedMs;
+    double expectedSincePriorMs;
+    double sincePriorMs;
+  };
+
   void ensureStreamLocked(double toneHz);
   void startStreamLocked();
   void closeStreamLocked();
@@ -61,7 +84,8 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   void runPattern(std::vector<PlaybackSymbol> pattern,
                   double toneHz,
                   float gain,
-                  double unitMs);
+                  double unitMs,
+                  std::chrono::steady_clock::time_point patternStart);
   void logEvent(const char* event, const char* fmt = nullptr, ...) const;
 
   std::mutex mStreamMutex;
@@ -78,18 +102,19 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   EnvelopeConfig mEnvelopeConfig;
   double mPhase;
 
+  std::atomic<bool> mToneActive;
+  std::atomic<bool> mToneStartLogged;
+  std::atomic<bool> mToneSteadyLogged;
+  std::atomic<bool> mToneStopLogged;
+  std::atomic<double> mToneStartRequestedMs;
+  std::atomic<double> mToneActualStartMs;
+
   std::mutex mSymbolInfoMutex;
   uint64_t mSymbolSequence;
-  uint64_t mSymbolSequenceConsumed;
-  PlaybackSymbol mLatestSymbolKind;
-  double mLatestSymbolTimestampMs;
-  double mLatestSymbolDurationMs;
+  std::deque<SymbolSnapshot> mSymbolSnapshots;
   double mPatternStartTimestampMs;
-  double mLatestSymbolExpectedTimestampMs;
-  double mLatestSymbolStartSkewMs;
-  double mLatestSymbolBatchElapsedMs;
-  double mLatestSymbolExpectedSincePriorMs;
-  double mLatestSymbolSincePriorMs;
+  std::mutex mScheduleMutex;
+  std::vector<ScheduledSymbol> mScheduledSymbols;
   std::thread mPlaybackThread;
   std::mutex mPlaybackMutex;
   std::atomic<bool> mPlaybackCancel;

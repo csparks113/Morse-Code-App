@@ -16,6 +16,8 @@ $hapticToFlash = New-Object System.Collections.Generic.List[double]
 $flashToCommit = New-Object System.Collections.Generic.List[double]
 $audioToTone = New-Object System.Collections.Generic.List[double]
 $audioToTorchReset = New-Object System.Collections.Generic.List[double]
+$nativeDispatches = New-Object System.Collections.Generic.List[pscustomobject]
+$nativeGaps = New-Object System.Collections.Generic.List[pscustomobject]
 
 $symbolSamples = @()
 $symbolByCorrelation = @{}
@@ -123,7 +125,7 @@ function Get-Stats {
 
 $linePattern = '^(?<md>\d\d-\d\d)\s+(?<time>\d\d:\d\d:\d\d\.\d+)\s+\d+\s+\d+\s+\w\s+(?<tag>OutputsAudio|ReactNativeJS):\s+(?<message>.*)$'
 
-foreach ($line in Get-Content -Path $LogFile) {
+foreach ($line in Get-Content -Path $LogFile -Encoding Unicode) {
     $match = [regex]::Match($line, $linePattern)
     if (!$match.Success) { continue }
 
@@ -136,6 +138,32 @@ foreach ($line in Get-Content -Path $LogFile) {
     $jsonPayload = Try-ParseJsonPayload $message
 
 if ($tag -eq 'OutputsAudio') {
+    if ($message -match '\[outputs-audio\]\s+playMorse\.dispatch\s+sequence=(?<seq>\d+)\s+symbol=(?<sym>[-\.])\s+offset=(?<offset>[-0-9\.]+)\s+lead=(?<lead>[-0-9\.]+)\s+dispatchAt=(?<dispatch>[-0-9\.]+)') {
+        $seq = [int]$matches['seq'].Value
+        $sym = $matches['sym'].Value
+        $offsetVal = [double]$matches['offset'].Value
+        $leadVal = [double]$matches['lead'].Value
+        $dispatchVal = [double]$matches['dispatch'].Value
+        $nativeDispatches.Add([pscustomobject]@{
+            Sequence = $seq
+            Symbol = $sym
+            OffsetMs = $offsetVal
+            LeadMs = $leadVal
+            DispatchAtMs = $dispatchVal
+        }) | Out-Null
+        continue
+    }
+    if ($message -match '\[outputs-audio\]\s+playMorse\.gap\s+sequence=(?<seq>\d+)\s+nextOffset=(?<offset>[-0-9\.]+)\s+gapTarget=(?<target>[-0-9\.]+)') {
+        $seq = [int]$matches['seq'].Value
+        $offsetVal = [double]$matches['offset'].Value
+        $targetVal = [double]$matches['target'].Value
+        $nativeGaps.Add([pscustomobject]@{
+            Sequence = $seq
+            NextOffsetMs = $offsetVal
+            GapTargetMs = $targetVal
+        }) | Out-Null
+        continue
+    }
     if ($message -match '\[outputs-audio\]\s+start') {
         $lastAudioStart = $logTime
     }
@@ -269,23 +297,10 @@ if ($tag -eq 'OutputsAudio') {
                 $delta = $timestampMs - $symbolInfo.JsTimestampMs
             }
         }
-        if ($delta -eq $null) {
-            $timelineOffset = Parse-NativeField $message $jsonPayload 'timelineOffsetMs'
-            if ($timelineOffset -ne $null) {
-                $delta = $timelineOffset
-            }
-        }
-        if ($delta -eq $null -and $jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'latencyMs') {
-            $value = $jsonPayload.latencyMs
-            if ($null -ne $value -and $value -ne 'null') {
-                $delta = [double]$value
-            }
-        }
-        if ($delta -eq $null -and $lastAudioStart) {
-            $delta = ($logTime - $lastAudioStart).TotalMilliseconds
-        }
         if ($delta -ne $null) {
             Add-Stat $audioToFlash $delta
+        } else {
+            continue
         }
         if ($symbolInfo) {
             $symbolInfo.UsedForFlash = $true
@@ -491,4 +506,23 @@ if ($highOffsetEvents.Count -gt 0) {
         Format-Table -AutoSize |
         Out-String -Width 200
     )
+}
+
+if ($nativeDispatches.Count -gt 0) {
+    Write-Host ''
+    Write-Host 'Native dispatch telemetry:' -ForegroundColor Cyan
+    $dispatchLeadStats = Get-Stats 'dispatch lead (ms)' ($nativeDispatches | ForEach-Object { $_.LeadMs })
+    $dispatchOffsetStats = Get-Stats 'dispatch offset (ms)' ($nativeDispatches | ForEach-Object { $_.OffsetMs })
+    ($dispatchLeadStats, $dispatchOffsetStats) | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+    Write-Host ("  Entries captured: {0}" -f $nativeDispatches.Count)
+    $nativeDispatches | Select-Object -First 12 | Format-Table Sequence,Symbol,OffsetMs,LeadMs,DispatchAtMs -AutoSize | Out-String -Width 200 | Write-Host
+} else {
+    Write-Host ''
+    Write-Host 'Native dispatch telemetry not captured (ensure logcat includes OutputsAudio:D).' -ForegroundColor Yellow
+}
+
+if ($nativeGaps.Count -gt 0) {
+    Write-Host ''
+    Write-Host 'Native gap telemetry:' -ForegroundColor Cyan
+    $nativeGaps | Select-Object -First 12 | Format-Table Sequence,NextOffsetMs,GapTargetMs -AutoSize | Out-String -Width 200 | Write-Host
 }
