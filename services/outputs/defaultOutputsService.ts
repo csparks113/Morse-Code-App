@@ -5,6 +5,7 @@ import { playMorseCode, stopPlayback, createToneController } from '@/utils/audio
 import type { NativeSymbolTimingContext } from '@/utils/audio';
 import { acquireTorch, releaseTorch, resetTorch, isTorchAvailable, forceTorchOff } from '@/utils/torch';
 import { nowMs, toMonotonicTime } from '@/utils/time';
+import { scheduleMonotonic } from '@/utils/scheduling';
 import { traceOutputs } from './trace';
 import { updateTorchSupport, recordTorchPulse, recordTorchFailure } from '@/store/useOutputsDiagnosticsStore';
 import { recordLatencySample } from '@/store/useOutputsLatencyStore';
@@ -61,14 +62,34 @@ const WATCHDOG_PRESS_TIMEOUT_MS = 4000;
 
 const NATIVE_OFFSET_SPIKE_THRESHOLD_MS = 80;
 const FLASH_TIMELINE_LEAD_MS = 8;
-const AUDIO_START_MIN_HEADROOM_MS = 12;
+const AUDIO_START_MIN_HEADROOM_MS = 6;
 const AUDIO_START_MAX_NATIVE_SKEW_MS = 25;
-const AUDIO_START_MAX_NATIVE_AGE_MS = 45;
-const AUDIO_START_FALLBACK_TIMELINE_MS = 24;
+const AUDIO_START_MAX_NATIVE_AGE_MS = 90;
+const AUDIO_START_FALLBACK_TIMELINE_MS = 12;
 const AUDIO_START_MAX_COMPENSATION_MS = 160;
+const FLASH_PRESCHEDULE_BASELINE_MS = 32;
+const FLASH_PRESCHEDULE_MIN_MS = 6;
+const FLASH_PRESCHEDULE_MAX_MS = 192;
+const FLASH_PRESCHEDULE_BUFFER_MS = 6;
+const FLASH_PRESCHEDULE_SMOOTHING_ALPHA = 0.25;
+const FLASH_PRESCHEDULE_DECAY_DELAY_MS = 1500;
+const FLASH_PRESCHEDULE_DECAY_WINDOW_MS = 4000;
+const FLASH_PRESCHEDULE_MAX_SAMPLE_MS = 400;
+const FLASH_AUDIO_START_LEAD_RATIO = 0.98;
+const FLASH_AUDIO_START_LEAD_OFFSET_MS = 24;
+const FLASH_AUDIO_START_LEAD_MIN_MS = 10;
+const FLASH_AUDIO_START_LEAD_MAX_MS = 96;
+const FLASH_AUDIO_START_TARGET_MARGIN_MS = 2;
+const CONSOLE_REPLAY_AUDIO_START_TARGET_MARGIN_MS = 24;
+const CONSOLE_REPLAY_MIN_AUDIO_START_LEAD_MS = 8;
+const FLASH_HEADROOM_SMOOTHING_ALPHA = 0.35;
+const FLASH_HEADROOM_SMOOTHING_WINDOW_MS = 400;
+const FLASH_HEADROOM_SMOOTHING_DECAY_MS = 1200;
+const HEADROOM_SMOOTHING_DEFAULT_KEY = -1;
 
 let pendingFlashPulseTimeout: ReturnType<typeof setTimeout> | null = null;
 let pendingFlashPulseFrame: number | null = null;
+let pendingTimelineFallback: ReturnType<typeof setTimeout> | null = null;
 const raf =
   typeof globalThis.requestAnimationFrame === 'function'
     ? globalThis.requestAnimationFrame.bind(globalThis)
@@ -77,6 +98,145 @@ const caf =
   typeof globalThis.cancelAnimationFrame === 'function'
     ? globalThis.cancelAnimationFrame.bind(globalThis)
     : null;
+
+type FlashSchedulerState = {
+  smoothedSkewMs: number;
+  lastSampleAtMs: number;
+};
+
+let flashSchedulerState: FlashSchedulerState = {
+  smoothedSkewMs: FLASH_PRESCHEDULE_BASELINE_MS,
+  lastSampleAtMs: 0,
+};
+
+type HeadroomSmoothingEntry = {
+  value: number;
+  updatedAt: number;
+};
+
+const headroomSmoothingState = new Map<number, HeadroomSmoothingEntry>();
+
+const updateHeadroomEstimate = (
+  rawDuration: number | undefined,
+  sampleMs: number,
+  timestampMs: number,
+): number => {
+  if (!Number.isFinite(sampleMs)) {
+    return sampleMs;
+  }
+  const key =
+    typeof rawDuration === 'number' && Number.isFinite(rawDuration) && rawDuration > 0
+      ? Math.round(rawDuration)
+      : HEADROOM_SMOOTHING_DEFAULT_KEY;
+  const previous = headroomSmoothingState.get(key);
+  let nextValue = sampleMs;
+  if (previous) {
+    const elapsed = Math.max(0, timestampMs - previous.updatedAt);
+    const normalizedWindow = Math.max(1, FLASH_HEADROOM_SMOOTHING_WINDOW_MS);
+    const normalizedDecay = Math.max(1, FLASH_HEADROOM_SMOOTHING_DECAY_MS);
+    const windowSteps =
+      elapsed <= 0 ? 0 : Math.min(elapsed / normalizedWindow, elapsed / normalizedWindow);
+    const alpha = 1 - Math.pow(1 - FLASH_HEADROOM_SMOOTHING_ALPHA, windowSteps);
+    nextValue = previous.value + (sampleMs - previous.value) * alpha;
+  }
+  headroomSmoothingState.set(key, {
+    value: nextValue,
+    updatedAt: timestampMs,
+  });
+  return nextValue;
+};
+
+const recordFlashPreScheduleSkew = (sampleMs: number) => {
+  if (!Number.isFinite(sampleMs) || sampleMs <= 0) {
+    return;
+  }
+  const clamped = Math.min(
+    FLASH_PRESCHEDULE_MAX_SAMPLE_MS,
+    Math.max(0, sampleMs),
+  );
+  const now = nowMs();
+  const alpha =
+    flashSchedulerState.lastSampleAtMs === 0
+      ? 1
+      : FLASH_PRESCHEDULE_SMOOTHING_ALPHA;
+  const next =
+    flashSchedulerState.smoothedSkewMs +
+    (clamped - flashSchedulerState.smoothedSkewMs) * alpha;
+  flashSchedulerState = {
+    smoothedSkewMs: next,
+    lastSampleAtMs: now,
+  };
+};
+
+type FlashAdaptiveLead = {
+  preScheduleLeadMs: number;
+  displayLeadMs: number;
+};
+
+const getFlashAdaptiveLeads = (
+  referenceNow: number,
+  mode: 'timeline' | 'audio-start',
+  isConsoleReplay: boolean = false,
+): FlashAdaptiveLead => {
+  if (mode !== 'audio-start') {
+    return { preScheduleLeadMs: 0, displayLeadMs: 0 };
+  }
+
+  let effective = flashSchedulerState.smoothedSkewMs;
+  if (!Number.isFinite(effective) || effective <= 0) {
+    effective = FLASH_PRESCHEDULE_BASELINE_MS;
+  }
+
+  if (flashSchedulerState.lastSampleAtMs > 0) {
+    const elapsed = referenceNow - flashSchedulerState.lastSampleAtMs;
+    if (elapsed > FLASH_PRESCHEDULE_DECAY_DELAY_MS) {
+      const decayWindow = Math.max(1, FLASH_PRESCHEDULE_DECAY_WINDOW_MS);
+      const decayProgress = Math.min(
+        1,
+            (elapsed - FLASH_PRESCHEDULE_DECAY_DELAY_MS) / decayWindow,
+      );
+      effective =
+        effective * (1 - decayProgress) +
+        FLASH_PRESCHEDULE_BASELINE_MS * decayProgress;
+    }
+  }
+
+  let preScheduleLeadMs = Math.max(
+    FLASH_PRESCHEDULE_MIN_MS,
+    Math.min(FLASH_PRESCHEDULE_MAX_MS, effective - FLASH_PRESCHEDULE_BUFFER_MS),
+  );
+
+  let displayLeadMs = Math.max(
+    0,
+    effective * FLASH_AUDIO_START_LEAD_RATIO - FLASH_AUDIO_START_LEAD_OFFSET_MS,
+  );
+  if (displayLeadMs > 0 && displayLeadMs < FLASH_AUDIO_START_LEAD_MIN_MS) {
+    displayLeadMs = FLASH_AUDIO_START_LEAD_MIN_MS;
+  }
+  displayLeadMs = Math.min(FLASH_AUDIO_START_LEAD_MAX_MS, displayLeadMs);
+  if (displayLeadMs > preScheduleLeadMs) {
+    displayLeadMs = preScheduleLeadMs;
+  }
+
+  if (!Number.isFinite(displayLeadMs) || displayLeadMs < 0) {
+    displayLeadMs = 0;
+  }
+  if (!Number.isFinite(preScheduleLeadMs) || preScheduleLeadMs < 0) {
+    preScheduleLeadMs = 0;
+  }
+
+  if (isConsoleReplay) {
+    const minLead = CONSOLE_REPLAY_MIN_AUDIO_START_LEAD_MS;
+    if (displayLeadMs < minLead) {
+      displayLeadMs = minLead;
+    }
+    if (preScheduleLeadMs < minLead) {
+      preScheduleLeadMs = minLead;
+    }
+  }
+
+  return { preScheduleLeadMs, displayLeadMs };
+};
 
 function normalizeTimelineOffset(value?: number | null): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -412,7 +572,7 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     }
   };
 
-  const enableTorch = async (startedAt: number, options?: TorchScheduleOptions) => {
+  async function enableTorch(startedAt: number, options?: TorchScheduleOptions) {
     const supported = isTorchAvailable();
     updateTorchSupport(supported);
     const torchAllowed = options?.torchEnabled ?? true;
@@ -441,9 +601,9 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       torchActive = false;
       recordTorchFailure(error instanceof Error ? error.message : String(error), 'keyer');
     }
-  };
+  }
 
-  const disableTorch = async (endedAt: number, options?: TorchScheduleOptions) => {
+  async function disableTorch(endedAt: number, options?: TorchScheduleOptions) {
     if (!torchActive) return;
     const scheduleInfo = options ?? torchScheduleInfo ?? null;
     torchActive = false;
@@ -657,12 +817,17 @@ const defaultOutputsService: OutputsService = {
     durationMs,
     flashValue,
     source,
+    torchEnabled = false,
     requestedAtMs,
     timelineOffsetMs,
     correlationId,
     metadata,
   }: FlashPulseOptions) {
     const eventSource = source ?? 'unspecified';
+    const isConsoleReplay = eventSource === 'console.replay';
+    const audioStartMarginMs = isConsoleReplay
+      ? CONSOLE_REPLAY_AUDIO_START_TARGET_MARGIN_MS
+      : FLASH_AUDIO_START_TARGET_MARGIN_MS;
     let normalizedTimelineOffset = normalizeTimelineOffset(timelineOffsetMs);
     const baseMetadata: Record<string, string | number | boolean> = metadata ? { ...metadata } : {};
     const providedTimelineOffsetMs = normalizedTimelineOffset;
@@ -700,6 +865,7 @@ const defaultOutputsService: OutputsService = {
     let schedulingMode: 'timeline' | 'audio-start' =
       normalizedTimelineOffset != null ? 'timeline' : 'audio-start';
     let audioStartHeadroomMs: number | null = null;
+    let smoothedHeadroomMs: number | null = null;
     let audioStartGuardReason: string | null = null;
 
     if (normalizedTimelineOffset == null) {
@@ -713,7 +879,7 @@ const defaultOutputsService: OutputsService = {
         effectiveRequestedAt = expectedTimestampMs;
         const targetForAudioStart = effectiveRequestedAt - leadMs;
         audioStartHeadroomMs = targetForAudioStart - nowMs();
-        if (audioStartHeadroomMs < AUDIO_START_MIN_HEADROOM_MS) {
+        if (!isConsoleReplay && audioStartHeadroomMs < AUDIO_START_MIN_HEADROOM_MS) {
           audioStartGuardReason = 'headroom';
         } else if (
           nativeStartSkewMs != null &&
@@ -721,6 +887,7 @@ const defaultOutputsService: OutputsService = {
         ) {
           audioStartGuardReason = 'skew';
         } else if (
+          !isConsoleReplay &&
           nativeAgeMs != null &&
           nativeAgeMs > AUDIO_START_MAX_NATIVE_AGE_MS
         ) {
@@ -729,10 +896,17 @@ const defaultOutputsService: OutputsService = {
           audioStartGuardReason = 'missing-native';
         }
 
+        if (isConsoleReplay && audioStartGuardReason === 'headroom') {
+          audioStartGuardReason = null;
+        }
+
+        const hasAudioStartHeadroom =
+          audioStartHeadroomMs != null && audioStartHeadroomMs >= AUDIO_START_MIN_HEADROOM_MS;
         const nativeStartReliable =
           hasNativeTimestamp &&
           nativeStartSkewMs != null &&
-          Math.abs(nativeStartSkewMs) <= AUDIO_START_MAX_NATIVE_SKEW_MS;
+          Math.abs(nativeStartSkewMs) <= AUDIO_START_MAX_NATIVE_SKEW_MS &&
+          hasAudioStartHeadroom;
 
         if (nativeStartReliable) {
           audioStartGuardReason = null;
@@ -747,11 +921,8 @@ const defaultOutputsService: OutputsService = {
         }
 
         if (audioStartGuardReason) {
-          const fallbackOffset =
-            (typeof providedTimelineOffsetMs === 'number' ? providedTimelineOffsetMs : null) ??
-            nativeOffsetMs ??
-            AUDIO_START_FALLBACK_TIMELINE_MS;
-          normalizedTimelineOffset = fallbackOffset;
+          normalizedTimelineOffset = AUDIO_START_FALLBACK_TIMELINE_MS;
+          audioStartCompensationMs = 0;
           effectiveRequestedAt = applyTimelineOffset(requestedAt, normalizedTimelineOffset);
           schedulingMode = 'timeline';
         } else {
@@ -774,19 +945,101 @@ const defaultOutputsService: OutputsService = {
 
     let targetStart = effectiveRequestedAt - leadMs;
     let audioStartCompensationMs = 0;
-    if (audioStartGuardReason === 'headroom' && audioStartHeadroomMs != null) {
+    if (
+      schedulingMode === 'audio-start' &&
+      audioStartGuardReason === 'headroom' &&
+      audioStartHeadroomMs != null
+    ) {
       audioStartCompensationMs = Math.min(
         AUDIO_START_MAX_COMPENSATION_MS,
         Math.max(0, -audioStartHeadroomMs),
       );
       targetStart -= audioStartCompensationMs;
     }
-    const now = nowMs();
-    if (targetStart < now) {
-      targetStart = now;
+    const schedulingNow = nowMs();
+    if (schedulingMode === 'timeline' && audioStartGuardReason === 'headroom') {
+      const fallbackOffset =
+        normalizedTimelineOffset != null && Number.isFinite(normalizedTimelineOffset)
+          ? normalizedTimelineOffset
+          : AUDIO_START_FALLBACK_TIMELINE_MS;
+      normalizedTimelineOffset = fallbackOffset;
+      audioStartHeadroomMs = fallbackOffset;
+      leadMs = FLASH_TIMELINE_LEAD_MS > 0 ? FLASH_TIMELINE_LEAD_MS : 0;
+      effectiveRequestedAt = schedulingNow + fallbackOffset;
+      targetStart = effectiveRequestedAt - leadMs;
+      smoothedHeadroomMs = updateHeadroomEstimate(
+        durationMs,
+        audioStartHeadroomMs ?? 0,
+        schedulingNow,
+      );
+    }
+    if (targetStart < schedulingNow) {
+      targetStart = schedulingNow;
       if (normalizedTimelineOffset == null) {
         effectiveRequestedAt = targetStart + leadMs;
         audioStartHeadroomMs = 0;
+      }
+    }
+
+    let availableHeadroomMs = Math.max(0, smoothedHeadroomMs != null ? smoothedHeadroomMs : effectiveRequestedAt - schedulingNow);
+
+    if (schedulingMode === 'audio-start' && !isConsoleReplay && availableHeadroomMs < AUDIO_START_MIN_HEADROOM_MS) {
+      audioStartGuardReason = 'headroom';
+      normalizedTimelineOffset = AUDIO_START_FALLBACK_TIMELINE_MS;
+      audioStartCompensationMs = 0;
+      leadMs = FLASH_TIMELINE_LEAD_MS > 0 ? FLASH_TIMELINE_LEAD_MS : 0;
+      effectiveRequestedAt = schedulingNow + normalizedTimelineOffset;
+      audioStartHeadroomMs = normalizedTimelineOffset;
+      schedulingMode = 'timeline';
+      targetStart = effectiveRequestedAt - leadMs;
+      availableHeadroomMs = Math.max(0, effectiveRequestedAt - schedulingNow);
+    }
+
+    const adaptiveLeads = getFlashAdaptiveLeads(schedulingNow, schedulingMode, isConsoleReplay);
+    let preScheduleLeadMs = adaptiveLeads.preScheduleLeadMs;
+    let appliedDisplayLeadMs = adaptiveLeads.displayLeadMs;
+
+    const maxDisplayLead = Math.max(
+      0,
+      availableHeadroomMs > audioStartMarginMs
+        ? availableHeadroomMs - audioStartMarginMs
+        : availableHeadroomMs,
+    );
+    if (appliedDisplayLeadMs > maxDisplayLead) {
+      appliedDisplayLeadMs = maxDisplayLead;
+    }
+    if (appliedDisplayLeadMs < 0) {
+      appliedDisplayLeadMs = 0;
+    }
+
+    const maxPreScheduleLead = availableHeadroomMs;
+    if (preScheduleLeadMs > maxPreScheduleLead) {
+      preScheduleLeadMs = maxPreScheduleLead;
+    } else if (preScheduleLeadMs < 0) {
+      preScheduleLeadMs = 0;
+    }
+
+    if (schedulingMode === 'audio-start' && appliedDisplayLeadMs > 0) {
+      if (appliedDisplayLeadMs > leadMs) {
+        leadMs = appliedDisplayLeadMs;
+      }
+      targetStart = effectiveRequestedAt - leadMs;
+      const minTargetStart =
+        schedulingNow + Math.max(0, Math.min(audioStartMarginMs, availableHeadroomMs));
+      if (targetStart < minTargetStart) {
+        targetStart = Math.min(effectiveRequestedAt, minTargetStart);
+        effectiveRequestedAt = targetStart + leadMs;
+        audioStartHeadroomMs = Math.max(0, targetStart - schedulingNow);
+      }
+    }
+
+    const audioStartLeadForMetadata =
+      schedulingMode === 'audio-start' && appliedDisplayLeadMs > 0 ? appliedDisplayLeadMs : 0;
+
+    if (schedulingMode === 'timeline') {
+      audioStartCompensationMs = 0;
+      if ('audioStartCompensationMs' in baseMetadata) {
+        delete baseMetadata.audioStartCompensationMs;
       }
     }
 
@@ -799,6 +1052,12 @@ const defaultOutputsService: OutputsService = {
       ...(leadMs > 0 ? { leadMs } : {}),
       schedulingMode,
     };
+    if (audioStartLeadForMetadata > 0) {
+      sampleMetadata.audioStartLeadMs = audioStartLeadForMetadata;
+    }
+    if (preScheduleLeadMs > 0) {
+      sampleMetadata.preScheduleLeadMs = preScheduleLeadMs;
+    }
     if (audioStartHeadroomMs != null) {
       sampleMetadata.audioStartHeadroomMs = audioStartHeadroomMs;
     }
@@ -816,6 +1075,8 @@ const defaultOutputsService: OutputsService = {
       correlationId: correlationId ?? null,
       timelineOffsetMs: normalizedTimelineOffset,
       schedulingMode,
+      ...(audioStartLeadForMetadata > 0 ? { audioStartLeadMs: audioStartLeadForMetadata } : {}),
+      ...(preScheduleLeadMs > 0 ? { preScheduleLeadMs } : {}),
       ...(audioStartHeadroomMs != null ? { audioStartHeadroomMs } : {}),
       ...(audioStartGuardReason ? { audioStartGuard: audioStartGuardReason } : {}),
       ...(audioStartCompensationMs > 0 ? { audioStartCompensationMs } : {}),
@@ -826,6 +1087,26 @@ const defaultOutputsService: OutputsService = {
       const commitAt = nowMs();
       const scheduleSkewMs = commitAt - targetStart;
       const latencyMs = Math.max(0, commitAt - effectiveRequestedAt);
+      if (schedulingMode === 'audio-start') {
+        recordFlashPreScheduleSkew(scheduleSkewMs);
+      }
+      const isReplaySource =
+        typeof eventSource === 'string' && eventSource.toLowerCase().includes('replay');
+      const shouldEnableTorch = torchEnabled && !isReplaySource;
+      if (shouldEnableTorch) {
+        const torchOptions: TorchScheduleOptions = {
+          source: eventSource,
+          correlationId: correlationId ?? null,
+          timelineOffsetMs: normalizedTimelineOffset,
+          torchEnabled: true,
+        };
+        enableTorch(commitAt, torchOptions).catch(() => {});
+        clearTorchTimeout();
+        const torchHoldDuration = Math.max(0, holdMs + fadeMs);
+        torchTimeout = setTimeout(() => {
+          disableTorch(nowMs(), torchOptions).catch(() => {});
+        }, torchHoldDuration);
+      }
       traceOutputs('outputs.flashPulse.commit', {
         durationMs,
         source: eventSource,
@@ -835,6 +1116,10 @@ const defaultOutputsService: OutputsService = {
         leadMs,
         scheduleSkewMs,
         schedulingMode,
+        ...(audioStartLeadForMetadata > 0
+          ? { audioStartLeadMs: audioStartLeadForMetadata }
+          : {}),
+        ...(preScheduleLeadMs > 0 ? { preScheduleLeadMs } : {}),
         ...(audioStartHeadroomMs != null ? { audioStartHeadroomMs } : {}),
         ...(audioStartGuardReason ? { audioStartGuard: audioStartGuardReason } : {}),
         ...(audioStartCompensationMs > 0 ? { audioStartCompensationMs } : {}),
@@ -876,50 +1161,95 @@ const defaultOutputsService: OutputsService = {
       caf(pendingFlashPulseFrame);
       pendingFlashPulseFrame = null;
     }
+    if (pendingTimelineFallback) {
+      clearTimeout(pendingTimelineFallback);
+      pendingTimelineFallback = null;
+    }
 
-    if (normalizedTimelineOffset == null && schedulingMode === 'audio-start') {
+    const beginDispatchLoop = () => {
+      if (schedulingMode === 'timeline') {
+        const delay = Math.max(0, targetStart - nowMs());
+        if (delay <= 1) {
+          dispatchStart();
+          return;
+        }
+        pendingTimelineFallback = scheduleMonotonic(
+          () => {
+            pendingTimelineFallback = null;
+            dispatchStart();
+          },
+          { offsetMs: delay },
+        );
+        if (pendingTimelineFallback == null) {
+          dispatchStart();
+        }
+        return;
+      }
+
       if (raf == null) {
+        const poll = () => {
+          const pollNow = nowMs();
+          if (pollNow >= targetStart) {
+            pendingFlashPulseTimeout = null;
+            dispatchStart();
+            return;
+          }
+          const wait = Math.min(8, Math.max(1, targetStart - pollNow));
+          pendingFlashPulseTimeout = setTimeout(poll, wait);
+        };
+        poll();
+        return;
+      }
+
+      if (nowMs() >= targetStart) {
         dispatchStart();
         return;
       }
-      const frame = () => {
+
+      const rafLoop = () => {
         if (nowMs() >= targetStart) {
           pendingFlashPulseFrame = null;
           dispatchStart();
         } else {
-          pendingFlashPulseFrame = raf(frame);
+          pendingFlashPulseFrame = raf(rafLoop);
         }
       };
-      pendingFlashPulseFrame = raf(frame);
-      return;
-    }
-
-    const delayMs = Math.max(0, targetStart - nowMs());
-
-    if (delayMs <= 1) {
-      dispatchStart();
-      return;
-    }
-
-    if (delayMs > 16 || raf == null) {
-      pendingFlashPulseTimeout = setTimeout(() => {
-        pendingFlashPulseTimeout = null;
-        dispatchStart();
-      }, delayMs);
-      return;
-    }
-
-    const scheduleFrame = () => {
-      pendingFlashPulseFrame = raf(() => {
-        if (nowMs() >= targetStart) {
-          pendingFlashPulseFrame = null;
-          dispatchStart();
-        } else {
-          scheduleFrame();
-        }
-      });
+      pendingFlashPulseFrame = raf(rafLoop);
     };
-    scheduleFrame();
+
+    const activationTarget = Math.max(schedulingNow, targetStart - preScheduleLeadMs);
+    let activationDelayMs = Math.max(0, activationTarget - schedulingNow);
+    const activationCheckNow = nowMs();
+    if (activationCheckNow > schedulingNow) {
+      activationDelayMs = Math.max(0, activationTarget - activationCheckNow);
+    }
+
+    const activate = () => {
+      pendingFlashPulseTimeout = null;
+      beginDispatchLoop();
+    };
+
+    if (activationDelayMs <= 1) {
+      activate();
+      return;
+    }
+
+    if (raf != null && activationDelayMs <= 16) {
+      const waitForActivation = () => {
+        if (nowMs() >= activationTarget) {
+          pendingFlashPulseFrame = null;
+          activate();
+        } else {
+          pendingFlashPulseFrame = raf(waitForActivation);
+        }
+      };
+      pendingFlashPulseFrame = raf(waitForActivation);
+      return;
+    }
+
+    pendingFlashPulseTimeout = setTimeout(() => {
+      activate();
+    }, activationDelayMs);
   },
 
   hapticSymbol({
@@ -933,6 +1263,7 @@ const defaultOutputsService: OutputsService = {
     metadata,
   }: HapticSymbolOptions) {
     const eventSource = source ?? 'unspecified';
+    const isConsoleReplay = eventSource === 'console.replay';
     const normalizedTimelineOffset = normalizeTimelineOffset(timelineOffsetMs);
     traceOutputs('outputs.hapticSymbol', {
       enabled,
@@ -1077,7 +1408,13 @@ const defaultOutputsService: OutputsService = {
 
     let symbolIndex = 0;
     const symbolTracker = (symbol: '.' | '-', durationMs: number, native?: NativeSymbolTimingContext) => {
+      const dispatchPhase = native?.dispatchPhase ?? 'actual';
       const correlation = createPressCorrelation(playbackSource);
+      const requestedAtMs =
+        (typeof native?.requestedAtMs === 'number' && Number.isFinite(native.requestedAtMs)
+          ? native.requestedAtMs
+          : correlation.startedAtMs);
+      correlation.startedAtMs = requestedAtMs;
       const nativeTimestampMs = native?.nativeTimestampMs ?? null;
       const nativeDurationMs = native?.nativeDurationMs ?? null;
       const nativeOffsetMs = native?.nativeOffsetMs ?? null;
@@ -1092,12 +1429,35 @@ const defaultOutputsService: OutputsService = {
       const monotonicTimestampMs =
         native?.monotonicTimestampMs ??
         (nativeTimestampMs != null ? toMonotonicTime(nativeTimestampMs) : null);
+      const correlationId = native?.correlationId ?? correlation.id;
+      const contextPayload = {
+        requestedAtMs,
+        correlationId,
+        source: native?.source ?? playbackSource,
+        dispatchPhase,
+        nativeTimestampMs,
+        nativeDurationMs,
+        nativeOffsetMs,
+        nativeSequence,
+        monotonicTimestampMs,
+        nativeExpectedTimestampMs,
+        nativeStartSkewMs,
+        nativeBatchElapsedMs,
+        nativeExpectedSincePriorMs,
+        nativeSincePriorMs,
+        nativePatternStartMs,
+        nativeAgeMs,
+      };
+      if (dispatchPhase === 'scheduled') {
+        onSymbolStart?.(symbol, durationMs, contextPayload);
+        return;
+      }
       traceOutputs('playMorse.symbol', {
         symbol,
         durationMs,
         index: symbolIndex,
         source: playbackSource,
-        correlationId: correlation.id,
+        correlationId,
         nativeTimestampMs,
         nativeDurationMs,
         nativeOffsetMs,
@@ -1117,7 +1477,7 @@ const defaultOutputsService: OutputsService = {
           offsetMs: nativeOffsetMs,
           sequence: nativeSequence,
           unitMs,
-          correlationId: correlation.id,
+          correlationId,
         };
         if (nativeStartSkewMs != null) {
           spikePayload.startSkewMs = nativeStartSkewMs;
@@ -1131,23 +1491,7 @@ const defaultOutputsService: OutputsService = {
         traceOutputs('playMorse.nativeOffset.spike', spikePayload);
       }
       symbolIndex += 1;
-      onSymbolStart?.(symbol, durationMs, {
-        requestedAtMs: correlation.startedAtMs,
-        correlationId: correlation.id,
-        source: playbackSource,
-        nativeTimestampMs,
-        nativeDurationMs,
-        nativeOffsetMs,
-        nativeSequence,
-        monotonicTimestampMs,
-        nativeExpectedTimestampMs,
-        nativeStartSkewMs,
-        nativeBatchElapsedMs,
-        nativeExpectedSincePriorMs,
-        nativeSincePriorMs,
-        nativePatternStartMs,
-        nativeAgeMs,
-      });
+      onSymbolStart?.(symbol, durationMs, contextPayload);
     };
 
     try {
@@ -1188,6 +1532,13 @@ const defaultOutputsService: OutputsService = {
 };
 
 export { defaultOutputsService };
+
+
+
+
+
+
+
 
 
 

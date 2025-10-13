@@ -29,8 +29,8 @@ namespace margelo::nitro::morse {
    * An enum which can be represented as a JavaScript union (PlaybackSymbol).
    */
   enum class PlaybackSymbol {
-    Dot  SWIFT_NAME(dot) = 0,
-    Dash SWIFT_NAME(dash) = 1,
+    DOT      SWIFT_NAME(dot) = 0,
+    DASH      SWIFT_NAME(dash) = 1,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::morse
@@ -43,16 +43,16 @@ namespace margelo::nitro {
     static inline margelo::nitro::morse::PlaybackSymbol fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
-        case hashString("."): return margelo::nitro::morse::PlaybackSymbol::Dot;
-        case hashString("-"): return margelo::nitro::morse::PlaybackSymbol::Dash;
+        case hashString("dot"): return margelo::nitro::morse::PlaybackSymbol::DOT;
+        case hashString("dash"): return margelo::nitro::morse::PlaybackSymbol::DASH;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum PlaybackSymbol - invalid value!");
       }
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::morse::PlaybackSymbol arg) {
       switch (arg) {
-        case margelo::nitro::morse::PlaybackSymbol::Dot: return JSIConverter<std::string>::toJSI(runtime, ".");
-        case margelo::nitro::morse::PlaybackSymbol::Dash: return JSIConverter<std::string>::toJSI(runtime, "-");
+        case margelo::nitro::morse::PlaybackSymbol::DOT: return JSIConverter<std::string>::toJSI(runtime, "dot");
+        case margelo::nitro::morse::PlaybackSymbol::DASH: return JSIConverter<std::string>::toJSI(runtime, "dash");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert PlaybackSymbol to JS - invalid value: "
                                     + std::to_string(static_cast<int>(arg)) + "!");
@@ -64,8 +64,8 @@ namespace margelo::nitro {
       }
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
-        case hashString("."):
-        case hashString("-"):
+        case hashString("dot"):
+        case hashString("dash"):
           return true;
         default:
           return false;

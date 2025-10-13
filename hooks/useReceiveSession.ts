@@ -9,6 +9,7 @@ import { getMorseUnitMs } from '@/utils/audio';
 import { toMorse } from '@/utils/morse';
 import { useProgressStore } from '@/store/useProgressStore';
 import { scheduleMonotonic } from '@/utils/scheduling';
+import { nowMs } from '@/utils/time';
 
 export const TOTAL_RECEIVE_QUESTIONS = 5;
 
@@ -109,6 +110,7 @@ export function useReceiveSession({
   const flash = React.useRef(outputs.createFlashValue()).current;
   const advanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentMorseRef = React.useRef('');
+  const scheduledCorrelationsRef = React.useRef<Set<string>>(new Set());
 
   const currentIndex = results.length;
   const currentTarget = questions[currentIndex] ?? null;
@@ -138,6 +140,7 @@ export function useReceiveSession({
       const metadata = buildPlaybackMetadata(context);
       outputs.flashPulse({
         enabled: lightEnabled,
+        torchEnabled: lightEnabled && context?.dispatchPhase !== 'scheduled',
         durationMs,
         flashValue: flash,
         source: context?.source ?? 'session.receive',
@@ -176,6 +179,7 @@ export function useReceiveSession({
 
     setIsPlaying(true);
     try {
+      scheduledCorrelationsRef.current.clear();
       await outputs.playMorse({
         morse,
         unitMs: getMorseUnitMs(),
@@ -184,6 +188,24 @@ export function useReceiveSession({
         audioVolumePercent,
         onSymbolStart: (symbol, duration, context) => {
           const playbackStart = resolvePlaybackRequestedAt(context);
+          const phase = context?.dispatchPhase ?? 'actual';
+          const correlationId = context?.correlationId ?? `${symbol}-${playbackStart ?? nowMs()}`;
+          const scheduleKey = correlationId ?? `${symbol}-${playbackStart ?? nowMs()}`;
+          if (phase === 'scheduled') {
+            scheduledCorrelationsRef.current.add(scheduleKey);
+            scheduleMonotonic(
+              () => runFlash(duration, context),
+              { startMs: playbackStart, offsetMs: flashOffsetMs },
+            );
+            scheduleMonotonic(
+              () => hapticTick(symbol, duration, context),
+              { startMs: playbackStart, offsetMs: hapticOffsetMs },
+            );
+            return;
+          }
+          if (scheduledCorrelationsRef.current.has(scheduleKey)) {
+            return;
+          }
           scheduleMonotonic(
             () => runFlash(duration, context),
             { startMs: playbackStart, offsetMs: flashOffsetMs },

@@ -7,6 +7,16 @@
 
 ## Completed (2025-10-12)
 
+- Added an adaptive `preScheduleLeadMs` path in `defaultOutputsService.flashPulse` so flash commits pre-arm `requestAnimationFrame` up to ~190 ms early based on recent `scheduleSkewMs` samples (new trace field + smoothing guard), aiming to collapse the 80-200 ms flash jitter without reintroducing audio-start headroom.
+- Replay scheduling now prefers `nativeExpectedTimestampMs` when present (`resolvePlaybackRequestedAt`) so Play Pattern flashes queue ahead of the tone and give the adaptive lead real headroom.
+- Guard now enforces a small target margin when applying `audioStartLeadMs`, clamping leads to available headroom so flashes stay a few ms ahead instead of collapsing back to zero headroom.
+- Audio-start guard now requires >=12 ms headroom before staying in audio-start mode, zeroes any compensation, and falls back to the 24 ms timeline offset to stop runaway skew.
+- Extended the same adaptive sampler to apply a capped `audioStartLeadMs` (<=96 ms) when we stick with audio-start scheduling so flashes lead by the measured JS skew while the analyzer keeps `preScheduleLeadMs` + `audioStartLeadMs` aligned.
+- Trimmed timeline fallback offset to 12 ms (with an 8 ms flash lead) so guard fallbacks stay closer to the audio track.
+- Relaxed the audio-start guard to 6 ms headroom (margin 2 ms) so more pulses stay on the native schedule while keeping a small safety buffer.
+- Console Play Pattern sweeps now skip the age/headroom guard, enforce a =24 ms audio-start lead, and pair with a 12 ms tone lead so flashes stay ahead of the audio track.
+- Boosted the adaptive lead baseline (36 ms, ratio 1.0 with 8 ms offset) so short guard successes get an earlier JS pre-arm and stay in audio-start.
+- Parsed the 13:56 (35.9 ms mean audio→flash) and 14:39 (39.6 ms mean) Play Pattern sweeps to quantify the residual flash spikes: 259 commits at 117.7 ms mean / 179 ms p95 with every pulse ≥60 ms, and 467 commits at 123.4 ms mean / 201 ms p95 (p99 421 ms) with 90 ms pulses peaking at 494 ms.
 - Trimmed `OutputsAudio` tone lead to 20 ms with a 12 ms gap cushion so tones no longer start far ahead of their slots at higher WPM.
 - Reworked the flash/haptic dispatcher to remain in audio-start mode with zero headroom and drive pulses via `requestAnimationFrame`, eliminating `audioStartCompensationMs` in the latest sweeps.
 - Taught the analyzer to read UTF-16 logcat captures (`Get-Content -Encoding Unicode`) so reported latencies reflect the on-device behaviour.
@@ -51,13 +61,10 @@
 - Synced the living spec architecture/details with the current bridgeless runtime so cross-platform contributors have an accurate map.
 
 ## Next Steps
-
-- Quantify the remaining `scheduleSkewMs` (~60–100 ms outliers) and experiment with shorter tone lead or additional jitter smoothing so audio→flash stays <35 ms across sweeps.
-- Evaluate moving replay/receive scheduling fully onto `scheduleMonotonic` (or the native queue) to remove the last JS timer spikes.
-- Continue weekly SOS→40 WPM sweeps (UTF‑16 analyzer) to ensure the ~35–40 ms baseline holds and to catch regressions after dependency bumps.
-- Use the telemetry (`startSkewMs`, `batchElapsedMs`, `nativeAgeMs`) to document any residual spikes and feed hypotheses back into the backlog.
-- Flag future flash-commit spans >1 s or clustered spikes in `docs/outputs-investigation.md`; archive the corresponding logcat snippets for comparison.
-- Retire older compensation-heavy logs once the new baseline has a week of coverage and update the spike summary CSV accordingly.
+- Before any console replay sweep, stop outstanding receive replays (`adb shell am broadcast -a com.csparks113.MorseCodeApp.STOP_REPLAY` and `adb shell am force-stop com.csparks113.MorseCodeApp`), relaunch the app, run `commands.clear()`, and `adb logcat -c` so stale pulses cannot contaminate the capture.
+- Collect clean Play Pattern captures at 10/20/30 WPM (one run per log) with replay torches disabled; save them as `docs/logs/console-replay-YYYYMMDD-HHMMSS-play-pattern.txt` and process each with `scripts/analyze-logcat.ps1`.
+- Once flash/haptic sit <20 ms across those WPMs, re-enable torch, rerun the sweeps plus SOS/receive validations, and archive the logs with updated notes in `docs/outputs-investigation.md` / `docs/outputs-alignment-notes.md`.
+- After the baseline holds, prune the pre-clamp timeline CSVs and tighten documentation so the next session can start from a clean, torch-enabled baseline.
 
 ### Deferred: Outputs Testing
 
@@ -135,6 +142,11 @@
 - Completed 2025-10-09: `forceCutOutputs` now runs whenever verdicts queue or sessions end, and the keyer release signal clears button state so outputs never stay latched between questions.
 - Completed 2025-10-08: Added watchdog logging when manual/dev-console handles fail to release tone/flash within expected timeouts (default outputs service records pressTimeout samples and force-cuts handles).
 - Follow up with send/practice flows to ensure the verdict timers cancel pending pressStart correlations before queuing the next prompt (verify practice/send flows honour the cutActiveOutputs path).
+
+
+
+
+
 
 
 

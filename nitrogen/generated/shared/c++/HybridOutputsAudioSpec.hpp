@@ -7,20 +7,28 @@
 
 #pragma once
 
-#include <string>
 #if __has_include(<NitroModules/HybridObject.hpp>)
 #include <NitroModules/HybridObject.hpp>
 #else
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
+// Forward declaration of `WarmupOptions` to properly resolve imports.
+namespace margelo::nitro::morse { struct WarmupOptions; }
 // Forward declaration of `ToneStartOptions` to properly resolve imports.
 namespace margelo::nitro::morse { struct ToneStartOptions; }
 // Forward declaration of `PlaybackRequest` to properly resolve imports.
 namespace margelo::nitro::morse { struct PlaybackRequest; }
+// Forward declaration of `PlaybackDispatchEvent` to properly resolve imports.
+namespace margelo::nitro::morse { struct PlaybackDispatchEvent; }
 
+#include "WarmupOptions.hpp"
 #include "ToneStartOptions.hpp"
 #include "PlaybackRequest.hpp"
+#include "PlaybackDispatchEvent.hpp"
+#include <functional>
+#include <optional>
+#include <string>
 
 namespace margelo::nitro::morse {
 
@@ -54,12 +62,13 @@ namespace margelo::nitro::morse {
     public:
       // Methods
       virtual bool isSupported() = 0;
-      virtual void warmup(const ToneStartOptions& options) = 0;
+      virtual void warmup(const WarmupOptions& options) = 0;
       virtual void startTone(const ToneStartOptions& options) = 0;
       virtual void stopTone() = 0;
       virtual void playMorse(const PlaybackRequest& request) = 0;
-      virtual std::string getLatestSymbolInfo() = 0;
-      virtual std::string getScheduledSymbols() = 0;
+      virtual void setSymbolDispatchCallback(const std::optional<std::function<void(const PlaybackDispatchEvent& /* event */)>>& callback) = 0;
+      virtual std::optional<std::string> getLatestSymbolInfo() = 0;
+      virtual std::optional<std::string> getScheduledSymbols() = 0;
       virtual void teardown() = 0;
 
     protected:

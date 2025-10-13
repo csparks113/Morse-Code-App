@@ -13,10 +13,13 @@
 #include <oboe/Oboe.h>
 
 #include "HybridOutputsAudioSpec.hpp"
+#include "WarmupOptions.hpp"
 #include "ToneStartOptions.hpp"
 #include "PlaybackRequest.hpp"
 #include "ToneEnvelopeOptions.hpp"
 #include "PlaybackSymbol.hpp"
+#include "PlaybackDispatchEvent.hpp"
+#include <functional>
 
 namespace margelo::nitro::morse {
 
@@ -27,13 +30,15 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   ~OutputsAudio() override;
 
   bool isSupported() override;
-  void warmup(const ToneStartOptions& options) override;
+  void warmup(const WarmupOptions& options) override;
   void startTone(const ToneStartOptions& options) override;
   void stopTone() override;
   void playMorse(const PlaybackRequest& request) override;
-  std::string getLatestSymbolInfo() override;
-  std::string getScheduledSymbols() override;
+  void setSymbolDispatchCallback(const std::optional<std::function<void(const PlaybackDispatchEvent&)>>& callback) override;
+  std::optional<std::string> getLatestSymbolInfo() override;
+  std::optional<std::string> getScheduledSymbols() override;
   void teardown() override;
+  void loadHybridMethods() override;
 
   oboe::DataCallbackResult onAudioReady(oboe::AudioStream* stream,
                                         void* audioData,
@@ -87,6 +92,7 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
                   double unitMs,
                   std::chrono::steady_clock::time_point patternStart);
   void logEvent(const char* event, const char* fmt = nullptr, ...) const;
+  void emitSymbolDispatchEvent(const PlaybackDispatchEvent& event);
 
   std::mutex mStreamMutex;
   StreamPtr mStream;
@@ -119,6 +125,8 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   std::mutex mPlaybackMutex;
   std::atomic<bool> mPlaybackCancel;
   std::atomic<bool> mPlaybackRunning;
+  std::mutex mCallbackMutex;
+  std::optional<std::function<void(const PlaybackDispatchEvent&)>> mSymbolDispatchCallback;
 };
 
 } // namespace margelo::nitro::morse

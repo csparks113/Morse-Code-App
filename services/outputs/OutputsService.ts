@@ -12,6 +12,7 @@ export type FlashPulseOptions = {
   durationMs: number;
   flashValue: Animated.Value;
   source?: string;
+  torchEnabled?: boolean;
   timelineOffsetMs?: number;
   brightnessPercent?: number;
   requestedAtMs?: number;
@@ -34,6 +35,7 @@ export type PlaybackSymbolContext = {
   requestedAtMs: number;
   correlationId: string;
   source: string;
+  dispatchPhase?: 'scheduled' | 'actual';
   nativeTimestampMs?: number | null;
   nativeDurationMs?: number | null;
   nativeOffsetMs?: number | null;
@@ -86,6 +88,10 @@ export type KeyerOutputsHandle = {
 export function resolvePlaybackRequestedAt(context?: PlaybackSymbolContext): number | undefined {
   if (!context) {
     return undefined;
+  }
+  const expectedTimestamp = context.nativeExpectedTimestampMs;
+  if (typeof expectedTimestamp === 'number') {
+    return toMonotonicTime(expectedTimestamp);
   }
   if (typeof context.monotonicTimestampMs === 'number') {
     return context.monotonicTimestampMs;

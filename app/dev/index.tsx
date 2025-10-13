@@ -325,6 +325,8 @@ export default function DeveloperConsoleScreen() {
     const pattern = (manualPattern || DEFAULT_PATTERN).replace(/\s+/g, ' ').trim() || DEFAULT_PATTERN;
 
     try {
+      const CONSOLE_REPLAY_FLASH_OFFSET_MS = -24;
+      const CONSOLE_REPLAY_HAPTIC_OFFSET_MS = 0;
       await outputs.playMorse({
         morse: pattern,
         unitMs,
@@ -335,6 +337,33 @@ export default function DeveloperConsoleScreen() {
           const requestedAtMs = resolvePlaybackRequestedAt(context);
           const timelineOffsetMs = resolvePlaybackTimelineOffset(context);
           const metadata = buildPlaybackMetadata(context);
+          const phase = context?.dispatchPhase ?? 'actual';
+          if (phase === 'scheduled') {
+            scheduleMonotonic(() => {
+              outputs.hapticSymbol({
+                enabled: manualOptions.hapticsEnabled,
+                symbol,
+                durationMs,
+                source: context?.source ?? 'console.replay',
+                requestedAtMs,
+                timelineOffsetMs,
+                correlationId: context?.correlationId,
+                metadata,
+              });
+              outputs.flashPulse({
+                enabled: manualOptions.lightEnabled,
+                torchEnabled: manualOptions.torchEnabled,
+                durationMs,
+                flashValue: manualFlashValue,
+                source: context?.source ?? 'console.replay',
+                requestedAtMs,
+                timelineOffsetMs,
+                correlationId: context?.correlationId,
+                metadata,
+              });
+            }, { startMs: requestedAtMs, offsetMs: CONSOLE_REPLAY_FLASH_OFFSET_MS });
+            return;
+          }
           scheduleMonotonic(() => {
             outputs.hapticSymbol({
               enabled: manualOptions.hapticsEnabled,
@@ -348,6 +377,7 @@ export default function DeveloperConsoleScreen() {
             });
             outputs.flashPulse({
               enabled: manualOptions.lightEnabled,
+              torchEnabled: manualOptions.torchEnabled && context?.dispatchPhase !== 'scheduled',
               durationMs,
               flashValue: manualFlashValue,
               source: context?.source ?? 'console.replay',
@@ -356,7 +386,7 @@ export default function DeveloperConsoleScreen() {
               correlationId: context?.correlationId,
               metadata,
             });
-          }, { startMs: requestedAtMs });
+          }, { startMs: requestedAtMs, offsetMs: phase === 'actual' ? 0 : CONSOLE_REPLAY_HAPTIC_OFFSET_MS });
         },
       });
     } catch (error) {

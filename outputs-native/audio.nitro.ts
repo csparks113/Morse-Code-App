@@ -1,4 +1,6 @@
-export type PlaybackSymbol = '.' | '-';
+import type { HybridObject } from 'react-native-nitro-modules';
+
+export type PlaybackSymbol = 'dot' | 'dash';
 
 export type ToneEnvelopeOptions = {
   attackMs?: number;
@@ -11,6 +13,11 @@ export type ToneStartOptions = {
   envelope?: ToneEnvelopeOptions;
 };
 
+export type WarmupOptions = {
+  toneHz: number;
+  gain?: number;
+};
+
 export type PlaybackRequest = {
   toneHz: number;
   unitMs: number;
@@ -18,12 +25,35 @@ export type PlaybackRequest = {
   gain?: number;
 };
 
-export interface OutputsAudio {
+export type PlaybackDispatchPhase = 'scheduled' | 'actual';
+
+export type PlaybackDispatchEvent = {
+  phase: PlaybackDispatchPhase;
+  symbol: PlaybackSymbol;
+  sequence: number;
+  patternStartMs: number;
+  expectedTimestampMs: number;
+  offsetMs: number;
+  durationMs: number;
+  unitMs: number;
+  toneHz: number;
+  scheduledTimestampMs?: number;
+  leadMs?: number;
+  actualTimestampMs?: number;
+  monotonicTimestampMs?: number;
+  startSkewMs?: number;
+  batchElapsedMs?: number;
+  expectedSincePriorMs?: number;
+  sincePriorMs?: number;
+};
+
+export interface OutputsAudio extends HybridObject<{ android: 'c++' }> {
   isSupported(): boolean;
-  warmup(options: { toneHz: number; gain?: number }): void;
+  warmup(options: WarmupOptions): void;
   startTone(options: ToneStartOptions): void;
   stopTone(): void;
   playMorse(request: PlaybackRequest): void;
+  setSymbolDispatchCallback(callback: ((event: PlaybackDispatchEvent) => void) | null): void;
   getLatestSymbolInfo?(): string | null;
   getScheduledSymbols?(): string | null;
   teardown(): void;

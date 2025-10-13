@@ -13,19 +13,15 @@ Use this document to capture the single source of truth after each working sessi
 - **Automation & Tooling (Codex CLI harness):** Provides local execution environment, log capture scripts, and build automation support.
 
 ## Latest Update
-- **Summary:** Native `OutputsAudio` now precomputes the playback schedule (`getScheduledSymbols`), and the Nitro JS path parses those entries while logging `playMorse.symbol.schedule`. JS guardrails (160 ms compensation + requestAnimationFrame) remain, but the latest sweeps (`...175743...`, `...180457...`, `...181428...`) still show unitMs 34/40/48 spikes lingering around 80–110 ms with `audioStartGuard=headroom`, so we need to wire the scheduled timestamps straight through to flash/haptic consumers.
-- **State:** Native scheduling scaffolding is ready, yet send/receive/console flows still lean on timeline offsets; the next push is integrating the scheduled contexts and then trimming the JS compensation path once high-WPM timing holds.
+- **Summary:** Adaptive flash scheduler now pre-arms RAF from prior `scheduleSkewMs`, applies a capped `audioStartLeadMs` (<=96 ms) with a minimum-headroom guard, and replays schedule from `nativeExpectedTimestampMs`; remaining analyzer spikes stem from stale `audioStartCompensationMs` surviving timeline fallbacks, not real latency. Docs (`refactor-notes`, `outputs-investigation`, `outputs-alignment-notes`) track the 13:56?16:20 sweep trend.
+- **State:** Need fresh device sweeps to confirm the adaptive lead collapses the flash `scheduleSkewMs` tail and to decide whether further tone-lead trims or scheduleMonotonic migration are still required.
 
 ## Next Steps
-1. Wire the scheduled symbol contexts into send/receive replays and the developer console so flash/haptic pulses schedule directly from `nativeExpectedTimestampMs` (no timeline-offset fallback).
-2. Capture new SOS→40 WPM sweeps after wiring, verify `audioStartCompensationMs` ~0 and unitMs 30/34/40 spikes fall below 80 ms, and append the results to `docs/logs/spike-summary-play-pattern-20251011.csv`.
-3. Once native scheduling holds, reduce or remove the JS compensation guard, update documentation, and keep the spike summary/analyzer telemetry current.
-4. Continue running the JSON-aware analyzer on every capture and archive any pre-instrumentation logs once stability holds.
-5. Spot-check future flash-commit spans above ~1 s; the recent 1.83 s commit mapped to a deliberate 1.74 s hold, so flag any new cases that lack matching long presses.
-6. Keep watching `playMorse.nativeOffset.spike`; the analyzer still surfaces >=80 ms entries automatically, so bundle fresh logs if clusters cluster.
-7. Keep torch alignment and high-WPM keyer precision on watch during upcoming sweeps, logging anomalies and proposed tweaks back into `docs/refactor-notes.md`.
-8. Run the iOS bridgeless checklist once Android validation is locked so we confirm Nitro parity across platforms.
-
+1. Before launch, cap settings at 30 WPM and verify audio->flash/haptic skew stays under 15 ms through Play Pattern + SOS sweeps.
+2. Purge `audioStartCompensationMs`/timeline offsets when the guard falls back to timeline and rerun Play Pattern to confirm analyzer means drop toward <15 ms.
+3. Capture new Play Pattern + SOS runs with the adaptive `preScheduleLeadMs`/`audioStartLeadMs` path and dump scheduleSkew/audio->flash stats back into `docs/outputs-investigation.md`.
+4. If spikes stay above ~60 ms, prototype replay/receive dispatch on `scheduleMonotonic` (or reduce the native tone lead below 20 ms) and compare against the adaptive JS lead.
+5. Continue weekly SOS->40 WPM sweeps, logging any >1 s flash commits and archiving the matching logcat snippets in `docs/logs/`.
 ## Verification
 - `npm run lint` *(fails)* — command timed out after ESLint attempted to parse generated bundle artifacts (`..bundle.js`, `..virtual-entry.bundle.js`), which already trigger thousands of legacy lint errors.
 

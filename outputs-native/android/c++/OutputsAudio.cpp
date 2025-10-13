@@ -11,6 +11,7 @@
 #include <sstream>
 #include <thread>
 #include <utility>
+#include <exception>
 
 namespace margelo::nitro::morse {
 
@@ -34,7 +35,7 @@ constexpr double kTwoPi = 6.283185307179586476925286766559;
 constexpr std::chrono::milliseconds kSleepQuantum(1);
 constexpr int kDashUnits = 3;
 constexpr int kSymbolGapUnits = 1;
-constexpr double kToneStartLeadMs = 20.0;
+constexpr double kToneStartLeadMs = 4.0;
 constexpr double kMinDispatchOffsetMs = 12.0;
 
 inline float clampGain(float value) {
@@ -48,6 +49,10 @@ inline std::chrono::microseconds toMicros(double milliseconds) {
 
 inline double toMillis(const std::chrono::steady_clock::time_point& timePoint) {
   return std::chrono::duration<double, std::milli>(timePoint.time_since_epoch()).count();
+}
+
+inline char toSymbolChar(PlaybackSymbol symbol) {
+  return symbol == PlaybackSymbol::DASH ? '-' : '.';
 }
 } // namespace
 
@@ -79,6 +84,36 @@ OutputsAudio::OutputsAudio()
 
 OutputsAudio::~OutputsAudio() {
   teardown();
+}
+
+void OutputsAudio::loadHybridMethods() {
+  HybridOutputsAudioSpec::loadHybridMethods();
+  registerHybrids(this, [](Prototype& prototype) {
+    prototype.registerHybridMethod("setSymbolDispatchCallback", &OutputsAudio::setSymbolDispatchCallback);
+  });
+}
+
+void OutputsAudio::setSymbolDispatchCallback(const std::optional<std::function<void(const PlaybackDispatchEvent&)>>& callback) {
+  std::lock_guard<std::mutex> lock(mCallbackMutex);
+  mSymbolDispatchCallback = callback;
+}
+
+void OutputsAudio::emitSymbolDispatchEvent(const PlaybackDispatchEvent& event) {
+  std::function<void(const PlaybackDispatchEvent&)> callback;
+  {
+    std::lock_guard<std::mutex> lock(mCallbackMutex);
+    if (!mSymbolDispatchCallback.has_value()) {
+      return;
+    }
+    callback = *mSymbolDispatchCallback;
+  }
+  try {
+    callback(event);
+  } catch (const std::exception& exception) {
+    logEvent("dispatch.callback.error", "message=%s", exception.what());
+  } catch (...) {
+    logEvent("dispatch.callback.error", "message=unknown");
+  }
 }
 
 void OutputsAudio::logEvent(const char* event, const char* fmt, ...) const {
@@ -295,7 +330,7 @@ void OutputsAudio::startToneInternal(const ToneStartOptions& options, bool cance
            requestedAtMs);
 }
 
-void OutputsAudio::warmup(const ToneStartOptions& options) {
+void OutputsAudio::warmup(const WarmupOptions& options) {
   if (!isSupported()) {
     return;
   }
@@ -376,9 +411,9 @@ void OutputsAudio::resetSymbolInfo() {
 
 void OutputsAudio::playMorse(const PlaybackRequest& request) {
   if (!isSupported()) {
-    logEvent("playMorse.skip", "unsupported=1");
-    return;
-  }
+  logEvent("playMorse.skip", "unsupported=1");
+  return;
+}
 
   if (request.pattern.empty()) {
     return;
@@ -484,9 +519,9 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
       break;
     }
 
-    const int symbolValue = static_cast<int>(pattern[i]);
-    const bool isDash = symbolValue == 1;
-    const bool isDot = symbolValue == 0;
+    const PlaybackSymbol symbolType = pattern[i];
+    const bool isDash = symbolType == PlaybackSymbol::DASH;
+    const bool isDot = symbolType == PlaybackSymbol::DOT;
 
     if (!isDash && !isDot) {
       const double invalidGapMs = unitMs * 3.0;
@@ -510,11 +545,31 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
     logEvent("playMorse.dispatch",
              "sequence=%llu symbol=%c offset=%.3f lead=%.3f dispatchAt=%.3f gapLead=%.3f",
              static_cast<unsigned long long>(upcomingSequence),
-             isDash ? '-' : '.',
+             toSymbolChar(symbolType),
              expectedStartOffsetMs,
              leadMs,
              dispatchTimestampMs,
              availableGapLead);
+    PlaybackDispatchEvent scheduledEvent;
+    scheduledEvent.phase = PlaybackDispatchPhase::SCHEDULED;
+    scheduledEvent.symbol = symbolType;
+    scheduledEvent.sequence = static_cast<double>(upcomingSequence);
+    scheduledEvent.patternStartMs = patternStartMs;
+    scheduledEvent.expectedTimestampMs = patternStartMs + expectedStartOffsetMs;
+    scheduledEvent.offsetMs = expectedStartOffsetMs;
+    scheduledEvent.durationMs = symbolDurationMs;
+    scheduledEvent.unitMs = unitMs;
+    scheduledEvent.toneHz = toneHz;
+    scheduledEvent.scheduledTimestampMs = dispatchTimestampMs;
+    scheduledEvent.leadMs = leadMs;
+    scheduledEvent.actualTimestampMs = std::nullopt;
+    scheduledEvent.monotonicTimestampMs = std::nullopt;
+    scheduledEvent.startSkewMs = std::nullopt;
+    scheduledEvent.batchElapsedMs = std::nullopt;
+    scheduledEvent.expectedSincePriorMs =
+        isFirstSymbol ? std::nullopt : std::optional<double>(expectedStartOffsetMs - previousExpectedEndOffsetMs);
+    scheduledEvent.sincePriorMs = std::nullopt;
+    emitSymbolDispatchEvent(scheduledEvent);
     sleepUntil(dispatchTime);
 
     ToneStartOptions startOptions;
@@ -542,7 +597,7 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
       sequenceValue = mSymbolSequence;
       SymbolSnapshot snapshot;
       snapshot.sequence = sequenceValue;
-      snapshot.symbol = isDash ? PlaybackSymbol::Dash : PlaybackSymbol::Dot;
+      snapshot.symbol = symbolType;
       snapshot.timestampMs = audioStartMs;
       snapshot.durationMs = symbolDurationMs;
       snapshot.patternStartMs = patternStartMs;
@@ -560,11 +615,31 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
     logEvent("playMorse.symbol.start",
              "sequence=%llu symbol=%c expected=%.3f actual=%.3f skew=%.3f batchElapsed=%.3f",
              static_cast<unsigned long long>(sequenceValue),
-             isDash ? '-' : '.',
+             toSymbolChar(symbolType),
              expectedStartMs,
              audioStartMs,
              startSkewMs,
              batchElapsedMs);
+    PlaybackDispatchEvent actualEvent;
+    actualEvent.phase = PlaybackDispatchPhase::ACTUAL;
+    actualEvent.symbol = symbolType;
+    actualEvent.sequence = static_cast<double>(sequenceValue);
+    actualEvent.patternStartMs = patternStartMs;
+    actualEvent.expectedTimestampMs = expectedStartMs;
+    actualEvent.offsetMs = expectedStartOffsetMs;
+    actualEvent.durationMs = symbolDurationMs;
+    actualEvent.unitMs = unitMs;
+    actualEvent.toneHz = toneHz;
+    actualEvent.scheduledTimestampMs = dispatchTimestampMs;
+    actualEvent.leadMs = leadMs;
+    actualEvent.actualTimestampMs = audioStartMs;
+    actualEvent.monotonicTimestampMs = audioStartMs;
+    actualEvent.startSkewMs = startSkewMs;
+    actualEvent.batchElapsedMs = batchElapsedMs;
+    actualEvent.expectedSincePriorMs =
+        isFirstSymbol ? std::nullopt : std::optional<double>(expectedSincePriorMs);
+    actualEvent.sincePriorMs = isFirstSymbol ? std::nullopt : std::optional<double>(sincePriorMs);
+    emitSymbolDispatchEvent(actualEvent);
 
     previousExpectedStartMs = expectedStartMs;
     previousActualStartMs = audioStartMs;
@@ -599,17 +674,17 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
   logEvent("playMorse.end", "cancelled=%d", cancelled ? 1 : 0);
 }
 
-std::string OutputsAudio::getLatestSymbolInfo() {
+std::optional<std::string> OutputsAudio::getLatestSymbolInfo() {
   const double fetchedAtMs =
       std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch())
           .count();
   std::lock_guard<std::mutex> lock(mSymbolInfoMutex);
   if (mSymbolSnapshots.empty()) {
-    return {};
+    return std::nullopt;
   }
   const SymbolSnapshot snapshot = mSymbolSnapshots.front();
   mSymbolSnapshots.pop_front();
-  const char symbolChar = snapshot.symbol == PlaybackSymbol::Dash ? '-' : '.';
+  const char symbolChar = toSymbolChar(snapshot.symbol);
   const double ageMs = std::max(0.0, fetchedAtMs - snapshot.timestampMs);
   std::ostringstream stream;
   stream.setf(std::ios::fixed, std::ios::floatfield);
@@ -632,15 +707,15 @@ std::string OutputsAudio::getLatestSymbolInfo() {
            snapshot.timestampMs,
            snapshot.durationMs,
            snapshot.expectedTimestampMs,
-           snapshot.startSkewMs,
-           ageMs);
+         snapshot.startSkewMs,
+         ageMs);
   return stream.str();
 }
 
-std::string OutputsAudio::getScheduledSymbols() {
+std::optional<std::string> OutputsAudio::getScheduledSymbols() {
   std::lock_guard<std::mutex> lock(mScheduleMutex);
   if (mScheduledSymbols.empty()) {
-    return {};
+    return std::nullopt;
   }
 
   std::ostringstream stream;
@@ -648,7 +723,7 @@ std::string OutputsAudio::getScheduledSymbols() {
   stream << "[";
   for (std::size_t i = 0; i < mScheduledSymbols.size(); ++i) {
     const auto& entry = mScheduledSymbols[i];
-    const char symbolChar = entry.symbol == PlaybackSymbol::Dash ? '-' : '.';
+    const char symbolChar = toSymbolChar(entry.symbol);
     stream << "{\"sequence\":" << entry.sequence
            << ",\"symbol\":\"" << symbolChar << "\""
            << ",\"expectedTimestampMs\":" << std::setprecision(3) << entry.expectedTimestampMs
@@ -749,6 +824,10 @@ void OutputsAudio::onErrorAfterClose(oboe::AudioStream*, oboe::Result error) {
 
 void OutputsAudio::teardown() {
   cancelPlaybackThread(true);
+  {
+    std::lock_guard<std::mutex> callbackLock(mCallbackMutex);
+    mSymbolDispatchCallback.reset();
+  }
   std::lock_guard<std::mutex> lock(mStreamMutex);
   closeStreamLocked();
 }
