@@ -30,6 +30,7 @@ type UseReceiveSessionArgs = {
   audioEnabled: boolean;
   audioVolumePercent: number;
   flashBrightnessPercent: number;
+  screenBrightnessBoost: boolean;
   flashOffsetMs?: number;
   hapticOffsetMs?: number;
   actionLabels: PromptActionLabels;
@@ -89,6 +90,7 @@ export function useReceiveSession({
   audioEnabled,
   audioVolumePercent,
   flashBrightnessPercent,
+  screenBrightnessBoost,
   flashOffsetMs = 0,
   hapticOffsetMs = 0,
   actionLabels,
@@ -190,6 +192,7 @@ export function useReceiveSession({
         hapticsEnabled,
         torchEnabled: lightEnabled,
         flashBrightnessPercent,
+        screenBrightnessBoost,
         onSymbolStart: (symbol, duration, context) => {
           const playbackStart = resolvePlaybackRequestedAt(context);
           const phase = context?.dispatchPhase ?? 'actual';
@@ -235,6 +238,7 @@ export function useReceiveSession({
     lightEnabled,
     hapticsEnabled,
     flashBrightnessPercent,
+    screenBrightnessBoost,
   ]);
 
   const playTargetRef = React.useRef<() => Promise<void> | void>(() => {});

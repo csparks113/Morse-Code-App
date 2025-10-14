@@ -9,8 +9,10 @@ import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.ReactHost
+import com.facebook.react.ReactInstanceManager
 import com.facebook.react.common.ReleaseLevel
 import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContext
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.react.soloader.OpenSourceMergedSoMapping
@@ -55,11 +57,14 @@ class MainApplication : Application(), ReactApplication {
       throw RuntimeException("Unable to initialize SoLoader", error)
     }
 
-    reactNativeHost.reactInstanceManager.addReactInstanceEventListener { context ->
-      if (context is ReactApplicationContext) {
-        NativeOutputsDispatcher.initialize(context)
-      }
-    }
+    reactNativeHost.reactInstanceManager.addReactInstanceEventListener(
+        object : ReactInstanceManager.ReactInstanceEventListener {
+          override fun onReactContextInitialized(context: ReactContext) {
+            if (context is ReactApplicationContext) {
+              NativeOutputsDispatcher.initialize(context)
+            }
+          }
+        })
     var usingNewArchitecture = newArchitectureController.isEnabled()
 
     if (usingNewArchitecture) {

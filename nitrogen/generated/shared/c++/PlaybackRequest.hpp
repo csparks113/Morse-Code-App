@@ -40,10 +40,11 @@ namespace margelo::nitro::morse {
     std::optional<bool> hapticsEnabled     SWIFT_PRIVATE;
     std::optional<bool> torchEnabled     SWIFT_PRIVATE;
     std::optional<double> flashBrightnessPercent     SWIFT_PRIVATE;
+    std::optional<bool> screenBrightnessBoost     SWIFT_PRIVATE;
 
   public:
     PlaybackRequest() = default;
-    explicit PlaybackRequest(double toneHz, double unitMs, std::vector<PlaybackSymbol> pattern, std::optional<double> gain, std::optional<bool> flashEnabled, std::optional<bool> hapticsEnabled, std::optional<bool> torchEnabled, std::optional<double> flashBrightnessPercent): toneHz(toneHz), unitMs(unitMs), pattern(pattern), gain(gain), flashEnabled(flashEnabled), hapticsEnabled(hapticsEnabled), torchEnabled(torchEnabled), flashBrightnessPercent(flashBrightnessPercent) {}
+    explicit PlaybackRequest(double toneHz, double unitMs, std::vector<PlaybackSymbol> pattern, std::optional<double> gain, std::optional<bool> flashEnabled, std::optional<bool> hapticsEnabled, std::optional<bool> torchEnabled, std::optional<double> flashBrightnessPercent, std::optional<bool> screenBrightnessBoost): toneHz(toneHz), unitMs(unitMs), pattern(pattern), gain(gain), flashEnabled(flashEnabled), hapticsEnabled(hapticsEnabled), torchEnabled(torchEnabled), flashBrightnessPercent(flashBrightnessPercent), screenBrightnessBoost(screenBrightnessBoost) {}
   };
 
 } // namespace margelo::nitro::morse
@@ -63,7 +64,8 @@ namespace margelo::nitro {
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "flashEnabled")),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "hapticsEnabled")),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "torchEnabled")),
-        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "flashBrightnessPercent"))
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "flashBrightnessPercent")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "screenBrightnessBoost"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::morse::PlaybackRequest& arg) {
@@ -76,6 +78,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "hapticsEnabled", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.hapticsEnabled));
       obj.setProperty(runtime, "torchEnabled", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.torchEnabled));
       obj.setProperty(runtime, "flashBrightnessPercent", JSIConverter<std::optional<double>>::toJSI(runtime, arg.flashBrightnessPercent));
+      obj.setProperty(runtime, "screenBrightnessBoost", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.screenBrightnessBoost));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -91,6 +94,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "hapticsEnabled"))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "torchEnabled"))) return false;
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "flashBrightnessPercent"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "screenBrightnessBoost"))) return false;
       return true;
     }
   };

@@ -1,9 +1,19 @@
-### Using This Log
+﻿### Using This Log
 
 - Capture each day's finished work in **Completed (Today)** so anyone skimming the file can see what moved recently.
 - Treat **Next Steps** as the living backlog: rewrite items when priorities shift and remove them only after the work ships.
 - When you pick up a task, copy the relevant bullet into your working notes and expand it with acceptance criteria, links, or test plans.
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
+
+## Completed (2025-10-14)
+
+- Added `android/app/src/main/java/com/csparks113/MorseCodeApp/NativeOutputsDispatcher.kt` so Nitro playback can toggle torch and vibration with basic hardware guards and main-thread marshaling.
+- Ensured `outputs-native/android/c++/OutputsAudio.cpp` always forces the torch off when playback is cancelled, preventing latched hardware between runs.
+- Threaded replay flash brightness percentages through session/console flows and logged `flashIntensity` so the upcoming native flash path inherits the user's intensity settings.
+- Implemented a native `ScreenFlasherView` overlay driven via JNI (`setFlashOverlayState`/`setFlashIntensity`), plumbed `flashHandledNatively` through dispatch events, and taught the JS layer to treat Nitro-controlled flashes as telemetry-only fallbacks.
+- Updated `scripts/analyze-logcat.ps1` to understand `outputs.flashPulse.nativeHandled`, mark native-handled flashes in the symbol queue, and report overlay coverage alongside existing phase stats.
+- Extended overlay telemetry end-to-end: Kotlin logs structured availability transitions, playback dispatch events expose `nativeFlashAvailable`, JS traces emit `outputs.flashPulse.nativeFallback`, and the analyzer now reports native availability/fallback summaries.
+- Added a screen brightness boost toggle (settings + dev console) that threads `screenBrightnessBoost` through Nitro so native flashes can temporarily raise display brightness while analyzer coverage reflects `nativeFlashHandled`.
 
 ## Completed (2025-10-13)
 
@@ -70,10 +80,11 @@
 - Synced the living spec architecture/details with the current bridgeless runtime so cross-platform contributors have an accurate map.
 
 ## Next Steps
-- Finish wiring the Android dispatcher so native callbacks drive flash/haptic/torch end-to-end (respect brightness percentages, ensure torch clean-up, keep JS telemetry-only), then mirror the bridge on iOS when hardware is available.
-- Harden the Kotlin helper against missing hardware, expose brightness hooks, and confirm JS fallbacks remain safe when native actuation succeeds or fails.
-- Capture new Play Pattern sweeps at 10/20/30 WPM (torch still disabled) to confirm <20 ms audio->flash/haptic and review dispatch-phase coverage in the analyzer.
-- Re-enable torch and SOS/receive sweeps once the native dispatcher holds, archive the new baselines, and document the steady-state workflow for native-driven outputs.
+
+- Surface the `nativeFlashAvailable` signal inside the developer console diagnostics so we can see overlay status/fallback counts without digging through logcat.
+- Sanity-check the new analyzer availability/fallback output on fresh Play Pattern captures before we declare the overlay path production-ready.
+- Capture fresh Play Pattern sweeps at 10/20/30 WPM (torch still disabled), verify `<20 ms` audio->flash/haptic, confirm the `nativeFlashAvailable`/`nativeHandled` coverage, then decide when to re-enable Torch Mode plus SOS/receive validations.
+- Mirror the overlay dispatcher on iOS (UIView mount + brightness hook) once Android stabilises so cross-platform behaviour and telemetry stay aligned.
 ### Deferred: Outputs Testing
 
 - Extend the freeform sweeps to high-WPM stress cases and confirm the relaxed classifiers still hold; log any misreads or latency drifts in `docs/outputs-investigation.md`.
@@ -150,6 +161,8 @@
 - Completed 2025-10-09: `forceCutOutputs` now runs whenever verdicts queue or sessions end, and the keyer release signal clears button state so outputs never stay latched between questions.
 - Completed 2025-10-08: Added watchdog logging when manual/dev-console handles fail to release tone/flash within expected timeouts (default outputs service records pressTimeout samples and force-cuts handles).
 - Follow up with send/practice flows to ensure the verdict timers cancel pending pressStart correlations before queuing the next prompt (verify practice/send flows honour the cutActiveOutputs path).
+
+
 
 
 

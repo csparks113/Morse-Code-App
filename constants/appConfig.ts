@@ -14,6 +14,7 @@ export const SETTINGS_DEFAULTS = {
   toneHz: 600,
   audioVolumePercent: 80,
   flashBrightnessPercent: 80,
+  screenBrightnessBoost: false,
   signalTolerancePercent: 30,
   gapTolerancePercent: 50,
   flashOffsetMs: 0,

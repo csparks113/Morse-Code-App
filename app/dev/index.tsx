@@ -337,6 +337,7 @@ export default function DeveloperConsoleScreen() {
         hapticsEnabled: manualOptions.hapticsEnabled,
         torchEnabled: manualOptions.torchEnabled,
         flashBrightnessPercent: manualOptions.flashBrightnessPercent,
+        screenBrightnessBoost: manualOptions.screenBrightnessBoost,
         onSymbolStart: (symbol, durationMs, context) => {
           const requestedAtMs = resolvePlaybackRequestedAt(context);
           const timelineOffsetMs = resolvePlaybackTimelineOffset(context);
@@ -362,6 +363,7 @@ export default function DeveloperConsoleScreen() {
                 source: context?.source ?? 'console.replay',
                 requestedAtMs,
                 timelineOffsetMs,
+                brightnessPercent: manualOptions.flashBrightnessPercent,
                 correlationId: context?.correlationId,
                 metadata,
               });
@@ -387,6 +389,7 @@ export default function DeveloperConsoleScreen() {
               source: context?.source ?? 'console.replay',
               requestedAtMs,
               timelineOffsetMs,
+              brightnessPercent: manualOptions.flashBrightnessPercent,
               correlationId: context?.correlationId,
               metadata,
             });
@@ -405,6 +408,7 @@ export default function DeveloperConsoleScreen() {
     manualOptions.lightEnabled,
     manualOptions.torchEnabled,
     manualOptions.flashBrightnessPercent,
+    manualOptions.screenBrightnessBoost,
     manualPattern,
     outputs,
     unitMs,
@@ -888,6 +892,20 @@ export default function DeveloperConsoleScreen() {
                     trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
                     thumbColor={
                       torchSupported && manualOptions.torchEnabled
+                        ? lessonColors.blueNeon
+                        : devConsoleTheme.switchThumb
+                    }
+                  />
+                </View>
+
+                <View style={styles.manualToggleItem}>
+                  <Text style={styles.manualToggleLabel}>Screen boost</Text>
+                  <Switch
+                    value={Boolean(manualOptions.screenBrightnessBoost)}
+                    onValueChange={handleManualToggle('screenBrightnessBoost')}
+                    trackColor={{ true: lessonColors.blueNeon, false: lessonColors.border }}
+                    thumbColor={
+                      manualOptions.screenBrightnessBoost
                         ? lessonColors.blueNeon
                         : devConsoleTheme.switchThumb
                     }

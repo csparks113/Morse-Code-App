@@ -29,6 +29,8 @@ $hapticPhaseCounts = @{
     scheduled = 0
     actual = 0
 }
+$nativeFallbackEvents = New-Object System.Collections.Generic.List[pscustomobject]
+$overlayAvailabilityEvents = New-Object System.Collections.Generic.List[pscustomobject]
 
 $symbolSamples = @()
 $symbolByCorrelation = @{}
@@ -134,7 +136,7 @@ function Get-Stats {
     }
 }
 
-$linePattern = '^(?<md>\d\d-\d\d)\s+(?<time>\d\d:\d\d:\d\d\.\d+)\s+\d+\s+\d+\s+\w\s+(?<tag>OutputsAudio|ReactNativeJS):\s+(?<message>.*)$'
+$linePattern = '^(?<md>\d\d-\d\d)\s+(?<time>\d\d:\d\d:\d\d\.\d+)\s+\d+\s+\d+\s+\w\s+(?<tag>OutputsAudio|NativeOutputsDispatcher|ReactNativeJS):\s+(?<message>.*)$'
 
 foreach ($line in Get-Content -Path $LogFile -Encoding Unicode) {
     $match = [regex]::Match($line, $linePattern)
@@ -210,6 +212,19 @@ if ($tag -eq 'OutputsAudio') {
     }
     continue
 }
+
+    if ($tag -eq 'NativeOutputsDispatcher') {
+        if ($message -match '\[outputs-native\]\s+overlay\.availability\s+state=(?<state>\w+)\s+reason=(?<reason>\S+)') {
+            $stateValue = $matches['state']
+            $reasonValue = $matches['reason']
+            $overlayAvailabilityEvents.Add([pscustomobject]@{
+                Timestamp = $logTime
+                State = $stateValue
+                Reason = $reasonValue
+            }) | Out-Null
+        }
+        continue
+    }
 
     if ($tag -ne 'ReactNativeJS') { continue }
 
@@ -316,7 +331,9 @@ if ($tag -eq 'OutputsAudio') {
         continue
     }
 
-    if ($message -match '\[outputs\]\s+(outputs\.flashPulse(?!\.commit)|keyer\.flash\.start)') {
+    $flashMatch = [regex]::Match($message, '\[outputs\]\s+(?<event>outputs\.flashPulse(?:\.nativeHandled|\.nativeFallback)?(?!\.commit)|keyer\.flash\.start)')
+    if ($flashMatch.Success) {
+        $eventName = $flashMatch.Groups['event'].Value
         $timestampMs = Parse-TimestampMs $message $jsonPayload
         $correlationId = $null
         if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'correlationId') {
@@ -340,6 +357,44 @@ if ($tag -eq 'OutputsAudio') {
         if ($dispatchPhaseValue -eq 'scheduled') {
             continue
         }
+        $nativeFlashHandledFlag = $false
+        $nativeFlashAvailableFlag = $null
+        if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'nativeFlashAvailable') {
+            $value = $jsonPayload.nativeFlashAvailable
+            if ($value -ne $null -and $value -ne '') {
+                $nativeFlashAvailableFlag = [bool]$value
+            }
+        }
+        if ($eventName -eq 'outputs.flashPulse.nativeHandled') {
+            $nativeFlashHandledFlag = $true
+            if ($nativeFlashAvailableFlag -eq $null) {
+                $nativeFlashAvailableFlag = $true
+            }
+        } elseif ($eventName -eq 'outputs.flashPulse.nativeFallback') {
+            $nativeFlashHandledFlag = $false
+            if ($nativeFlashAvailableFlag -eq $null) {
+                $nativeFlashAvailableFlag = $false
+            }
+            $fallbackReason = $null
+            if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'reason') {
+                $reasonValue = $jsonPayload.reason
+                if ($reasonValue -ne $null -and $reasonValue -ne '') {
+                    $fallbackReason = [string]$reasonValue
+                }
+            }
+            $sourceValue = $null
+            if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'source') {
+                $sourceValue = [string]$jsonPayload.source
+            }
+            $nativeFallbackEvents.Add([pscustomobject]@{
+                Timestamp = $logTime
+                Reason = $fallbackReason
+                Source = $sourceValue
+                CorrelationId = $correlationId
+            }) | Out-Null
+        } elseif ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'nativeFlashHandled') {
+            $nativeFlashHandledFlag = [bool]$jsonPayload.nativeFlashHandled
+        }
         $symbolInfo = $null
         if ($correlationId -and $symbolByCorrelation.ContainsKey($correlationId)) {
             $symbolInfo = $symbolByCorrelation[$correlationId]
@@ -360,42 +415,50 @@ if ($tag -eq 'OutputsAudio') {
                 break
             }
         }
-        $delta = $null
-        if ($symbolInfo -and $null -ne $timestampMs) {
-            if ($symbolInfo.NativeTimestampMs -ne $null) {
-                $delta = $timestampMs - $symbolInfo.NativeTimestampMs
-            } elseif ($symbolInfo.JsTimestampMs -ne $null) {
-                $delta = $timestampMs - $symbolInfo.JsTimestampMs
-            }
-        }
-        if ($delta -ne $null) {
-            Add-Stat $audioToFlash $delta
-        } else {
-            continue
-        }
         if ($symbolInfo) {
             $symbolInfo.UsedForFlash = $true
             if ($null -ne $timestampMs) {
                 $symbolInfo.FlashTimestampMs = $timestampMs
             }
-        }
-        if ($lastHaptic) {
-            $deltaHF = $null
-            if ($symbolInfo -and $symbolInfo.HapticTimestampMs -ne $null -and $null -ne $timestampMs) {
-                $deltaHF = $timestampMs - $symbolInfo.HapticTimestampMs
-            } elseif ($null -ne $timestampMs -and $null -ne $lastHaptic.TimestampMs -and $lastHaptic.CorrelationId -eq $correlationId) {
-                $deltaHF = $timestampMs - $lastHaptic.TimestampMs
-            } elseif ($lastHaptic.LogTime) {
-                $deltaHF = ($logTime - $lastHaptic.LogTime).TotalMilliseconds
-            }
-            if ($deltaHF -ne $null -and [math]::Abs($deltaHF) -le 500) {
-                Add-Stat $hapticToFlash $deltaHF
+            $symbolInfo.NativeFlashHandled = $nativeFlashHandledFlag
+            if ($nativeFlashAvailableFlag -ne $null) {
+                $symbolInfo.NativeFlashAvailable = $nativeFlashAvailableFlag
             }
         }
-        $lastFlash = [pscustomobject]@{
-            TimestampMs = $timestampMs
-            LogTime = $logTime
-            CorrelationId = $correlationId
+        if (-not $nativeFlashHandledFlag) {
+            $delta = $null
+            if ($symbolInfo -and $null -ne $timestampMs) {
+                if ($symbolInfo.NativeTimestampMs -ne $null) {
+                    $delta = $timestampMs - $symbolInfo.NativeTimestampMs
+                } elseif ($symbolInfo.JsTimestampMs -ne $null) {
+                    $delta = $timestampMs - $symbolInfo.JsTimestampMs
+                }
+            }
+            if ($delta -ne $null) {
+                Add-Stat $audioToFlash $delta
+            } else {
+                continue
+            }
+            if ($lastHaptic) {
+                $deltaHF = $null
+                if ($symbolInfo -and $symbolInfo.HapticTimestampMs -ne $null -and $null -ne $timestampMs) {
+                    $deltaHF = $timestampMs - $symbolInfo.HapticTimestampMs
+                } elseif ($null -ne $timestampMs -and $null -ne $lastHaptic.TimestampMs -and $lastHaptic.CorrelationId -eq $correlationId) {
+                    $deltaHF = $timestampMs - $lastHaptic.TimestampMs
+                } elseif ($lastHaptic.LogTime) {
+                    $deltaHF = ($logTime - $lastHaptic.LogTime).TotalMilliseconds
+                }
+                if ($deltaHF -ne $null -and [math]::Abs($deltaHF) -le 500) {
+                    Add-Stat $hapticToFlash $deltaHF
+                }
+            }
+            $lastFlash = [pscustomobject]@{
+                TimestampMs = $timestampMs
+                LogTime = $logTime
+                CorrelationId = $correlationId
+            }
+        } else {
+            $lastFlash = $null
         }
         while ($symbolQueue.Count -gt 0) {
             $front = $symbolQueue.Peek()
@@ -474,19 +537,21 @@ if ($tag -eq 'OutputsAudio') {
             NativeOffsetMs = $nativeOffset
             NativeDurationMs = $nativeDuration
             CorrelationId = $correlationId
-            UsedForHaptic = $false
-            UsedForFlash = $false
-            HapticTimestampMs = $null
-            FlashTimestampMs = $null
-            MonotonicTimestampMs = $monotonicTimestamp
+        UsedForHaptic = $false
+        UsedForFlash = $false
+        HapticTimestampMs = $null
+        FlashTimestampMs = $null
+        MonotonicTimestampMs = $monotonicTimestamp
             NativeExpectedTimestampMs = $nativeExpectedTimestamp
             NativeSequence = $null
             NativeStartSkewMs = $nativeStartSkew
             NativeBatchElapsedMs = $nativeBatchElapsed
             NativeExpectedSincePriorMs = $nativeExpectedSincePrior
-            NativeSincePriorMs = $nativeSincePrior
-            NativePatternStartMs = $nativePatternStart
-            NativeAgeMs = $nativeAge
+        NativeSincePriorMs = $nativeSincePrior
+        NativePatternStartMs = $nativePatternStart
+        NativeAgeMs = $nativeAge
+        NativeFlashHandled = $false
+        NativeFlashAvailable = $null
         }
         $nativeSequenceValue = $null
         if ($nativeSequenceField -ne $null) {
@@ -735,3 +800,49 @@ Write-Host ''
 Write-Host 'Dispatch phase coverage:' -ForegroundColor Cyan
 Write-Host ("  Flash pulses  - scheduled: {0} actual: {1}" -f $flashPhaseCounts['scheduled'], $flashPhaseCounts['actual'])
 Write-Host ("  Haptic pulses - scheduled: {0} actual: {1}" -f $hapticPhaseCounts['scheduled'], $hapticPhaseCounts['actual'])
+
+$nativeHandledSamples = $symbolSamples | Where-Object { $_.NativeFlashHandled }
+$flashActualSamples = $symbolSamples | Where-Object { $_.FlashTimestampMs -ne $null }
+if ($flashActualSamples.Count -gt 0) {
+    Write-Host ("  Native overlay handled flashes: {0} / {1}" -f $nativeHandledSamples.Count, $flashActualSamples.Count)
+    if ($nativeHandledSamples.Count -gt 0) {
+        $nativeHandledSamples |
+            Where-Object { $_.NativeSequence -ne $null } |
+            Select-Object -First 12 NativeSequence,FlashTimestampMs,MonotonicTimestampMs |
+            Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+    }
+}
+$availabilitySamples = $symbolSamples | Where-Object { $_.NativeFlashAvailable -ne $null -and $_.UsedForFlash }
+if ($availabilitySamples.Count -gt 0) {
+    $availableCount = ($availabilitySamples | Where-Object { $_.NativeFlashAvailable }).Count
+    Write-Host ("  Native overlay availability (actual flashes): {0} / {1}" -f $availableCount, $availabilitySamples.Count)
+    $unavailableSamples = $availabilitySamples | Where-Object { -not $_.NativeFlashAvailable }
+    if ($unavailableSamples.Count -gt 0) {
+        $unavailableSamples |
+            Where-Object { $_.NativeSequence -ne $null } |
+            Select-Object -First 12 NativeSequence,FlashTimestampMs,MonotonicTimestampMs |
+            Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+    }
+}
+
+if ($nativeFallbackEvents.Count -gt 0) {
+    Write-Host ''
+    Write-Host 'Native flash fallbacks:' -ForegroundColor Yellow
+    $nativeFallbackEvents |
+        Select-Object -First 12 @{
+            Name = 'Time'
+            Expression = { $_.Timestamp.ToString('HH:mm:ss.fff') }
+        }, Reason, Source, CorrelationId |
+        Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+}
+
+if ($overlayAvailabilityEvents.Count -gt 0) {
+    Write-Host ''
+    Write-Host 'Overlay availability events:' -ForegroundColor Cyan
+    $overlayAvailabilityEvents |
+        Select-Object -First 12 @{
+            Name = 'Time'
+            Expression = { $_.Timestamp.ToString('HH:mm:ss.fff') }
+        }, State, Reason |
+        Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+}

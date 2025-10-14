@@ -251,6 +251,8 @@ export type NativeSymbolTimingContext = {
   nativeSincePriorMs: number | null;
   nativePatternStartMs: number | null;
   nativeAgeMs: number | null;
+  nativeFlashHandled: boolean | null;
+  nativeFlashAvailable: boolean | null;
 };
 
 export type PlayOpts = {
@@ -266,6 +268,7 @@ export type PlayOpts = {
   hapticsEnabled?: boolean;
   torchEnabled?: boolean;
   flashBrightnessPercent?: number;
+  screenBrightnessBoost?: boolean;
 };
 
 const DEFAULT_AUDIO_VOLUME_PERCENT = 100;
@@ -1052,6 +1055,10 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
       nativeSincePriorMs: typeof event.sincePriorMs === 'number' ? event.sincePriorMs : null,
       nativePatternStartMs: typeof event.patternStartMs === 'number' ? event.patternStartMs : null,
       nativeAgeMs: null,
+      nativeFlashHandled:
+        typeof event.flashHandledNatively === 'boolean' ? event.flashHandledNatively : null,
+      nativeFlashAvailable:
+        typeof event.nativeFlashAvailable === 'boolean' ? event.nativeFlashAvailable : null,
     };
 
     onSymbolStart?.(symbol, durationMs, context);
@@ -1095,6 +1102,7 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
       hapticsEnabled: opts.hapticsEnabled ?? false,
       torchEnabled: opts.torchEnabled ?? false,
       flashBrightnessPercent: opts.flashBrightnessPercent,
+      screenBrightnessBoost: opts.screenBrightnessBoost ?? false,
     });
     await playbackCompleted;
   } catch (error) {

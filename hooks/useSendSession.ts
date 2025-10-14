@@ -52,6 +52,7 @@ type UseSendSessionArgs = {
   torchEnabled: boolean;
   toneHz: number;
   flashBrightnessPercent: number;
+  screenBrightnessBoost: boolean;
   signalTolerancePercent: number;
   gapTolerancePercent: number;
   actionLabels: PromptActionLabels;
@@ -118,6 +119,7 @@ export function useSendSession({
   torchEnabled,
   toneHz,
   flashBrightnessPercent,
+  screenBrightnessBoost,
   signalTolerancePercent,
   gapTolerancePercent,
   actionLabels,
@@ -156,6 +158,7 @@ export function useSendSession({
     toneHz,
     audioVolumePercent,
     flashBrightnessPercent,
+    screenBrightnessBoost,
   }, { source: 'session.send', pressTracker });
 
   const [feedback, setFeedback] = React.useState<FeedbackState>('idle');
@@ -277,11 +280,12 @@ export function useSendSession({
         source: context?.source ?? 'session.send.replay',
         timelineOffsetMs,
         requestedAtMs,
+        brightnessPercent: flashBrightnessPercent,
         correlationId: context?.correlationId,
         metadata,
       });
     },
-    [outputs, lightEnabled, flashOpacity],
+    [outputs, lightEnabled, flashBrightnessPercent, flashOpacity],
   );
 
   const hapticSymbol = React.useCallback(
@@ -621,6 +625,7 @@ export function useSendSession({
         hapticsEnabled,
         torchEnabled,
         flashBrightnessPercent,
+        screenBrightnessBoost,
         onSymbolStart: (symbol, durationMs, context) => {
           hapticSymbol(symbol, durationMs, context);
           flashSymbol(durationMs, context);
@@ -648,6 +653,7 @@ export function useSendSession({
     hapticsEnabled,
     torchEnabled,
     flashBrightnessPercent,
+    screenBrightnessBoost,
     outputs,
   ]);
 

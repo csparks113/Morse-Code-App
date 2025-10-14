@@ -1,4 +1,4 @@
-# Codex Handoff Log
+﻿# Codex Handoff Log
 
 Use this document to capture the single source of truth after each working session. Update the sections below before ending work so future chats can resume without reconstructing context.
 
@@ -7,21 +7,23 @@ Use this document to capture the single source of truth after each working sessi
 - **Objective:** Shift replay flash/haptic/torch control fully onto the Nitro dispatcher so native callbacks own timing while JS focuses on telemetry; validate with fresh 10/20/30 WPM sweeps before re-enabling torch.
 - **Owner:** Codex pairing session (update with your initials if another contributor takes over).
 
-## Roles & Responsibilities
-- **Product & Device Validation (cspar):** Drives priorities, runs on-device Play Pattern / freeform sweeps, and captures logcat artifacts.
-- **Hands-on Implementation (ChatGPT via Codex CLI):** Implements native/JS fixes, updates documentation, and maintains the outputs backlog.
-- **Automation & Tooling (Codex CLI harness):** Provides local execution environment, log capture scripts, and build automation support.
-
 ## Latest Update
-- **Summary:** Archived the JS-timer replay logs, refreshed the docs, and upgraded the analyzer to ingest native scheduled/actual telemetry. JS now treats dispatcher phases explicitly, and Android has a `NativeOutputsDispatcher` helper plus replay-option flags so hot paths can call torch/vibration natively; flash hardware is still pending.
-- **State:** Android bridge is partially in place (torch/vibration), flash hardware + iOS parity still TODO; analyzer already reports dispatch-phase coverage so we can validate the native handoff once the hardware path lands.
+- **Summary:** Android Nitro now mounts a native `ScreenFlasherView` overlay for every playback symbol, drives screen brightness boost through C++/JS, logs overlay availability, and the analyzer tracks native availability/fallback metrics so we can see when JS lighting kicks in.
+- **Key File Touchpoints:**
+  - `android/app/src/main/java/com/csparks113/MorseCodeApp/NativeOutputsDispatcher.kt`, `ScreenFlasherView.kt`: overlay mount/teardown, `setFlashOverlayState`, brightness boost hook, lifecycle guards, and `[outputs-native] overlay.availability` logging.
+  - `outputs-native/android/c++/OutputsAudio.cpp`, `.hpp`: per-symbol overlay toggles, manages `mScreenBrightnessBoostEnabled`, emits `flashHandledNatively`/`nativeFlashAvailable`, logs overlay activation failures, restores fallbacks if overlay unavailable or playback cancels.
+  - Nitro bindings (`outputs-native/audio.nitro.ts`, `nitrogen/generated/shared/c++/PlaybackRequest.hpp`, `PlaybackDispatchEvent.hpp`) and JS consumers (`utils/audio.ts`, `services/outputs/*`, hooks, session/practice/lesson surfaces, dev console) forward `screenBrightnessBoost` and the new `nativeFlashAvailable` flag while honouring native-handled flashes.
+  - Settings/dev console (`constants/appConfig.ts`, `store/useSettingsStore.ts`, `store/useDeveloperStore.ts`, `app/settings/output.tsx`, `app/dev/index.tsx`) expose the brightness boost toggle with live preview.
+  - Analyzer (`scripts/analyze-logcat.ps1`) counts `outputs.flashPulse.nativeHandled`, tracks `nativeFlashAvailable`/`outputs.flashPulse.nativeFallback`, excludes native-handled pulses from latency stats, and reports coverage totals.
+  - Docs (`docs/refactor-notes.md`, `docs/outputs-investigation.md`, this handoff) detail the overlay rollout, brightness boost path, and updated backlog.
+- **State:** Overlay + brightness boost run natively on Android with JS relegated to telemetry fallback; availability telemetry now logs end-to-end, and we still need to surface the flag in diagnostics, capture validation sweeps, and finish iOS parity before torch/SOS flows return.
 
 ## Next Steps
-1. Finish wiring the Android dispatcher so native callbacks drive flash/haptic/torch end-to-end (respect brightness percentages, ensure torch clean-up), then mirror the bridge on iOS.
-2. Keep JS in telemetry-only mode while monitoring fallbacks, and add any brightness/torch status hooks needed by the Kotlin bridge.
-3. Implement and smoke-test the dispatcher-driven outputs; capture 10/20/30 WPM Play Pattern sweeps (torch off) and confirm <20 ms audio->flash/haptic with healthy dispatch-phase coverage.
-4. Re-enable torch plus SOS/receive sweeps once stable, archive the new baselines, and refresh the investigation docs with final deltas.
-
+1. Surface the `nativeFlashAvailable` flag in developer console diagnostics so overlay status/fallback counts are visible without parsing logs.
+2. Sanity-check the updated analyzer (`nativeFlashAvailable` / `outputs.flashPulse.nativeFallback`) on fresh Play Pattern captures before declaring the overlay path stable.
+3. Capture 10/20/30 WPM Play Pattern sweeps (torch off, brightness boost on); verify <20 ms audio->flash/haptic, confirm `nativeFlashAvailable`/`nativeHandled` coverage, archive logs and notes.
+4. Mirror the screen-flash overlay + brightness boost plumbing on iOS so both platforms expose the same toggle and telemetry.
+5. Once sweeps pass, re-enable torch plus SOS/receive validations, archive the data, and refresh investigation docs.
 ## Verification
 - `npm run lint` *(fails)* - command timed out after ESLint attempted to parse generated bundle artifacts (`..bundle.js`, `..virtual-entry.bundle.js`), which already trigger thousands of legacy lint errors.
 
@@ -79,5 +81,6 @@ Use this document to capture the single source of truth after each working sessi
 - [ ] Run `npm run verify:handoff` and resolve any failures.
 
 _Tip: Keep entries terse but explicit enough that a new chat can resume work immediately._
+
 
 

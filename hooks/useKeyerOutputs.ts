@@ -13,6 +13,7 @@ type UseKeyerOutputsOptions = {
   toneHz: number;
   audioVolumePercent: number;
   flashBrightnessPercent: number;
+  screenBrightnessBoost?: boolean;
 };
 
 type UseKeyerOutputsMetadata = {
@@ -39,6 +40,7 @@ function useStableOptions(options: UseKeyerOutputsOptions): UseKeyerOutputsOptio
       toneHz: options.toneHz,
       audioVolumePercent: options.audioVolumePercent,
       flashBrightnessPercent: options.flashBrightnessPercent,
+      screenBrightnessBoost: options.screenBrightnessBoost ?? false,
     }),
     [
       options.audioEnabled,
@@ -48,6 +50,7 @@ function useStableOptions(options: UseKeyerOutputsOptions): UseKeyerOutputsOptio
       options.toneHz,
       options.audioVolumePercent,
       options.flashBrightnessPercent,
+      options.screenBrightnessBoost,
     ],
   );
 }

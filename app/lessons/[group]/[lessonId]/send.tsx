@@ -55,6 +55,7 @@ export default function SendSessionScreen() {
   const toneHzSetting = useSettingsStore((s) => s.toneHz as unknown as string | number);
   const audioVolumePercent = useSettingsStore((s) => s.audioVolumePercent ?? 100);
   const flashBrightnessPercent = useSettingsStore((s) => s.flashBrightnessPercent ?? 80);
+  const screenBrightnessBoost = useSettingsStore((s) => s.screenBrightnessBoost ?? false);
   const signalTolerancePercent = useSettingsStore((s) => s.signalTolerancePercent ?? 30);
   const gapTolerancePercent = useSettingsStore((s) => s.gapTolerancePercent ?? 50);
 
@@ -103,6 +104,7 @@ export default function SendSessionScreen() {
     toneHz: toneHzValue,
     audioVolumePercent,
     flashBrightnessPercent,
+    screenBrightnessBoost,
     signalTolerancePercent,
     gapTolerancePercent,
     actionLabels: {

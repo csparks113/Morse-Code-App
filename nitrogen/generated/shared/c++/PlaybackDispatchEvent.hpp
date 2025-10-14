@@ -51,10 +51,12 @@ namespace margelo::nitro::morse {
     std::optional<double> batchElapsedMs     SWIFT_PRIVATE;
     std::optional<double> expectedSincePriorMs     SWIFT_PRIVATE;
     std::optional<double> sincePriorMs     SWIFT_PRIVATE;
+    std::optional<bool> flashHandledNatively     SWIFT_PRIVATE;
+    std::optional<bool> nativeFlashAvailable     SWIFT_PRIVATE;
 
   public:
     PlaybackDispatchEvent() = default;
-    explicit PlaybackDispatchEvent(PlaybackDispatchPhase phase, PlaybackSymbol symbol, double sequence, double patternStartMs, double expectedTimestampMs, double offsetMs, double durationMs, double unitMs, double toneHz, std::optional<double> scheduledTimestampMs, std::optional<double> leadMs, std::optional<double> actualTimestampMs, std::optional<double> monotonicTimestampMs, std::optional<double> startSkewMs, std::optional<double> batchElapsedMs, std::optional<double> expectedSincePriorMs, std::optional<double> sincePriorMs): phase(phase), symbol(symbol), sequence(sequence), patternStartMs(patternStartMs), expectedTimestampMs(expectedTimestampMs), offsetMs(offsetMs), durationMs(durationMs), unitMs(unitMs), toneHz(toneHz), scheduledTimestampMs(scheduledTimestampMs), leadMs(leadMs), actualTimestampMs(actualTimestampMs), monotonicTimestampMs(monotonicTimestampMs), startSkewMs(startSkewMs), batchElapsedMs(batchElapsedMs), expectedSincePriorMs(expectedSincePriorMs), sincePriorMs(sincePriorMs) {}
+    explicit PlaybackDispatchEvent(PlaybackDispatchPhase phase, PlaybackSymbol symbol, double sequence, double patternStartMs, double expectedTimestampMs, double offsetMs, double durationMs, double unitMs, double toneHz, std::optional<double> scheduledTimestampMs, std::optional<double> leadMs, std::optional<double> actualTimestampMs, std::optional<double> monotonicTimestampMs, std::optional<double> startSkewMs, std::optional<double> batchElapsedMs, std::optional<double> expectedSincePriorMs, std::optional<double> sincePriorMs, std::optional<bool> flashHandledNatively, std::optional<bool> nativeFlashAvailable): phase(phase), symbol(symbol), sequence(sequence), patternStartMs(patternStartMs), expectedTimestampMs(expectedTimestampMs), offsetMs(offsetMs), durationMs(durationMs), unitMs(unitMs), toneHz(toneHz), scheduledTimestampMs(scheduledTimestampMs), leadMs(leadMs), actualTimestampMs(actualTimestampMs), monotonicTimestampMs(monotonicTimestampMs), startSkewMs(startSkewMs), batchElapsedMs(batchElapsedMs), expectedSincePriorMs(expectedSincePriorMs), sincePriorMs(sincePriorMs), flashHandledNatively(flashHandledNatively), nativeFlashAvailable(nativeFlashAvailable) {}
   };
 
 } // namespace margelo::nitro::morse
@@ -83,7 +85,9 @@ namespace margelo::nitro {
         JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "startSkewMs")),
         JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "batchElapsedMs")),
         JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "expectedSincePriorMs")),
-        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "sincePriorMs"))
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "sincePriorMs")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "flashHandledNatively")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "nativeFlashAvailable"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::morse::PlaybackDispatchEvent& arg) {
@@ -105,6 +109,8 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "batchElapsedMs", JSIConverter<std::optional<double>>::toJSI(runtime, arg.batchElapsedMs));
       obj.setProperty(runtime, "expectedSincePriorMs", JSIConverter<std::optional<double>>::toJSI(runtime, arg.expectedSincePriorMs));
       obj.setProperty(runtime, "sincePriorMs", JSIConverter<std::optional<double>>::toJSI(runtime, arg.sincePriorMs));
+      obj.setProperty(runtime, "flashHandledNatively", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.flashHandledNatively));
+      obj.setProperty(runtime, "nativeFlashAvailable", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.nativeFlashAvailable));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -129,6 +135,8 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "batchElapsedMs"))) return false;
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "expectedSincePriorMs"))) return false;
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "sincePriorMs"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "flashHandledNatively"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "nativeFlashAvailable"))) return false;
       return true;
     }
   };

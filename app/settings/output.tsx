@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Animated, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
@@ -125,6 +125,7 @@ export default function OutputSettingsScreen() {
   const torchEnabled = useSettingsStore((state) => state.torchEnabled);
   const audioVolumePercent = useSettingsStore((state) => state.audioVolumePercent);
   const flashBrightnessPercent = useSettingsStore((state) => state.flashBrightnessPercent);
+  const screenBrightnessBoost = useSettingsStore((state) => state.screenBrightnessBoost);
   const toneHz = useSettingsStore((state) => state.toneHz);
 
   const setAudioEnabled = useSettingsStore((state) => state.setAudioEnabled);
@@ -133,6 +134,7 @@ export default function OutputSettingsScreen() {
   const setTorchEnabled = useSettingsStore((state) => state.setTorchEnabled);
   const setAudioVolumePercent = useSettingsStore((state) => state.setAudioVolumePercent);
   const setFlashBrightnessPercent = useSettingsStore((state) => state.setFlashBrightnessPercent);
+  const setScreenBrightnessBoost = useSettingsStore((state) => state.setScreenBrightnessBoost);
   const setToneHz = useSettingsStore((state) => state.setToneHz);
 
   const previewOptions = React.useMemo(
@@ -144,6 +146,7 @@ export default function OutputSettingsScreen() {
       toneHz,
       audioVolumePercent,
       flashBrightnessPercent,
+      screenBrightnessBoost,
     }),
     [
       audioEnabled,
@@ -153,6 +156,7 @@ export default function OutputSettingsScreen() {
       toneHz,
       audioVolumePercent,
       flashBrightnessPercent,
+      screenBrightnessBoost,
     ],
   );
 
@@ -215,6 +219,14 @@ export default function OutputSettingsScreen() {
       applyPreviewOptions({ flashBrightnessPercent: percent });
     },
     [setFlashBrightnessPercent, applyPreviewOptions],
+  );
+
+  const handleScreenBrightnessBoostChange = React.useCallback(
+    (enabled: boolean) => {
+      setScreenBrightnessBoost(enabled);
+      applyPreviewOptions({ screenBrightnessBoost: enabled });
+    },
+    [setScreenBrightnessBoost, applyPreviewOptions],
   );
 
   const handleAudioEnabledChange = React.useCallback(
@@ -327,6 +339,27 @@ export default function OutputSettingsScreen() {
             onCommit={handleFlashBrightnessChange}
           />
 
+          <View style={styles.card}>
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleText}>
+                <Text style={styles.cardTitle}>
+                  {t('settings:screenBrightnessBoost', { defaultValue: 'Boost screen brightness' })}
+                </Text>
+                <Text style={styles.toggleDescription}>
+                  {t('settings:screenBrightnessBoostDescription', {
+                    defaultValue: 'Temporarily raise screen brightness during native flashes so they stay visible even on a dim device.',
+                  })}
+                </Text>
+              </View>
+              <Switch
+                value={screenBrightnessBoost}
+                onValueChange={handleScreenBrightnessBoostChange}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor={screenBrightnessBoost ? theme.colors.accent : theme.colors.surface}
+              />
+            </View>
+          </View>
+
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>{t('settings:outputsTitle', { defaultValue: 'Outputs' })}</Text>
             <OutputTogglesRow
@@ -429,6 +462,20 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14,
     marginBottom: 12,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  toggleText: {
+    flex: 1,
+  },
+  toggleDescription: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    marginTop: 4,
   },
   slider: {
     width: '100%',

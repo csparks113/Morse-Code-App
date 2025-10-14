@@ -818,12 +818,19 @@ const defaultOutputsService: OutputsService = {
     flashValue,
     source,
     torchEnabled = false,
+    brightnessPercent,
     requestedAtMs,
     timelineOffsetMs,
     correlationId,
     metadata,
   }: FlashPulseOptions) {
     const eventSource = source ?? 'unspecified';
+    const resolvedBrightnessPercent =
+      typeof brightnessPercent === 'number' && Number.isFinite(brightnessPercent)
+        ? Math.max(0, Math.min(100, brightnessPercent))
+        : null;
+    const flashIntensity =
+      resolvedBrightnessPercent != null ? Math.max(0, Math.min(1, resolvedBrightnessPercent / 100)) : 1;
     const isConsoleReplay = eventSource === 'console.replay';
     const audioStartMarginMs = isConsoleReplay
       ? CONSOLE_REPLAY_AUDIO_START_TARGET_MARGIN_MS
@@ -846,6 +853,15 @@ const defaultOutputsService: OutputsService = {
       normalizedTimelineOffset = null;
     }
 
+    const nativeFlashHandled = baseMetadata.nativeFlashHandled === true;
+    const nativeFlashAvailabilityRaw = baseMetadata.nativeFlashAvailable;
+    const nativeFlashAvailable =
+      nativeFlashAvailabilityRaw === true
+        ? true
+        : nativeFlashAvailabilityRaw === false
+          ? false
+          : null;
+
     if (!enabled) {
       if (pendingFlashPulseTimeout) {
         clearTimeout(pendingFlashPulseTimeout);
@@ -858,6 +874,39 @@ const defaultOutputsService: OutputsService = {
       return;
     }
 
+    if (nativeFlashHandled && dispatchPhase === 'actual') {
+      if (pendingFlashPulseTimeout) {
+        clearTimeout(pendingFlashPulseTimeout);
+        pendingFlashPulseTimeout = null;
+      }
+      if (pendingFlashPulseFrame != null && caf) {
+        caf(pendingFlashPulseFrame);
+        pendingFlashPulseFrame = null;
+      }
+      traceOutputs('outputs.flashPulse.nativeHandled', {
+        durationMs,
+        source: eventSource,
+        dispatchPhase,
+        correlationId: correlationId ?? null,
+        flashIntensity,
+        ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
+        ...(nativeFlashAvailable !== null ? { nativeFlashAvailable } : {}),
+      });
+      return;
+    }
+
+    if (!nativeFlashHandled && nativeFlashAvailable === false && dispatchPhase === 'actual') {
+      traceOutputs('outputs.flashPulse.nativeFallback', {
+        durationMs,
+        source: eventSource,
+        dispatchPhase,
+        correlationId: correlationId ?? null,
+        flashIntensity,
+        reason: 'overlay-unavailable',
+        ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
+      });
+    }
+
     if (dispatchPhase === 'scheduled') {
       traceOutputs('outputs.flashPulse.scheduled', {
         enabled,
@@ -866,6 +915,7 @@ const defaultOutputsService: OutputsService = {
         dispatchPhase,
         correlationId: correlationId ?? null,
         timelineOffsetMs: normalizedTimelineOffset,
+        ...(nativeFlashAvailable !== null ? { nativeFlashAvailable } : {}),
       });
       return;
     }
@@ -1101,6 +1151,8 @@ const defaultOutputsService: OutputsService = {
         : {}),
       ...(leadMs > 0 ? { leadMs } : {}),
       schedulingMode,
+      flashIntensity,
+      ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
     };
     if (audioStartLeadForMetadata > 0) {
       sampleMetadata.audioStartLeadMs = audioStartLeadForMetadata;
@@ -1126,6 +1178,9 @@ const defaultOutputsService: OutputsService = {
       correlationId: correlationId ?? null,
       timelineOffsetMs: normalizedTimelineOffset,
       schedulingMode,
+      flashIntensity,
+      ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
+      ...(nativeFlashAvailable !== null ? { nativeFlashAvailable } : {}),
       ...(audioStartLeadForMetadata > 0 ? { audioStartLeadMs: audioStartLeadForMetadata } : {}),
       ...(preScheduleLeadMs > 0 ? { preScheduleLeadMs } : {}),
       ...(audioStartHeadroomMs != null ? { audioStartHeadroomMs } : {}),
@@ -1134,7 +1189,7 @@ const defaultOutputsService: OutputsService = {
     });
 
     const startSequence = () => {
-      flashValue.setValue(1);
+      flashValue.setValue(flashIntensity);
       const commitAt = nowMs();
       const scheduleSkewMs = commitAt - targetStart;
       const latencyMs = Math.max(0, commitAt - effectiveRequestedAt);
@@ -1168,6 +1223,9 @@ const defaultOutputsService: OutputsService = {
         leadMs,
         scheduleSkewMs,
         schedulingMode,
+        flashIntensity,
+        ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
+        ...(nativeFlashAvailable !== null ? { nativeFlashAvailable } : {}),
         ...(audioStartLeadForMetadata > 0
           ? { audioStartLeadMs: audioStartLeadForMetadata }
           : {}),
@@ -1462,6 +1520,7 @@ const defaultOutputsService: OutputsService = {
     hapticsEnabled,
     torchEnabled,
     flashBrightnessPercent,
+    screenBrightnessBoost,
   }: PlayMorseOptions) {
     const playbackSource = source ?? 'replay';
     const resolvedAudioEnabled = audioEnabled ?? true;
@@ -1472,6 +1531,7 @@ const defaultOutputsService: OutputsService = {
     const resolvedHapticsEnabled = hapticsEnabled ?? false;
     const resolvedTorchEnabled = torchEnabled ?? false;
     const resolvedFlashBrightness = flashBrightnessPercent ?? 0;
+    const resolvedScreenBrightnessBoost = screenBrightnessBoost ?? false;
     const startedAt = nowMs();
     traceOutputs('playMorse.start', {
       unitMs,
@@ -1482,6 +1542,7 @@ const defaultOutputsService: OutputsService = {
       flashEnabled: resolvedFlashEnabled,
       hapticsEnabled: resolvedHapticsEnabled,
       torchEnabled: resolvedTorchEnabled,
+      screenBrightnessBoost: resolvedScreenBrightnessBoost,
     });
 
     let symbolIndex = 0;
@@ -1525,6 +1586,8 @@ const defaultOutputsService: OutputsService = {
         nativeSincePriorMs,
         nativePatternStartMs,
         nativeAgeMs,
+        nativeFlashHandled: native?.nativeFlashHandled ?? null,
+        nativeFlashAvailable: native?.nativeFlashAvailable ?? null,
       };
       if (dispatchPhase === 'scheduled') {
         onSymbolStart?.(symbol, durationMs, contextPayload);
@@ -1548,6 +1611,8 @@ const defaultOutputsService: OutputsService = {
         nativeSincePriorMs,
         nativePatternStartMs,
         nativeAgeMs,
+        nativeFlashHandled: contextPayload.nativeFlashHandled ?? null,
+        nativeFlashAvailable: contextPayload.nativeFlashAvailable ?? null,
       });
       if (nativeOffsetMs != null && Math.abs(nativeOffsetMs) >= NATIVE_OFFSET_SPIKE_THRESHOLD_MS) {
         const spikePayload: Record<string, unknown> = {
@@ -1582,12 +1647,14 @@ const defaultOutputsService: OutputsService = {
         hapticsEnabled: resolvedHapticsEnabled,
         torchEnabled: resolvedTorchEnabled,
         flashBrightnessPercent: resolvedFlashBrightness,
+        screenBrightnessBoost: resolvedScreenBrightnessBoost,
       });
       traceOutputs('playMorse.complete', {
         durationMs: nowMs() - startedAt,
         source: playbackSource,
         audioEnabled: resolvedAudioEnabled,
         audioVolumePercent: resolvedVolumePercent,
+        screenBrightnessBoost: resolvedScreenBrightnessBoost,
       });
     } catch (error) {
       traceOutputs('playMorse.error', {
@@ -1595,6 +1662,7 @@ const defaultOutputsService: OutputsService = {
         source: playbackSource,
         audioEnabled: resolvedAudioEnabled,
         audioVolumePercent: resolvedVolumePercent,
+        screenBrightnessBoost: resolvedScreenBrightnessBoost,
       });
       throw error;
     }

@@ -88,6 +88,31 @@ void triggerNativeVibration(long durationMs) {
     __android_log_print(ANDROID_LOG_WARN, kTag, "%s haptic dispatch failed", kLogPrefix);
   }
 }
+
+bool setNativeFlashOverlayState(bool enabled, double brightnessPercent) {
+  try {
+    facebook::jni::Environment::ensureCurrentThreadIsAttached();
+    auto& clazz = getNativeDispatcherClass();
+    static auto method = clazz->getStaticMethod<jboolean(jboolean, jdouble)>("setFlashOverlayState");
+    const jboolean result =
+        method(clazz, static_cast<jboolean>(enabled), static_cast<jdouble>(brightnessPercent));
+    return result == JNI_TRUE;
+  } catch (...) {
+    __android_log_print(ANDROID_LOG_WARN, kTag, "%s overlay dispatch failed", kLogPrefix);
+    return false;
+  }
+}
+
+[[maybe_unused]] void setNativeScreenBrightnessBoost(bool enabled) {
+  try {
+    facebook::jni::Environment::ensureCurrentThreadIsAttached();
+    auto& clazz = getNativeDispatcherClass();
+    static auto method = clazz->getStaticMethod<void(jboolean)>("setScreenBrightnessBoost");
+    method(clazz, static_cast<jboolean>(enabled));
+  } catch (...) {
+    __android_log_print(ANDROID_LOG_WARN, kTag, "%s brightness boost failed", kLogPrefix);
+  }
+}
 } // namespace
 
 OutputsAudio::OutputsAudio()
@@ -116,7 +141,10 @@ OutputsAudio::OutputsAudio()
       mReplayFlashEnabled(false),
       mReplayHapticsEnabled(false),
       mReplayTorchEnabled(false),
-      mReplayFlashBrightnessPercent(0.0) {
+      mReplayFlashBrightnessPercent(0.0),
+      mNativeOverlayAvailable(false),
+      mNativeOverlayActive(false),
+      mScreenBrightnessBoostEnabled(false) {
   logEvent("constructor");
 }
 
@@ -415,6 +443,13 @@ void OutputsAudio::cancelPlaybackThread(bool join) {
       mPlaybackRunning.store(false, std::memory_order_release);
       mPlaybackCancel.store(false, std::memory_order_release);
       resetSymbolInfo();
+      setNativeTorchEnabled(false);
+      if (mNativeOverlayAvailable.load(std::memory_order_relaxed)) {
+        setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+      }
+      mNativeOverlayActive.store(false, std::memory_order_release);
+      mScreenBrightnessBoostEnabled.store(false, std::memory_order_release);
+      setNativeScreenBrightnessBoost(false);
       return;
     }
     mPlaybackCancel.store(true, std::memory_order_release);
@@ -432,6 +467,13 @@ void OutputsAudio::cancelPlaybackThread(bool join) {
   mPlaybackRunning.store(false, std::memory_order_release);
   mPlaybackCancel.store(false, std::memory_order_release);
   resetSymbolInfo();
+  setNativeTorchEnabled(false);
+  if (mNativeOverlayAvailable.load(std::memory_order_relaxed)) {
+    setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+  }
+  mNativeOverlayActive.store(false, std::memory_order_release);
+  mScreenBrightnessBoostEnabled.store(false, std::memory_order_release);
+  setNativeScreenBrightnessBoost(false);
 }
 
 void OutputsAudio::resetSymbolInfo() {
@@ -513,8 +555,27 @@ void OutputsAudio::playMorse(const PlaybackRequest& request) {
   mReplayHapticsEnabled = request.hapticsEnabled.value_or(false);
   mReplayTorchEnabled = request.torchEnabled.value_or(false);
   mReplayFlashBrightnessPercent = request.flashBrightnessPercent.value_or(0.0);
+  bool screenBrightnessBoostEnabled =
+      request.screenBrightnessBoost.value_or(false) && mReplayFlashEnabled;
+  if (mReplayFlashEnabled) {
+    const bool overlayReady =
+        setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+    mNativeOverlayAvailable.store(overlayReady, std::memory_order_release);
+    if (!overlayReady) {
+      logEvent("overlay.prepare.failed", "brightness=%.1f", mReplayFlashBrightnessPercent);
+      mNativeOverlayActive.store(false, std::memory_order_release);
+      screenBrightnessBoostEnabled = false;
+    }
+  } else {
+    mNativeOverlayAvailable.store(false, std::memory_order_release);
+    mNativeOverlayActive.store(false, std::memory_order_release);
+    setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+    screenBrightnessBoostEnabled = false;
+  }
+  mScreenBrightnessBoostEnabled.store(screenBrightnessBoostEnabled, std::memory_order_release);
 
   cancelPlaybackThread(true);
+  setNativeScreenBrightnessBoost(screenBrightnessBoostEnabled);
 
   {
     std::lock_guard<std::mutex> lock(mPlaybackMutex);
@@ -614,6 +675,19 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
     scheduledEvent.expectedSincePriorMs =
         isFirstSymbol ? std::nullopt : std::optional<double>(expectedStartOffsetMs - previousExpectedEndOffsetMs);
     scheduledEvent.sincePriorMs = std::nullopt;
+    if (mReplayFlashEnabled && mReplayFlashBrightnessPercent > 0.0) {
+      const bool nativeOverlayAvailable =
+          mNativeOverlayAvailable.load(std::memory_order_relaxed);
+      scheduledEvent.nativeFlashAvailable = nativeOverlayAvailable;
+      if (nativeOverlayAvailable) {
+        scheduledEvent.flashHandledNatively = true;
+      } else {
+        scheduledEvent.flashHandledNatively = std::nullopt;
+      }
+    } else {
+      scheduledEvent.nativeFlashAvailable = std::nullopt;
+      scheduledEvent.flashHandledNatively = std::nullopt;
+    }
     emitSymbolDispatchEvent(scheduledEvent);
     sleepUntil(dispatchTime);
 
@@ -665,6 +739,26 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
              audioStartMs,
              startSkewMs,
              batchElapsedMs);
+    bool overlayActiveForSymbol = false;
+    const bool overlayCandidate =
+        mReplayFlashEnabled && mReplayFlashBrightnessPercent > 0.0 &&
+        mNativeOverlayAvailable.load(std::memory_order_relaxed);
+    if (overlayCandidate) {
+      overlayActiveForSymbol = setNativeFlashOverlayState(true, mReplayFlashBrightnessPercent);
+      if (!overlayActiveForSymbol) {
+        mNativeOverlayAvailable.store(false, std::memory_order_release);
+        logEvent("overlay.symbol.unavailable",
+                 "sequence=%llu brightness=%.1f",
+                 static_cast<unsigned long long>(sequenceValue),
+                 mReplayFlashBrightnessPercent);
+        if (mScreenBrightnessBoostEnabled.load(std::memory_order_acquire)) {
+          mScreenBrightnessBoostEnabled.store(false, std::memory_order_release);
+          setNativeScreenBrightnessBoost(false);
+        }
+      } else {
+        mNativeOverlayActive.store(true, std::memory_order_release);
+      }
+    }
     PlaybackDispatchEvent actualEvent;
     actualEvent.phase = PlaybackDispatchPhase::ACTUAL;
     actualEvent.symbol = symbolType;
@@ -684,6 +778,13 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
     actualEvent.expectedSincePriorMs =
         isFirstSymbol ? std::nullopt : std::optional<double>(expectedSincePriorMs);
     actualEvent.sincePriorMs = isFirstSymbol ? std::nullopt : std::optional<double>(sincePriorMs);
+    actualEvent.flashHandledNatively = overlayActiveForSymbol;
+    if (mReplayFlashEnabled && mReplayFlashBrightnessPercent > 0.0) {
+      actualEvent.nativeFlashAvailable =
+          mNativeOverlayAvailable.load(std::memory_order_relaxed);
+    } else {
+      actualEvent.nativeFlashAvailable = std::nullopt;
+    }
     emitSymbolDispatchEvent(actualEvent);
     if (replayTorchEnabled) {
       setNativeTorchEnabled(true);
@@ -700,6 +801,10 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
     sleepUntil(symbolDeadline);
     if (replayTorchEnabled) {
       setNativeTorchEnabled(false);
+    }
+    if (overlayActiveForSymbol) {
+      setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+      mNativeOverlayActive.store(false, std::memory_order_release);
     }
 
     stopTone();
@@ -722,6 +827,12 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
   if (replayTorchEnabled) {
     setNativeTorchEnabled(false);
   }
+  if (mNativeOverlayActive.load(std::memory_order_relaxed)) {
+    setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+    mNativeOverlayActive.store(false, std::memory_order_release);
+  }
+  mScreenBrightnessBoostEnabled.store(false, std::memory_order_release);
+  setNativeScreenBrightnessBoost(false);
   mPlaybackRunning.store(false, std::memory_order_release);
   const bool cancelled = mPlaybackCancel.load(std::memory_order_acquire);
   mPlaybackCancel.store(false, std::memory_order_release);
@@ -890,6 +1001,7 @@ void OutputsAudio::teardown() {
 }
 
 } // namespace margelo::nitro::morse
+
 
 
 

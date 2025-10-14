@@ -48,6 +48,8 @@ export type PlaybackSymbolContext = {
   nativeSincePriorMs?: number | null;
   nativePatternStartMs?: number | null;
   nativeAgeMs?: number | null;
+  nativeFlashHandled?: boolean | null;
+  nativeFlashAvailable?: boolean | null;
 };
 
 export type PlayMorseOptions = {
@@ -61,6 +63,7 @@ export type PlayMorseOptions = {
   hapticsEnabled?: boolean;
   torchEnabled?: boolean;
   flashBrightnessPercent?: number;
+  screenBrightnessBoost?: boolean;
 };
 
 export type KeyerOutputsOptions = {
@@ -71,6 +74,7 @@ export type KeyerOutputsOptions = {
   toneHz: number;
   audioVolumePercent: number;
   flashBrightnessPercent: number;
+  screenBrightnessBoost?: boolean;
 };
 
 export type KeyerOutputsContext = {
@@ -169,6 +173,12 @@ export function buildPlaybackMetadata(
   }
   if (typeof context.nativeAgeMs === 'number') {
     metadata.nativeAgeMs = context.nativeAgeMs;
+  }
+  if (typeof context.nativeFlashHandled === 'boolean') {
+    metadata.nativeFlashHandled = context.nativeFlashHandled;
+  }
+  if (typeof context.nativeFlashAvailable === 'boolean') {
+    metadata.nativeFlashAvailable = context.nativeFlashAvailable;
   }
   return Object.keys(metadata).length > 0 ? metadata : undefined;
 }

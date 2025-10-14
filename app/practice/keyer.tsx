@@ -35,6 +35,7 @@ export default function PracticeKeyerScreen() {
   const toneHzSetting = useSettingsStore((state) => state.toneHz as unknown as string | number);
   const audioVolumePercent = useSettingsStore((state) => state.audioVolumePercent ?? 100);
   const flashBrightnessPercent = useSettingsStore((state) => state.flashBrightnessPercent ?? 80);
+  const screenBrightnessBoost = useSettingsStore((state) => state.screenBrightnessBoost ?? false);
 
   const toneHz = React.useMemo(() => {
     const parsed = Number(toneHzSetting);
@@ -56,6 +57,7 @@ export default function PracticeKeyerScreen() {
       toneHz,
       audioVolumePercent,
       flashBrightnessPercent,
+      screenBrightnessBoost,
     },
     { source: 'practice.keyer', pressTracker },
   );

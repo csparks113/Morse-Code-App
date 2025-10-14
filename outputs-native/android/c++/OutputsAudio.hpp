@@ -131,6 +131,9 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   bool mReplayHapticsEnabled;
   bool mReplayTorchEnabled;
   double mReplayFlashBrightnessPercent;
+  std::atomic<bool> mNativeOverlayAvailable;
+  std::atomic<bool> mNativeOverlayActive;
+  std::atomic<bool> mScreenBrightnessBoostEnabled;
 };
 
 } // namespace margelo::nitro::morse

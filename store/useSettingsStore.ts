@@ -20,6 +20,7 @@ type SettingsState = {
   // Output tuning
   audioVolumePercent: number;
   flashBrightnessPercent: number;
+  screenBrightnessBoost: boolean;
 
   // Morse timing
   wpm: number;
@@ -36,6 +37,7 @@ type SettingsState = {
   setHapticsEnabled: (value: boolean) => void;
   setAudioVolumePercent: (value: number) => void;
   setFlashBrightnessPercent: (value: number) => void;
+  setScreenBrightnessBoost: (value: boolean) => void;
   setWpm: (value: number) => void;
   setToneHz: (value: number) => void;
   setSignalTolerancePercent: (value: number) => void;
@@ -63,6 +65,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       audioVolumePercent: SETTINGS_DEFAULTS.audioVolumePercent,
       flashBrightnessPercent: SETTINGS_DEFAULTS.flashBrightnessPercent,
+      screenBrightnessBoost: SETTINGS_DEFAULTS.screenBrightnessBoost,
 
       wpm: SETTINGS_DEFAULTS.wpm,
       toneHz: SETTINGS_DEFAULTS.toneHz,
@@ -78,6 +81,7 @@ export const useSettingsStore = create<SettingsState>()(
       setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
       setAudioVolumePercent: (value) => set({ audioVolumePercent: clamp('audioVolumePercent', value) }),
       setFlashBrightnessPercent: (value) => set({ flashBrightnessPercent: clamp('flashBrightnessPercent', value) }),
+      setScreenBrightnessBoost: (value) => set({ screenBrightnessBoost: value }),
       setWpm: (value) => set({ wpm: clamp('wpm', value) }),
       setToneHz: (value) => set({ toneHz: clamp('toneHz', value) }),
       setSignalTolerancePercent: (value) => set({ signalTolerancePercent: clamp('signalTolerancePercent', value) }),
@@ -96,6 +100,7 @@ export const useSettingsStore = create<SettingsState>()(
         hapticsEnabled: state.hapticsEnabled,
         audioVolumePercent: state.audioVolumePercent,
         flashBrightnessPercent: state.flashBrightnessPercent,
+        screenBrightnessBoost: state.screenBrightnessBoost,
         wpm: state.wpm,
         toneHz: state.toneHz,
         signalTolerancePercent: state.signalTolerancePercent,

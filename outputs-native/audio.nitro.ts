@@ -27,6 +27,7 @@ export type PlaybackRequest = {
   hapticsEnabled?: boolean;
   torchEnabled?: boolean;
   flashBrightnessPercent?: number;
+  screenBrightnessBoost?: boolean;
 };
 
 export type PlaybackDispatchPhase = 'scheduled' | 'actual';
@@ -49,6 +50,8 @@ export type PlaybackDispatchEvent = {
   batchElapsedMs?: number;
   expectedSincePriorMs?: number;
   sincePriorMs?: number;
+  flashHandledNatively?: boolean;
+  nativeFlashAvailable?: boolean;
 };
 
 export interface OutputsAudio extends HybridObject<{ android: 'c++' }> {

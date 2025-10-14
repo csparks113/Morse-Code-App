@@ -62,6 +62,7 @@ export default function ReceiveSessionScreen() {
   } = useSettingsStore();
 
   const flashBrightnessPercent = useSettingsStore((s) => s.flashBrightnessPercent ?? 80);
+  const screenBrightnessBoost = useSettingsStore((s) => s.screenBrightnessBoost ?? false);
   const flashOffsetMs = useSettingsStore((s) => s.flashOffsetMs ?? 0);
   const hapticOffsetMs = useSettingsStore((s) => s.hapticOffsetMs ?? 0);
 
@@ -98,6 +99,7 @@ export default function ReceiveSessionScreen() {
     lightEnabled,
     hapticsEnabled,
     flashBrightnessPercent,
+    screenBrightnessBoost,
     flashOffsetMs,
     hapticOffsetMs,
     actionLabels: {
