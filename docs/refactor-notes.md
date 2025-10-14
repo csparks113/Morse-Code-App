@@ -5,6 +5,15 @@
 - When you pick up a task, copy the relevant bullet into your working notes and expand it with acceptance criteria, links, or test plans.
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
+## Completed (2025-10-13)
+
+- Archived the 2025-10-12 console replay logs and timeline CSVs under `docs/logs/Archive/js-timer-replay/` so the retired JS timer baseline stays reference-only.
+- Reworked `docs/outputs-investigation.md` to track the native dispatcher rollout and reference the archive instead of enumerating every legacy sweep.
+- Documented the native dispatcher flow: Nitro `OutputsAudio` now raises scheduled/actual callbacks, `utils/audio.ts` forwards them into `defaultOutputsService`, and replay torch stays disabled while we align flash/haptic on the native timeline.
+- Chose to go all-in on the native dispatcher for replay outputs so the native callbacks own flash/haptic/torch timing and JS becomes a thin telemetry shim.
+- Rewired the JS layer to treat dispatcher phases explicitly: actual callbacks fire flash/haptic immediately, scheduled callbacks log metadata only, and the analyzer now reports phase coverage to catch drift.
+- Threaded replay output toggles into Nitro and added an Android `NativeOutputsDispatcher` bridge so console replays can drive torch/vibration directly when actual callbacks fire (flash hook-up still pending).
+
 ## Completed (2025-10-12)
 
 - Added an adaptive `preScheduleLeadMs` path in `defaultOutputsService.flashPulse` so flash commits pre-arm `requestAnimationFrame` up to ~190 ms early based on recent `scheduleSkewMs` samples (new trace field + smoothing guard), aiming to collapse the 80-200 ms flash jitter without reintroducing audio-start headroom.
@@ -14,13 +23,13 @@
 - Extended the same adaptive sampler to apply a capped `audioStartLeadMs` (<=96 ms) when we stick with audio-start scheduling so flashes lead by the measured JS skew while the analyzer keeps `preScheduleLeadMs` + `audioStartLeadMs` aligned.
 - Trimmed timeline fallback offset to 12 ms (with an 8 ms flash lead) so guard fallbacks stay closer to the audio track.
 - Relaxed the audio-start guard to 6 ms headroom (margin 2 ms) so more pulses stay on the native schedule while keeping a small safety buffer.
-- Console Play Pattern sweeps now skip the age/headroom guard, enforce a =24 ms audio-start lead, and pair with a 12 ms tone lead so flashes stay ahead of the audio track.
+- Console Play Pattern sweeps now skip the age/headroom guard, enforce a 24 ms audio-start lead, and pair with a 12 ms tone lead so flashes stay ahead of the audio track.
 - Boosted the adaptive lead baseline (36 ms, ratio 1.0 with 8 ms offset) so short guard successes get an earlier JS pre-arm and stay in audio-start.
-- Parsed the 13:56 (35.9 ms mean audio→flash) and 14:39 (39.6 ms mean) Play Pattern sweeps to quantify the residual flash spikes: 259 commits at 117.7 ms mean / 179 ms p95 with every pulse ≥60 ms, and 467 commits at 123.4 ms mean / 201 ms p95 (p99 421 ms) with 90 ms pulses peaking at 494 ms.
+- Parsed the 13:56 (35.9 ms audio->flash mean) and 14:39 (39.6 ms) Play Pattern sweeps to quantify residual flash spikes: 259 commits at 117.7 ms mean / 179 ms p95 with every pulse <=60 ms, and 467 commits at 123.4 ms mean / 201 ms p95 (p99 421 ms) with 90 ms pulses peaking at 494 ms.
 - Trimmed `OutputsAudio` tone lead to 20 ms with a 12 ms gap cushion so tones no longer start far ahead of their slots at higher WPM.
 - Reworked the flash/haptic dispatcher to remain in audio-start mode with zero headroom and drive pulses via `requestAnimationFrame`, eliminating `audioStartCompensationMs` in the latest sweeps.
 - Taught the analyzer to read UTF-16 logcat captures (`Get-Content -Encoding Unicode`) so reported latencies reflect the on-device behaviour.
-- Captured the 13:39/14:39 Play Pattern sweeps showing audio→flash ≈35–40 ms means with audible gaps restored at ≥15 WPM; remaining spikes now stem from JS timer jitter, not guard fallback.
+- Captured the 13:39/14:39 Play Pattern sweeps showing audio->flash means around 35-40 ms with audible gaps restored at roughly 15+ WPM; remaining spikes now stem from JS timer jitter, not guard fallback.
 
 ## Completed (2025-10-11)
 
@@ -61,11 +70,10 @@
 - Synced the living spec architecture/details with the current bridgeless runtime so cross-platform contributors have an accurate map.
 
 ## Next Steps
-- Before any console replay sweep, stop outstanding receive replays (`adb shell am broadcast -a com.csparks113.MorseCodeApp.STOP_REPLAY` and `adb shell am force-stop com.csparks113.MorseCodeApp`), relaunch the app, run `commands.clear()`, and `adb logcat -c` so stale pulses cannot contaminate the capture.
-- Collect clean Play Pattern captures at 10/20/30 WPM (one run per log) with replay torches disabled; save them as `docs/logs/console-replay-YYYYMMDD-HHMMSS-play-pattern.txt` and process each with `scripts/analyze-logcat.ps1`.
-- Once flash/haptic sit <20 ms across those WPMs, re-enable torch, rerun the sweeps plus SOS/receive validations, and archive the logs with updated notes in `docs/outputs-investigation.md` / `docs/outputs-alignment-notes.md`.
-- After the baseline holds, prune the pre-clamp timeline CSVs and tighten documentation so the next session can start from a clean, torch-enabled baseline.
-
+- Finish wiring the Android dispatcher so native callbacks drive flash/haptic/torch end-to-end (respect brightness percentages, ensure torch clean-up, keep JS telemetry-only), then mirror the bridge on iOS when hardware is available.
+- Harden the Kotlin helper against missing hardware, expose brightness hooks, and confirm JS fallbacks remain safe when native actuation succeeds or fails.
+- Capture new Play Pattern sweeps at 10/20/30 WPM (torch still disabled) to confirm <20 ms audio->flash/haptic and review dispatch-phase coverage in the analyzer.
+- Re-enable torch and SOS/receive sweeps once the native dispatcher holds, archive the new baselines, and document the steady-state workflow for native-driven outputs.
 ### Deferred: Outputs Testing
 
 - Extend the freeform sweeps to high-WPM stress cases and confirm the relaxed classifiers still hold; log any misreads or latency drifts in `docs/outputs-investigation.md`.

@@ -127,6 +127,10 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   std::atomic<bool> mPlaybackRunning;
   std::mutex mCallbackMutex;
   std::optional<std::function<void(const PlaybackDispatchEvent&)>> mSymbolDispatchCallback;
+  bool mReplayFlashEnabled;
+  bool mReplayHapticsEnabled;
+  bool mReplayTorchEnabled;
+  double mReplayFlashBrightnessPercent;
 };
 
 } // namespace margelo::nitro::morse

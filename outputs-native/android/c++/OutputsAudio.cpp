@@ -1,6 +1,7 @@
 #include "OutputsAudio.hpp"
 
 #include <android/log.h>
+#include <fbjni/fbjni.h>
 
 #include <algorithm>
 #include <chrono>
@@ -54,6 +55,39 @@ inline double toMillis(const std::chrono::steady_clock::time_point& timePoint) {
 inline char toSymbolChar(PlaybackSymbol symbol) {
   return symbol == PlaybackSymbol::DASH ? '-' : '.';
 }
+
+facebook::jni::global_ref<facebook::jni::JClass>& getNativeDispatcherClass() {
+  facebook::jni::Environment::ensureCurrentThreadIsAttached();
+  static facebook::jni::global_ref<facebook::jni::JClass> clazz =
+      facebook::jni::make_global(
+          facebook::jni::findClassStatic("com/csparks113/MorseCodeApp/NativeOutputsDispatcher"));
+  return clazz;
+}
+
+void setNativeTorchEnabled(bool enabled) {
+  try {
+    facebook::jni::Environment::ensureCurrentThreadIsAttached();
+    auto& clazz = getNativeDispatcherClass();
+    static auto method = clazz->getStaticMethod<void(jboolean)>("setTorchEnabled");
+    method(clazz, static_cast<jboolean>(enabled));
+  } catch (...) {
+    __android_log_print(ANDROID_LOG_WARN, kTag, "%s torch dispatch failed", kLogPrefix);
+  }
+}
+
+void triggerNativeVibration(long durationMs) {
+  if (durationMs <= 0) {
+    return;
+  }
+  try {
+    facebook::jni::Environment::ensureCurrentThreadIsAttached();
+    auto& clazz = getNativeDispatcherClass();
+    static auto method = clazz->getStaticMethod<void(jlong)>("vibrate");
+    method(clazz, static_cast<jlong>(durationMs));
+  } catch (...) {
+    __android_log_print(ANDROID_LOG_WARN, kTag, "%s haptic dispatch failed", kLogPrefix);
+  }
+}
 } // namespace
 
 OutputsAudio::OutputsAudio()
@@ -78,7 +112,11 @@ OutputsAudio::OutputsAudio()
       mToneSteadyLogged(false),
       mToneStopLogged(false),
       mToneStartRequestedMs(0.0),
-      mToneActualStartMs(0.0) {
+      mToneActualStartMs(0.0),
+      mReplayFlashEnabled(false),
+      mReplayHapticsEnabled(false),
+      mReplayTorchEnabled(false),
+      mReplayFlashBrightnessPercent(0.0) {
   logEvent("constructor");
 }
 
@@ -471,6 +509,11 @@ void OutputsAudio::playMorse(const PlaybackRequest& request) {
     mPatternStartTimestampMs = patternStartMs;
   }
 
+  mReplayFlashEnabled = request.flashEnabled.value_or(false);
+  mReplayHapticsEnabled = request.hapticsEnabled.value_or(false);
+  mReplayTorchEnabled = request.torchEnabled.value_or(false);
+  mReplayFlashBrightnessPercent = request.flashBrightnessPercent.value_or(0.0);
+
   cancelPlaybackThread(true);
 
   {
@@ -495,6 +538,8 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
                               double unitMs,
                               std::chrono::steady_clock::time_point patternStart) {
   logEvent("playMorse.start", "count=%zu unit=%.1f", pattern.size(), unitMs);
+  const bool replayTorchEnabled = mReplayTorchEnabled;
+  const bool replayHapticsEnabled = mReplayHapticsEnabled;
 
   const auto sleepUntil = [&](const std::chrono::steady_clock::time_point& deadline) {
     while (!mPlaybackCancel.load(std::memory_order_acquire) &&
@@ -640,6 +685,12 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
         isFirstSymbol ? std::nullopt : std::optional<double>(expectedSincePriorMs);
     actualEvent.sincePriorMs = isFirstSymbol ? std::nullopt : std::optional<double>(sincePriorMs);
     emitSymbolDispatchEvent(actualEvent);
+    if (replayTorchEnabled) {
+      setNativeTorchEnabled(true);
+    }
+    if (replayHapticsEnabled) {
+      triggerNativeVibration(static_cast<long>(std::llround(symbolDurationMs)));
+    }
 
     previousExpectedStartMs = expectedStartMs;
     previousActualStartMs = audioStartMs;
@@ -647,6 +698,9 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
 
     const auto symbolDeadline = startedAt + toMicros(leadMs + symbolDurationMs);
     sleepUntil(symbolDeadline);
+    if (replayTorchEnabled) {
+      setNativeTorchEnabled(false);
+    }
 
     stopTone();
 
@@ -665,6 +719,9 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
   }
 
   stopTone();
+  if (replayTorchEnabled) {
+    setNativeTorchEnabled(false);
+  }
   mPlaybackRunning.store(false, std::memory_order_release);
   const bool cancelled = mPlaybackCancel.load(std::memory_order_acquire);
   mPlaybackCancel.store(false, std::memory_order_release);

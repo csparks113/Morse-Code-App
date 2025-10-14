@@ -36,10 +36,14 @@ namespace margelo::nitro::morse {
     double unitMs     SWIFT_PRIVATE;
     std::vector<PlaybackSymbol> pattern     SWIFT_PRIVATE;
     std::optional<double> gain     SWIFT_PRIVATE;
+    std::optional<bool> flashEnabled     SWIFT_PRIVATE;
+    std::optional<bool> hapticsEnabled     SWIFT_PRIVATE;
+    std::optional<bool> torchEnabled     SWIFT_PRIVATE;
+    std::optional<double> flashBrightnessPercent     SWIFT_PRIVATE;
 
   public:
     PlaybackRequest() = default;
-    explicit PlaybackRequest(double toneHz, double unitMs, std::vector<PlaybackSymbol> pattern, std::optional<double> gain): toneHz(toneHz), unitMs(unitMs), pattern(pattern), gain(gain) {}
+    explicit PlaybackRequest(double toneHz, double unitMs, std::vector<PlaybackSymbol> pattern, std::optional<double> gain, std::optional<bool> flashEnabled, std::optional<bool> hapticsEnabled, std::optional<bool> torchEnabled, std::optional<double> flashBrightnessPercent): toneHz(toneHz), unitMs(unitMs), pattern(pattern), gain(gain), flashEnabled(flashEnabled), hapticsEnabled(hapticsEnabled), torchEnabled(torchEnabled), flashBrightnessPercent(flashBrightnessPercent) {}
   };
 
 } // namespace margelo::nitro::morse
@@ -55,7 +59,11 @@ namespace margelo::nitro {
         JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, "toneHz")),
         JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, "unitMs")),
         JSIConverter<std::vector<margelo::nitro::morse::PlaybackSymbol>>::fromJSI(runtime, obj.getProperty(runtime, "pattern")),
-        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "gain"))
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "gain")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "flashEnabled")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "hapticsEnabled")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "torchEnabled")),
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "flashBrightnessPercent"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::morse::PlaybackRequest& arg) {
@@ -64,6 +72,10 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "unitMs", JSIConverter<double>::toJSI(runtime, arg.unitMs));
       obj.setProperty(runtime, "pattern", JSIConverter<std::vector<margelo::nitro::morse::PlaybackSymbol>>::toJSI(runtime, arg.pattern));
       obj.setProperty(runtime, "gain", JSIConverter<std::optional<double>>::toJSI(runtime, arg.gain));
+      obj.setProperty(runtime, "flashEnabled", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.flashEnabled));
+      obj.setProperty(runtime, "hapticsEnabled", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.hapticsEnabled));
+      obj.setProperty(runtime, "torchEnabled", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.torchEnabled));
+      obj.setProperty(runtime, "flashBrightnessPercent", JSIConverter<std::optional<double>>::toJSI(runtime, arg.flashBrightnessPercent));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -75,6 +87,10 @@ namespace margelo::nitro {
       if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, "unitMs"))) return false;
       if (!JSIConverter<std::vector<margelo::nitro::morse::PlaybackSymbol>>::canConvert(runtime, obj.getProperty(runtime, "pattern"))) return false;
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "gain"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "flashEnabled"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "hapticsEnabled"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "torchEnabled"))) return false;
+      if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "flashBrightnessPercent"))) return false;
       return true;
     }
   };

@@ -3,8 +3,8 @@
 Use this document to capture the single source of truth after each working session. Update the sections below before ending work so future chats can resume without reconstructing context.
 
 ## Current Focus
-- **Initiative:** Outputs rewire - Nitro alignment and orchestration
-- **Objective:** Lock in the stabilized outputs pipeline while validating the new send-session UX (auto reveal + verdict buffer) and continuing replay drift + classification follow-up.
+- **Initiative:** Outputs rewire - native dispatcher takeover
+- **Objective:** Shift replay flash/haptic/torch control fully onto the Nitro dispatcher so native callbacks own timing while JS focuses on telemetry; validate with fresh 10/20/30 WPM sweeps before re-enabling torch.
 - **Owner:** Codex pairing session (update with your initials if another contributor takes over).
 
 ## Roles & Responsibilities
@@ -13,21 +13,21 @@ Use this document to capture the single source of truth after each working sessi
 - **Automation & Tooling (Codex CLI harness):** Provides local execution environment, log capture scripts, and build automation support.
 
 ## Latest Update
-- **Summary:** Adaptive flash scheduler now pre-arms RAF from prior `scheduleSkewMs`, applies a capped `audioStartLeadMs` (<=96 ms) with a minimum-headroom guard, and replays schedule from `nativeExpectedTimestampMs`; remaining analyzer spikes stem from stale `audioStartCompensationMs` surviving timeline fallbacks, not real latency. Docs (`refactor-notes`, `outputs-investigation`, `outputs-alignment-notes`) track the 13:56?16:20 sweep trend.
-- **State:** Need fresh device sweeps to confirm the adaptive lead collapses the flash `scheduleSkewMs` tail and to decide whether further tone-lead trims or scheduleMonotonic migration are still required.
+- **Summary:** Archived the JS-timer replay logs, refreshed the docs, and upgraded the analyzer to ingest native scheduled/actual telemetry. JS now treats dispatcher phases explicitly, and Android has a `NativeOutputsDispatcher` helper plus replay-option flags so hot paths can call torch/vibration natively; flash hardware is still pending.
+- **State:** Android bridge is partially in place (torch/vibration), flash hardware + iOS parity still TODO; analyzer already reports dispatch-phase coverage so we can validate the native handoff once the hardware path lands.
 
 ## Next Steps
-1. Before launch, cap settings at 30 WPM and verify audio->flash/haptic skew stays under 15 ms through Play Pattern + SOS sweeps.
-2. Purge `audioStartCompensationMs`/timeline offsets when the guard falls back to timeline and rerun Play Pattern to confirm analyzer means drop toward <15 ms.
-3. Capture new Play Pattern + SOS runs with the adaptive `preScheduleLeadMs`/`audioStartLeadMs` path and dump scheduleSkew/audio->flash stats back into `docs/outputs-investigation.md`.
-4. If spikes stay above ~60 ms, prototype replay/receive dispatch on `scheduleMonotonic` (or reduce the native tone lead below 20 ms) and compare against the adaptive JS lead.
-5. Continue weekly SOS->40 WPM sweeps, logging any >1 s flash commits and archiving the matching logcat snippets in `docs/logs/`.
+1. Finish wiring the Android dispatcher so native callbacks drive flash/haptic/torch end-to-end (respect brightness percentages, ensure torch clean-up), then mirror the bridge on iOS.
+2. Keep JS in telemetry-only mode while monitoring fallbacks, and add any brightness/torch status hooks needed by the Kotlin bridge.
+3. Implement and smoke-test the dispatcher-driven outputs; capture 10/20/30 WPM Play Pattern sweeps (torch off) and confirm <20 ms audio->flash/haptic with healthy dispatch-phase coverage.
+4. Re-enable torch plus SOS/receive sweeps once stable, archive the new baselines, and refresh the investigation docs with final deltas.
+
 ## Verification
-- `npm run lint` *(fails)* — command timed out after ESLint attempted to parse generated bundle artifacts (`..bundle.js`, `..virtual-entry.bundle.js`), which already trigger thousands of legacy lint errors.
+- `npm run lint` *(fails)* - command timed out after ESLint attempted to parse generated bundle artifacts (`..bundle.js`, `..virtual-entry.bundle.js`), which already trigger thousands of legacy lint errors.
 
 1. **Stop Metro** if it is running (`Ctrl+C` in the terminal hosting `npx expo start`).
 2. **Reinstall the dev client** (PowerShell from `C:\dev\Morse`):
-   - Use **Visual Studio 2026 Developer PowerShell v18.0.0-insiders** (or manually set `VCINSTALLDIR`, `VSINSTALLDIR`, `DIA_SDK_DIR`, and prepend the MSVC `Hostx64\\x64` bin to `PATH`) before running the Expo build so Hermes can locate the DIA SDK.
+   - Use **Visual Studio 2026 Developer PowerShell v18.0.0-insiders** (or manually set `VCINSTALLDIR`, `VSINSTALLDIR`, `DIA_SDK_DIR`, and prepend the MSVC `Hostx64\x64` bin to `PATH`) before running the Expo build so Hermes can locate the DIA SDK.
    ```powershell
    adb uninstall com.csparks113.MorseCodeApp  # optional but keeps things clean
    setx EXPO_USE_NEW_ARCHITECTURE 1
@@ -65,11 +65,11 @@ Use this document to capture the single source of truth after each working sessi
 - **Recent checks:** Bridgeless dev client rebuild with Nitro enabled (2025-10-05); outputs force-cut + flash overlay + verdict buffer/tolerance rollout (2025-10-09).
 
 ## Reference Docs
-- `docs/android-dev-client-testing.md` - investigation log and known issues.
-- `docs/refactor-notes.md` - master backlog and daily log.
-- `docs/outputs-investigation.md` - active diagnostics notes and testing recipes.
-- `docs/developer-console-updates.md` - console instrumentation history.
-- `docs/nitro-integration-prep.md` - New Architecture + Nitrogen setup checklist.
+- `docs/android-dev-client-testing.md` " investigation log and known issues.
+- `docs/refactor-notes.md` " master backlog and daily log.
+- `docs/outputs-investigation.md` " active diagnostics notes and testing recipes.
+- `docs/developer-console-updates.md` " console instrumentation history.
+- `docs/nitro-integration-prep.md` " New Architecture + Nitrogen setup checklist.
 
 ## Update Checklist (run this before ending a session)
 - [ ] Summarize what changed in **Latest Update** (include paths where relevant).
@@ -79,7 +79,5 @@ Use this document to capture the single source of truth after each working sessi
 - [ ] Run `npm run verify:handoff` and resolve any failures.
 
 _Tip: Keep entries terse but explicit enough that a new chat can resume work immediately._
-
-
 
 

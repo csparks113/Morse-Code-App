@@ -57,6 +57,10 @@ export type PlayMorseOptions = {
   onSymbolStart?: (symbol: MorseSymbol, durationMs: number, context: PlaybackSymbolContext) => void;
   audioEnabled?: boolean;
   audioVolumePercent?: number;
+  flashEnabled?: boolean;
+  hapticsEnabled?: boolean;
+  torchEnabled?: boolean;
+  flashBrightnessPercent?: number;
 };
 
 export type KeyerOutputsOptions = {
@@ -120,11 +124,16 @@ export function resolvePlaybackTimelineOffset(context?: PlaybackSymbolContext): 
   return undefined;
 }
 
-export function buildPlaybackMetadata(context?: PlaybackSymbolContext): Record<string, number> | undefined {
+export function buildPlaybackMetadata(
+  context?: PlaybackSymbolContext,
+): Record<string, string | number | boolean> | undefined {
   if (!context) {
     return undefined;
   }
-  const metadata: Record<string, number> = {};
+  const metadata: Record<string, string | number | boolean> = {};
+  if (typeof context.dispatchPhase === 'string') {
+    metadata.dispatchPhase = context.dispatchPhase;
+  }
   if (typeof context.nativeTimestampMs === 'number') {
     metadata.nativeTimestampMs = context.nativeTimestampMs;
   }

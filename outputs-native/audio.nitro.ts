@@ -23,6 +23,10 @@ export type PlaybackRequest = {
   unitMs: number;
   pattern: PlaybackSymbol[];
   gain?: number;
+  flashEnabled?: boolean;
+  hapticsEnabled?: boolean;
+  torchEnabled?: boolean;
+  flashBrightnessPercent?: number;
 };
 
 export type PlaybackDispatchPhase = 'scheduled' | 'actual';

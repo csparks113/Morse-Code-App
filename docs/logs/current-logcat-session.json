@@ -1,0 +1,10 @@
+{
+    "LogPath":  "docs/logs/console-replay-20251013-205458-play-pattern.txt",
+    "ProcessId":  1272,
+    "StartedAt":  {
+                      "value":  "\/Date(1760403298131)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "Monday, October 13, 2025 8:54:58 PM"
+                  },
+    "Format":  "threadtime"
+}

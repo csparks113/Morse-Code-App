@@ -10,11 +10,14 @@ import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.ReactHost
 import com.facebook.react.common.ReleaseLevel
+import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
-import java.io.IOException
+import java.io.IOException
+
+import com.csparks113.MorseCodeApp.NativeOutputsDispatcher
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
 
@@ -52,6 +55,11 @@ class MainApplication : Application(), ReactApplication {
       throw RuntimeException("Unable to initialize SoLoader", error)
     }
 
+    reactNativeHost.reactInstanceManager.addReactInstanceEventListener { context ->
+      if (context is ReactApplicationContext) {
+        NativeOutputsDispatcher.initialize(context)
+      }
+    }
     var usingNewArchitecture = newArchitectureController.isEnabled()
 
     if (usingNewArchitecture) {
@@ -67,6 +75,7 @@ class MainApplication : Application(), ReactApplication {
 
     try {
       loadReactNative(this)
+      initializeOutputsDispatcherIfReady()
       if (usingNewArchitecture) {
         Log.i(TAG, "New Architecture native libraries loaded successfully.")
       }
@@ -77,6 +86,7 @@ class MainApplication : Application(), ReactApplication {
         usingNewArchitecture = false
         Log.w(TAG, "Disabling New Architecture after native library load failure.", rootCause)
         loadReactNative(this)
+        initializeOutputsDispatcherIfReady()
       } else {
         throw error
       }
@@ -108,6 +118,13 @@ class MainApplication : Application(), ReactApplication {
       cachedValue = false
       Log.w(TAG, "Disabling New Architecture at runtime due to missing native libraries.", error)
       setRuntimeNewArchitectureEnabled(false)
+    }
+  }
+
+  private fun initializeOutputsDispatcherIfReady() {
+    val context = reactNativeHost.reactInstanceManager.currentReactContext
+    if (context is ReactApplicationContext) {
+      NativeOutputsDispatcher.initialize(context)
     }
   }
 

@@ -262,6 +262,10 @@ export type PlayOpts = {
   audioVolumePercent?: number;
   audioEnabled?: boolean;
   source?: string;
+  flashEnabled?: boolean;
+  hapticsEnabled?: boolean;
+  torchEnabled?: boolean;
+  flashBrightnessPercent?: number;
 };
 
 const DEFAULT_AUDIO_VOLUME_PERCENT = 100;
@@ -1010,25 +1014,32 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
       monotonicTimestampMs = event.monotonicTimestampMs;
     } else if (typeof event.actualTimestampMs === 'number' && Number.isFinite(event.actualTimestampMs)) {
       monotonicTimestampMs = toMonotonicTime(event.actualTimestampMs);
-    }
-    if (monotonicTimestampMs == null && typeof event.expectedTimestampMs === 'number' && Number.isFinite(event.expectedTimestampMs)) {
+    } else if (typeof event.expectedTimestampMs === 'number' && Number.isFinite(event.expectedTimestampMs)) {
       monotonicTimestampMs = toMonotonicTime(event.expectedTimestampMs);
-    }
-    if (monotonicTimestampMs == null) {
+    } else {
       monotonicTimestampMs = nowMs();
     }
 
-    const correlation =
+    const dispatchPhase = event.phase === 'scheduled' ? 'scheduled' : 'actual';
+
+    let correlation =
       correlationBySequence.get(sequence) ??
       createPlaybackCorrelation(playbackSource, event.actualTimestampMs ?? event.expectedTimestampMs ?? null);
+    if (!correlationBySequence.has(sequence)) {
+      correlationBySequence.set(sequence, correlation);
+    }
+
+    if (dispatchPhase === 'scheduled') {
+      return;
+    }
+
     correlation.startedAtMs = monotonicTimestampMs;
-    correlationBySequence.set(sequence, correlation);
 
     const context: PlaybackSymbolContext = {
       requestedAtMs: monotonicTimestampMs,
       correlationId: correlation.id,
       source: playbackSource,
-      dispatchPhase: event.phase,
+      dispatchPhase,
       nativeTimestampMs: event.actualTimestampMs ?? event.expectedTimestampMs ?? null,
       nativeDurationMs: durationMs,
       nativeOffsetMs: typeof event.offsetMs === 'number' ? event.offsetMs : null,
@@ -1045,39 +1056,46 @@ async function playMorseCodeNitro(outputsAudio: OutputsAudio, code: string, unit
 
     onSymbolStart?.(symbol, durationMs, context);
 
-    if (event.phase === 'actual') {
-      const isLastSymbol = sequence >= pattern.length;
-      const timeout = scheduleMonotonic(
-        () => {
-          if (token !== nitroPlaybackToken) {
-            return;
-          }
-          opts.onSymbolEnd?.(symbol, durationMs);
-          if (patternIndex < pattern.length - 1) {
-            opts.onGap?.(unitMs);
-          }
-          if (isLastSymbol && playbackCompletedResolve) {
-            playbackCompletedResolve();
-            playbackCompletedResolve = null;
-          }
-        },
-        { startMs: monotonicTimestampMs, offsetMs: durationMs },
-      );
-      if (timeout != null) {
-        scheduledTimeouts.push(timeout);
-      } else if (isLastSymbol && playbackCompletedResolve) {
-        playbackCompletedResolve();
-        playbackCompletedResolve = null;
-      }
-      correlationBySequence.delete(sequence);
+    const isLastSymbol = sequence >= pattern.length;
+    const timeout = scheduleMonotonic(
+      () => {
+        if (token !== nitroPlaybackToken) {
+          return;
+        }
+        opts.onSymbolEnd?.(symbol, durationMs);
+        if (patternIndex < pattern.length - 1) {
+          opts.onGap?.(unitMs);
+        }
+        if (isLastSymbol && playbackCompletedResolve) {
+          playbackCompletedResolve();
+          playbackCompletedResolve = null;
+        }
+      },
+      { startMs: monotonicTimestampMs, offsetMs: durationMs },
+    );
+    if (timeout != null) {
+      scheduledTimeouts.push(timeout);
+    } else if (isLastSymbol && playbackCompletedResolve) {
+      playbackCompletedResolve();
+      playbackCompletedResolve = null;
     }
+    correlationBySequence.delete(sequence);
   };
 
   outputsAudio.setSymbolDispatchCallback(handleDispatch);
 
   try {
     outputsAudio.warmup({ toneHz: hz, gain });
-    outputsAudio.playMorse({ toneHz: hz, unitMs, pattern, gain });
+    outputsAudio.playMorse({
+      toneHz: hz,
+      unitMs,
+      pattern,
+      gain,
+      flashEnabled: opts.flashEnabled ?? false,
+      hapticsEnabled: opts.hapticsEnabled ?? false,
+      torchEnabled: opts.torchEnabled ?? false,
+      flashBrightnessPercent: opts.flashBrightnessPercent,
+    });
     await playbackCompleted;
   } catch (error) {
     if (playbackCompletedResolve) {

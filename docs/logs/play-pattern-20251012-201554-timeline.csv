@@ -1,7 +1,0 @@
-﻿"CorrelationId","DurationMs","StartSchedulingMode","CommitSchedulingMode","AudioStartGuard","AudioStartHeadroomMs","TimelineOffsetMs","ScheduleSkewMs","LatencyMs","LeadMs","Source"
-"console-replay:mgodz5xorl2y5xmq","60","timeline","timeline","age","-102.37727999687195","12","110.67119799554348","193.05061300098896","8","console.replay"
-"console-replay:mgodyp79esfcxaq2","360","timeline","timeline","age","-130.03029899299145","12","91.08099000155926","201.12738199532032","8","console.replay"
-"console-replay:mgodyr86y97lhtlg","120","timeline","timeline","age","-115.4381619989872","12","82.31562499701977","177.7584230005741","8","console.replay"
-"console-replay:mgodz62314jkkc17","180","timeline","timeline","age","-141.50748799741268","12","68.88614599406719","190.39571699500084","8","console.replay"
-"console-replay:mgodzlcbnzl67me3","120","timeline","timeline","age","-124.49080400168896","12","64.80177100002766","169.29470999538898","8","console.replay"
-"console-replay:mgodzbd9k995186q","180","timeline","timeline","age","-108.23218300938606","12","62.31198000907898","150.54598601162434","8","console.replay"

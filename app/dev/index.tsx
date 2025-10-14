@@ -333,6 +333,10 @@ export default function DeveloperConsoleScreen() {
         source: 'console.replay',
         audioEnabled: manualOptions.audioEnabled,
         audioVolumePercent: manualOptions.audioVolumePercent,
+        flashEnabled: manualOptions.lightEnabled,
+        hapticsEnabled: manualOptions.hapticsEnabled,
+        torchEnabled: manualOptions.torchEnabled,
+        flashBrightnessPercent: manualOptions.flashBrightnessPercent,
         onSymbolStart: (symbol, durationMs, context) => {
           const requestedAtMs = resolvePlaybackRequestedAt(context);
           const timelineOffsetMs = resolvePlaybackTimelineOffset(context);
@@ -399,6 +403,8 @@ export default function DeveloperConsoleScreen() {
     manualOptions.audioVolumePercent,
     manualOptions.hapticsEnabled,
     manualOptions.lightEnabled,
+    manualOptions.torchEnabled,
+    manualOptions.flashBrightnessPercent,
     manualPattern,
     outputs,
     unitMs,

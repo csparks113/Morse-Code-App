@@ -617,6 +617,10 @@ export function useSendSession({
         source: 'session.send.replay',
         audioEnabled,
         audioVolumePercent,
+        flashEnabled: lightEnabled,
+        hapticsEnabled,
+        torchEnabled,
+        flashBrightnessPercent,
         onSymbolStart: (symbol, durationMs, context) => {
           hapticSymbol(symbol, durationMs, context);
           flashSymbol(durationMs, context);
@@ -640,6 +644,10 @@ export function useSendSession({
     flashOpacity,
     audioEnabled,
     audioVolumePercent,
+    lightEnabled,
+    hapticsEnabled,
+    torchEnabled,
+    flashBrightnessPercent,
     outputs,
   ]);
 

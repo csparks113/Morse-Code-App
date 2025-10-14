@@ -831,6 +831,14 @@ const defaultOutputsService: OutputsService = {
     let normalizedTimelineOffset = normalizeTimelineOffset(timelineOffsetMs);
     const baseMetadata: Record<string, string | number | boolean> = metadata ? { ...metadata } : {};
     const providedTimelineOffsetMs = normalizedTimelineOffset;
+    const rawDispatchPhase = baseMetadata.dispatchPhase;
+    const dispatchPhase =
+      rawDispatchPhase === 'scheduled' || rawDispatchPhase === 'actual'
+        ? rawDispatchPhase
+        : 'actual';
+    if (rawDispatchPhase !== undefined) {
+      delete baseMetadata.dispatchPhase;
+    }
     const hasNativeExpectedTimestamp =
       typeof baseMetadata.nativeExpectedTimestampMs === 'number' &&
       Number.isFinite(baseMetadata.nativeExpectedTimestampMs as number);
@@ -850,6 +858,18 @@ const defaultOutputsService: OutputsService = {
       return;
     }
 
+    if (dispatchPhase === 'scheduled') {
+      traceOutputs('outputs.flashPulse.scheduled', {
+        enabled,
+        durationMs,
+        source: eventSource,
+        dispatchPhase,
+        correlationId: correlationId ?? null,
+        timelineOffsetMs: normalizedTimelineOffset,
+      });
+      return;
+    }
+
     const requestedAt =
       typeof requestedAtMs === 'number' && Number.isFinite(requestedAtMs) ? requestedAtMs : nowMs();
     let effectiveRequestedAt = applyTimelineOffset(requestedAt, normalizedTimelineOffset);
@@ -862,11 +882,21 @@ const defaultOutputsService: OutputsService = {
       }
       return null;
     };
+    const monotonicTimestampMs = getNumericMetadata('monotonicTimestampMs');
+    const nativeTimestampFromMetadata = getNumericMetadata('nativeTimestampMs');
+    const nativeActualTargetMs =
+      monotonicTimestampMs != null
+        ? monotonicTimestampMs
+        : nativeTimestampFromMetadata != null
+          ? toMonotonicTime(nativeTimestampFromMetadata)
+          : null;
     let schedulingMode: 'timeline' | 'audio-start' =
       normalizedTimelineOffset != null ? 'timeline' : 'audio-start';
     let audioStartHeadroomMs: number | null = null;
     let smoothedHeadroomMs: number | null = null;
     let audioStartGuardReason: string | null = null;
+    const shouldDispatchImmediately =
+      dispatchPhase === 'actual' && isConsoleReplay && nativeActualTargetMs != null;
 
     if (normalizedTimelineOffset == null) {
       const expectedTimestampMs = getNumericMetadata('nativeExpectedTimestampMs');
@@ -981,7 +1011,20 @@ const defaultOutputsService: OutputsService = {
       }
     }
 
-    let availableHeadroomMs = Math.max(0, smoothedHeadroomMs != null ? smoothedHeadroomMs : effectiveRequestedAt - schedulingNow);
+    let availableHeadroomMs = Math.max(
+      0,
+      smoothedHeadroomMs != null ? smoothedHeadroomMs : effectiveRequestedAt - schedulingNow,
+    );
+
+    if (shouldDispatchImmediately && nativeActualTargetMs != null) {
+      normalizedTimelineOffset = null;
+      audioStartGuardReason = null;
+      audioStartHeadroomMs = 0;
+      targetStart = nativeActualTargetMs;
+      effectiveRequestedAt = nativeActualTargetMs;
+      audioStartCompensationMs = 0;
+      availableHeadroomMs = Math.max(0, nativeActualTargetMs - schedulingNow);
+    }
 
     if (schedulingMode === 'audio-start' && !isConsoleReplay && availableHeadroomMs < AUDIO_START_MIN_HEADROOM_MS) {
       audioStartGuardReason = 'headroom';
@@ -998,6 +1041,12 @@ const defaultOutputsService: OutputsService = {
     const adaptiveLeads = getFlashAdaptiveLeads(schedulingNow, schedulingMode, isConsoleReplay);
     let preScheduleLeadMs = adaptiveLeads.preScheduleLeadMs;
     let appliedDisplayLeadMs = adaptiveLeads.displayLeadMs;
+
+    if (shouldDispatchImmediately) {
+      preScheduleLeadMs = 0;
+      appliedDisplayLeadMs = 0;
+      leadMs = 0;
+    }
 
     const maxDisplayLead = Math.max(
       0,
@@ -1045,6 +1094,7 @@ const defaultOutputsService: OutputsService = {
 
     const sampleMetadata: Record<string, string | number | boolean> = {
       durationMs,
+      dispatchPhase,
       ...baseMetadata,
       ...(normalizedTimelineOffset != null
         ? { timelineOffsetMs: normalizedTimelineOffset }
@@ -1072,6 +1122,7 @@ const defaultOutputsService: OutputsService = {
       enabled,
       durationMs,
       source: eventSource,
+      dispatchPhase,
       correlationId: correlationId ?? null,
       timelineOffsetMs: normalizedTimelineOffset,
       schedulingMode,
@@ -1110,6 +1161,7 @@ const defaultOutputsService: OutputsService = {
       traceOutputs('outputs.flashPulse.commit', {
         durationMs,
         source: eventSource,
+        dispatchPhase,
         correlationId: correlationId ?? null,
         latencyMs,
         timelineOffsetMs: normalizedTimelineOffset,
@@ -1164,6 +1216,11 @@ const defaultOutputsService: OutputsService = {
     if (pendingTimelineFallback) {
       clearTimeout(pendingTimelineFallback);
       pendingTimelineFallback = null;
+    }
+
+    if (shouldDispatchImmediately && nativeActualTargetMs != null) {
+      dispatchStart();
+      return;
     }
 
     const beginDispatchLoop = () => {
@@ -1265,6 +1322,8 @@ const defaultOutputsService: OutputsService = {
     const eventSource = source ?? 'unspecified';
     const isConsoleReplay = eventSource === 'console.replay';
     const normalizedTimelineOffset = normalizeTimelineOffset(timelineOffsetMs);
+    const dispatchPhase =
+      metadata && typeof metadata.dispatchPhase === 'string' ? metadata.dispatchPhase : 'actual';
     traceOutputs('outputs.hapticSymbol', {
       enabled,
       symbol,
@@ -1273,9 +1332,10 @@ const defaultOutputsService: OutputsService = {
       source: eventSource,
       correlationId: correlationId ?? null,
       timelineOffsetMs: normalizedTimelineOffset,
+      dispatchPhase,
     });
 
-    if (!enabled) return;
+    if (!enabled || dispatchPhase === 'scheduled') return;
 
     const requestedAt =
       typeof requestedAtMs === 'number' && Number.isFinite(requestedAtMs) ? requestedAtMs : nowMs();
@@ -1391,12 +1451,27 @@ const defaultOutputsService: OutputsService = {
     }
   },
 
-  async playMorse({ morse, unitMs, onSymbolStart, source, audioEnabled, audioVolumePercent }: PlayMorseOptions) {
+  async playMorse({
+    morse,
+    unitMs,
+    onSymbolStart,
+    source,
+    audioEnabled,
+    audioVolumePercent,
+    flashEnabled,
+    hapticsEnabled,
+    torchEnabled,
+    flashBrightnessPercent,
+  }: PlayMorseOptions) {
     const playbackSource = source ?? 'replay';
     const resolvedAudioEnabled = audioEnabled ?? true;
     const resolvedVolumePercent = clampVolumePercent(audioVolumePercent);
     const volumeScalar = clampPercentToScalar(resolvedVolumePercent);
     const effectiveAudioEnabled = resolvedAudioEnabled && volumeScalar > 0;
+    const resolvedFlashEnabled = flashEnabled ?? false;
+    const resolvedHapticsEnabled = hapticsEnabled ?? false;
+    const resolvedTorchEnabled = torchEnabled ?? false;
+    const resolvedFlashBrightness = flashBrightnessPercent ?? 0;
     const startedAt = nowMs();
     traceOutputs('playMorse.start', {
       unitMs,
@@ -1404,6 +1479,9 @@ const defaultOutputsService: OutputsService = {
       source: playbackSource,
       audioEnabled: resolvedAudioEnabled,
       audioVolumePercent: resolvedVolumePercent,
+      flashEnabled: resolvedFlashEnabled,
+      hapticsEnabled: resolvedHapticsEnabled,
+      torchEnabled: resolvedTorchEnabled,
     });
 
     let symbolIndex = 0;
@@ -1500,6 +1578,10 @@ const defaultOutputsService: OutputsService = {
         audioEnabled: effectiveAudioEnabled,
         audioVolumePercent: resolvedVolumePercent,
         source: playbackSource,
+        flashEnabled: resolvedFlashEnabled,
+        hapticsEnabled: resolvedHapticsEnabled,
+        torchEnabled: resolvedTorchEnabled,
+        flashBrightnessPercent: resolvedFlashBrightness,
       });
       traceOutputs('playMorse.complete', {
         durationMs: nowMs() - startedAt,

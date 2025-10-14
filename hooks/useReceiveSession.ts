@@ -186,6 +186,10 @@ export function useReceiveSession({
         source: 'session.receive.replay',
         audioEnabled,
         audioVolumePercent,
+        flashEnabled: lightEnabled,
+        hapticsEnabled,
+        torchEnabled: lightEnabled,
+        flashBrightnessPercent,
         onSymbolStart: (symbol, duration, context) => {
           const playbackStart = resolvePlaybackRequestedAt(context);
           const phase = context?.dispatchPhase ?? 'actual';
@@ -219,7 +223,19 @@ export function useReceiveSession({
     } finally {
       setIsPlaying(false);
     }
-  }, [outputs, runFlash, hapticTick, flashOffsetMs, hapticOffsetMs, isPlaying, audioEnabled, audioVolumePercent]);
+  }, [
+    outputs,
+    runFlash,
+    hapticTick,
+    flashOffsetMs,
+    hapticOffsetMs,
+    isPlaying,
+    audioEnabled,
+    audioVolumePercent,
+    lightEnabled,
+    hapticsEnabled,
+    flashBrightnessPercent,
+  ]);
 
   const playTargetRef = React.useRef<() => Promise<void> | void>(() => {});
   React.useEffect(() => {

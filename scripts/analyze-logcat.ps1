@@ -18,6 +18,17 @@ $audioToTone = New-Object System.Collections.Generic.List[double]
 $audioToTorchReset = New-Object System.Collections.Generic.List[double]
 $nativeDispatches = New-Object System.Collections.Generic.List[pscustomobject]
 $nativeGaps = New-Object System.Collections.Generic.List[pscustomobject]
+$nativeActuals = New-Object System.Collections.Generic.List[pscustomobject]
+$nativeDispatchBySequence = @{}
+$nativeActualBySequence = @{}
+$flashPhaseCounts = @{
+    scheduled = 0
+    actual = 0
+}
+$hapticPhaseCounts = @{
+    scheduled = 0
+    actual = 0
+}
 
 $symbolSamples = @()
 $symbolByCorrelation = @{}
@@ -138,25 +149,55 @@ foreach ($line in Get-Content -Path $LogFile -Encoding Unicode) {
     $jsonPayload = Try-ParseJsonPayload $message
 
 if ($tag -eq 'OutputsAudio') {
-    if ($message -match '\[outputs-audio\]\s+playMorse\.dispatch\s+sequence=(?<seq>\d+)\s+symbol=(?<sym>[-\.])\s+offset=(?<offset>[-0-9\.]+)\s+lead=(?<lead>[-0-9\.]+)\s+dispatchAt=(?<dispatch>[-0-9\.]+)') {
-        $seq = [int]$matches['seq'].Value
-        $sym = $matches['sym'].Value
-        $offsetVal = [double]$matches['offset'].Value
-        $leadVal = [double]$matches['lead'].Value
-        $dispatchVal = [double]$matches['dispatch'].Value
-        $nativeDispatches.Add([pscustomobject]@{
+    if ($message -match '\[outputs-audio\]\s+playMorse\.dispatch\s+sequence=(?<seq>\d+)\s+symbol=(?<sym>[-\.])\s+offset=(?<offset>[-0-9\.]+)\s+lead=(?<lead>[-0-9\.]+)\s+dispatchAt=(?<dispatch>[-0-9\.]+)(?:\s+gapLead=(?<gap>[-0-9\.]+))?') {
+        $seq = [int]$matches['seq']
+        $sym = $matches['sym']
+        $offsetVal = [double]$matches['offset']
+        $leadVal = [double]$matches['lead']
+        $dispatchVal = [double]$matches['dispatch']
+        $gapVal = $null
+        if ($matches.ContainsKey('gap') -and -not [string]::IsNullOrEmpty($matches['gap'])) {
+            $gapVal = [double]$matches['gap']
+        }
+        $entry = [pscustomobject]@{
             Sequence = $seq
             Symbol = $sym
             OffsetMs = $offsetVal
             LeadMs = $leadVal
             DispatchAtMs = $dispatchVal
-        }) | Out-Null
+            GapLeadMs = $gapVal
+        }
+        $nativeDispatches.Add($entry) | Out-Null
+        if (-not $nativeDispatchBySequence.ContainsKey($seq)) {
+            $nativeDispatchBySequence[$seq] = New-Object System.Collections.ArrayList
+        }
+        $null = $nativeDispatchBySequence[$seq].Add($entry)
+        continue
+    }
+    if ($message -match '\[outputs-audio\]\s+playMorse\.symbol\.start\s+sequence=(?<seq>\d+)\s+symbol=(?<sym>[-\.])\s+expected=(?<expected>[-0-9\.]+)\s+actual=(?<actual>[-0-9\.]+)\s+skew=(?<skew>[-0-9\.]+)\s+batchElapsed=(?<batch>[-0-9\.]+)') {
+        $seq = [int]$matches['seq']
+        $sym = $matches['sym']
+        $expectedVal = [double]$matches['expected']
+        $actualVal = [double]$matches['actual']
+        $skewVal = [double]$matches['skew']
+        $batchVal = [double]$matches['batch']
+        $entry = [pscustomobject]@{
+            Sequence = $seq
+            Symbol = $sym
+            ExpectedMs = $expectedVal
+            ActualMs = $actualVal
+            SkewMs = $skewVal
+            BatchElapsedMs = $batchVal
+        }
+        $nativeActuals.Add($entry) | Out-Null
+        $nativeActualBySequence[$seq] = $entry
+        $lastAudioStart = $logTime
         continue
     }
     if ($message -match '\[outputs-audio\]\s+playMorse\.gap\s+sequence=(?<seq>\d+)\s+nextOffset=(?<offset>[-0-9\.]+)\s+gapTarget=(?<target>[-0-9\.]+)') {
-        $seq = [int]$matches['seq'].Value
-        $offsetVal = [double]$matches['offset'].Value
-        $targetVal = [double]$matches['target'].Value
+        $seq = [int]$matches['seq']
+        $offsetVal = [double]$matches['offset']
+        $targetVal = [double]$matches['target']
         $nativeGaps.Add([pscustomobject]@{
             Sequence = $seq
             NextOffsetMs = $offsetVal
@@ -188,6 +229,21 @@ if ($tag -eq 'OutputsAudio') {
             if ($value -ne $null -and $value -ne '') {
                 $correlationId = [string]$value
             }
+        }
+        $dispatchPhaseValue = 'actual'
+        if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'dispatchPhase') {
+            $phaseRaw = $jsonPayload.dispatchPhase
+            if ($phaseRaw -ne $null -and $phaseRaw -ne '') {
+                $dispatchPhaseValue = [string]$phaseRaw
+            }
+        }
+        $phaseKey = $dispatchPhaseValue.ToLower()
+        if (-not $hapticPhaseCounts.ContainsKey($phaseKey)) {
+            $hapticPhaseCounts[$phaseKey] = 0
+        }
+        $hapticPhaseCounts[$phaseKey] += 1
+        if ($dispatchPhaseValue -eq 'scheduled') {
+            continue
         }
         $symbolInfo = $null
         if ($correlationId -and $symbolByCorrelation.ContainsKey($correlationId)) {
@@ -268,6 +324,21 @@ if ($tag -eq 'OutputsAudio') {
             if ($value -ne $null -and $value -ne '') {
                 $correlationId = [string]$value
             }
+        }
+        $dispatchPhaseValue = 'actual'
+        if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'dispatchPhase') {
+            $phaseRaw = $jsonPayload.dispatchPhase
+            if ($phaseRaw -ne $null -and $phaseRaw -ne '') {
+                $dispatchPhaseValue = [string]$phaseRaw
+            }
+        }
+        $phaseKey = $dispatchPhaseValue.ToLower()
+        if (-not $flashPhaseCounts.ContainsKey($phaseKey)) {
+            $flashPhaseCounts[$phaseKey] = 0
+        }
+        $flashPhaseCounts[$phaseKey] += 1
+        if ($dispatchPhaseValue -eq 'scheduled') {
+            continue
         }
         $symbolInfo = $null
         if ($correlationId -and $symbolByCorrelation.ContainsKey($correlationId)) {
@@ -367,6 +438,15 @@ if ($tag -eq 'OutputsAudio') {
         $nativeTimestamp = Parse-NativeField $message $jsonPayload 'nativeTimestampMs'
         $nativeOffset = Parse-NativeField $message $jsonPayload 'nativeOffsetMs'
         $nativeDuration = Parse-NativeField $message $jsonPayload 'nativeDurationMs'
+        $monotonicTimestamp = Parse-NativeField $message $jsonPayload 'monotonicTimestampMs'
+        $nativeExpectedTimestamp = Parse-NativeField $message $jsonPayload 'nativeExpectedTimestampMs'
+        $nativeSequenceField = Parse-NativeField $message $jsonPayload 'nativeSequence'
+        $nativeStartSkew = Parse-NativeField $message $jsonPayload 'nativeStartSkewMs'
+        $nativeBatchElapsed = Parse-NativeField $message $jsonPayload 'nativeBatchElapsedMs'
+        $nativeExpectedSincePrior = Parse-NativeField $message $jsonPayload 'nativeExpectedSincePriorMs'
+        $nativeSincePrior = Parse-NativeField $message $jsonPayload 'nativeSincePriorMs'
+        $nativePatternStart = Parse-NativeField $message $jsonPayload 'nativePatternStartMs'
+        $nativeAge = Parse-NativeField $message $jsonPayload 'nativeAgeMs'
         $symbolIndex = $null
         $correlationId = $null
         if ($jsonPayload -and $jsonPayload.PSObject.Properties.Name -contains 'correlationId') {
@@ -398,6 +478,20 @@ if ($tag -eq 'OutputsAudio') {
             UsedForFlash = $false
             HapticTimestampMs = $null
             FlashTimestampMs = $null
+            MonotonicTimestampMs = $monotonicTimestamp
+            NativeExpectedTimestampMs = $nativeExpectedTimestamp
+            NativeSequence = $null
+            NativeStartSkewMs = $nativeStartSkew
+            NativeBatchElapsedMs = $nativeBatchElapsed
+            NativeExpectedSincePriorMs = $nativeExpectedSincePrior
+            NativeSincePriorMs = $nativeSincePrior
+            NativePatternStartMs = $nativePatternStart
+            NativeAgeMs = $nativeAge
+        }
+        $nativeSequenceValue = $null
+        if ($nativeSequenceField -ne $null) {
+            $nativeSequenceValue = [int][math]::Round($nativeSequenceField)
+            $symbolInfo.NativeSequence = $nativeSequenceValue
         }
         $symbolSamples += $symbolInfo
         if ($correlationId) {
@@ -464,6 +558,37 @@ if ($nativeOffsetValues.Count -gt 0) {
     Write-Host '  nativeOffsetMs values: none'
 }
 
+$nativeTimingStats = @()
+$monotonicDiffs = @(
+    $symbolSamples |
+    Where-Object { $_.MonotonicTimestampMs -ne $null -and $_.NativeExpectedTimestampMs -ne $null } |
+    ForEach-Object { $_.MonotonicTimestampMs - $_.NativeExpectedTimestampMs }
+)
+if ($monotonicDiffs.Count -gt 0) {
+    $nativeTimingStats += Get-Stats 'monotonic - expected (ms)' $monotonicDiffs
+}
+$nativeStartSkewValues = @(
+    $symbolSamples |
+    Where-Object { $_.NativeStartSkewMs -ne $null } |
+    ForEach-Object { $_.NativeStartSkewMs }
+)
+if ($nativeStartSkewValues.Count -gt 0) {
+    $nativeTimingStats += Get-Stats 'native start skew (ms)' $nativeStartSkewValues
+}
+$sincePriorDiffs = @(
+    $symbolSamples |
+    Where-Object { $_.NativeSincePriorMs -ne $null -and $_.NativeExpectedSincePriorMs -ne $null } |
+    ForEach-Object { $_.NativeSincePriorMs - $_.NativeExpectedSincePriorMs }
+)
+if ($sincePriorDiffs.Count -gt 0) {
+    $nativeTimingStats += Get-Stats 'sincePrior delta (ms)' $sincePriorDiffs
+}
+if ($nativeTimingStats.Count -gt 0) {
+    Write-Host ''
+    Write-Host 'Native dispatcher deltas:' -ForegroundColor Cyan
+    $nativeTimingStats | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+}
+
 $delaySamples = $nonNullSamples | Where-Object { $_.JsTimestampMs -ne $null -and $_.UnitMs -ne $null }
 if ($delaySamples.Count -gt 0) {
     $overallDelays = $delaySamples | ForEach-Object { $_.JsTimestampMs - $_.NativeTimestampMs }
@@ -521,8 +646,92 @@ if ($nativeDispatches.Count -gt 0) {
     Write-Host 'Native dispatch telemetry not captured (ensure logcat includes OutputsAudio:D).' -ForegroundColor Yellow
 }
 
+if ($nativeActuals.Count -gt 0) {
+    $dispatchToActual = New-Object System.Collections.Generic.List[double]
+    $dispatchLeadErrors = New-Object System.Collections.Generic.List[double]
+    $actualToExpected = New-Object System.Collections.Generic.List[double]
+    $batchElapsedValues = New-Object System.Collections.Generic.List[double]
+    $combinedRows = @()
+    $missingDispatchSeq = @()
+    foreach ($actual in $nativeActuals) {
+        if ($actual.SkewMs -ne $null) {
+            Add-Stat $actualToExpected $actual.SkewMs
+        } elseif ($actual.ExpectedMs -ne $null -and $actual.ActualMs -ne $null) {
+            Add-Stat $actualToExpected ($actual.ActualMs - $actual.ExpectedMs)
+        }
+        if ($actual.BatchElapsedMs -ne $null) {
+            Add-Stat $batchElapsedValues $actual.BatchElapsedMs
+        }
+        $dispatchList = $null
+        if ($nativeDispatchBySequence.ContainsKey($actual.Sequence)) {
+            $dispatchList = $nativeDispatchBySequence[$actual.Sequence]
+        }
+        $dispatch = $null
+        if ($dispatchList -and $dispatchList.Count -gt 0) {
+            $dispatch = $dispatchList[0]
+            $dispatchList.RemoveAt(0)
+        } else {
+            $missingDispatchSeq += $actual.Sequence
+        }
+        if ($dispatch) {
+            $deltaActualDispatch = $actual.ActualMs - $dispatch.DispatchAtMs
+            Add-Stat $dispatchToActual $deltaActualDispatch
+            if ($dispatch.LeadMs -ne $null) {
+                Add-Stat $dispatchLeadErrors ($deltaActualDispatch - $dispatch.LeadMs)
+            }
+        }
+        $combinedRows += [pscustomobject]@{
+            Sequence = $actual.Sequence
+            Symbol = $actual.Symbol
+            DispatchAtMs = if ($dispatch) { $dispatch.DispatchAtMs } else { $null }
+            LeadMs = if ($dispatch) { $dispatch.LeadMs } else { $null }
+            ActualMs = $actual.ActualMs
+            ExpectedMs = $actual.ExpectedMs
+            ActualMinusDispatchMs = if ($dispatch) { [math]::Round($actual.ActualMs - $dispatch.DispatchAtMs, 3) } else { $null }
+            SkewMs = $actual.SkewMs
+        }
+    }
+    $dispatcherAlignmentStats = @()
+    if ($dispatchToActual.Count -gt 0) {
+        $dispatcherAlignmentStats += Get-Stats 'actual - dispatchAt (ms)' $dispatchToActual
+    }
+    if ($dispatchLeadErrors.Count -gt 0) {
+        $dispatcherAlignmentStats += Get-Stats 'dispatch lead error (ms)' $dispatchLeadErrors
+    }
+    if ($actualToExpected.Count -gt 0) {
+        $dispatcherAlignmentStats += Get-Stats 'actual - expected (ms)' $actualToExpected
+    }
+    if ($batchElapsedValues.Count -gt 0) {
+        $dispatcherAlignmentStats += Get-Stats 'batch elapsed (ms)' $batchElapsedValues
+    }
+    if ($dispatcherAlignmentStats.Count -gt 0) {
+        Write-Host ''
+        Write-Host 'Native dispatch vs actual:' -ForegroundColor Cyan
+        $dispatcherAlignmentStats | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+    }
+    if ($combinedRows.Count -gt 0) {
+        $combinedRows |
+            Sort-Object Sequence |
+            Select-Object -First 12 |
+            Format-Table Sequence,Symbol,DispatchAtMs,LeadMs,ActualMs,ExpectedMs,ActualMinusDispatchMs,SkewMs -AutoSize |
+            Out-String -Width 200 | Write-Host
+    }
+    if ($missingDispatchSeq.Count -gt 0) {
+        $uniqueMissing = ($missingDispatchSeq | Sort-Object | Select-Object -Unique)
+        Write-Host ("  Warning: missing dispatch telemetry for sequences [{0}]" -f ($uniqueMissing -join ', ')) -ForegroundColor Yellow
+    }
+} else {
+    Write-Host ''
+    Write-Host 'Native dispatch vs actual: no symbol start telemetry captured.' -ForegroundColor Yellow
+}
+
 if ($nativeGaps.Count -gt 0) {
     Write-Host ''
     Write-Host 'Native gap telemetry:' -ForegroundColor Cyan
     $nativeGaps | Select-Object -First 12 | Format-Table Sequence,NextOffsetMs,GapTargetMs -AutoSize | Out-String -Width 200 | Write-Host
 }
+
+Write-Host ''
+Write-Host 'Dispatch phase coverage:' -ForegroundColor Cyan
+Write-Host ("  Flash pulses  - scheduled: {0} actual: {1}" -f $flashPhaseCounts['scheduled'], $flashPhaseCounts['actual'])
+Write-Host ("  Haptic pulses - scheduled: {0} actual: {1}" -f $hapticPhaseCounts['scheduled'], $hapticPhaseCounts['actual'])
