@@ -846,3 +846,4 @@ if ($overlayAvailabilityEvents.Count -gt 0) {
         }, State, Reason |
         Format-Table -AutoSize | Out-String -Width 200 | Write-Host
 }
+

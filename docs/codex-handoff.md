@@ -10,8 +10,8 @@ Use this document to capture the single source of truth after each working sessi
 ## Latest Update
 - **Summary:** Android Nitro now mounts a native `ScreenFlasherView` overlay for every playback symbol, drives screen brightness boost through C++/JS, logs overlay availability, and the analyzer tracks native availability/fallback metrics so we can see when JS lighting kicks in.
 - **Key File Touchpoints:**
-  - `android/app/src/main/java/com/csparks113/MorseCodeApp/NativeOutputsDispatcher.kt`, `ScreenFlasherView.kt`: overlay mount/teardown, `setFlashOverlayState`, brightness boost hook, lifecycle guards, and `[outputs-native] overlay.availability` logging.
-  - `outputs-native/android/c++/OutputsAudio.cpp`, `.hpp`: per-symbol overlay toggles, manages `mScreenBrightnessBoostEnabled`, emits `flashHandledNatively`/`nativeFlashAvailable`, logs overlay activation failures, restores fallbacks if overlay unavailable or playback cancels.
+  - `android/app/src/main/java/com/csparks113/MorseCodeApp/NativeOutputsDispatcher.kt`, `ScreenFlasherView.kt`: overlay mount/teardown, `setFlashOverlayState`, brightness boost hook, lifecycle guards, `[outputs-native] overlay.availability` logging, and a debug accessor for current availability state.
+  - `outputs-native/android/c++/OutputsAudio.cpp`, `.hpp`: per-symbol overlay toggles, manages `mScreenBrightnessBoostEnabled`, emits `flashHandledNatively`/`nativeFlashAvailable`, logs overlay activation failures with dispatcher state, restores fallbacks if overlay unavailable or playback cancels.
   - Nitro bindings (`outputs-native/audio.nitro.ts`, `nitrogen/generated/shared/c++/PlaybackRequest.hpp`, `PlaybackDispatchEvent.hpp`) and JS consumers (`utils/audio.ts`, `services/outputs/*`, hooks, session/practice/lesson surfaces, dev console) forward `screenBrightnessBoost` and the new `nativeFlashAvailable` flag while honouring native-handled flashes.
   - Settings/dev console (`constants/appConfig.ts`, `store/useSettingsStore.ts`, `store/useDeveloperStore.ts`, `app/settings/output.tsx`, `app/dev/index.tsx`) expose the brightness boost toggle with live preview.
   - Analyzer (`scripts/analyze-logcat.ps1`) counts `outputs.flashPulse.nativeHandled`, tracks `nativeFlashAvailable`/`outputs.flashPulse.nativeFallback`, excludes native-handled pulses from latency stats, and reports coverage totals.
@@ -20,10 +20,11 @@ Use this document to capture the single source of truth after each working sessi
 
 ## Next Steps
 1. Surface the `nativeFlashAvailable` flag in developer console diagnostics so overlay status/fallback counts are visible without parsing logs.
-2. Sanity-check the updated analyzer (`nativeFlashAvailable` / `outputs.flashPulse.nativeFallback`) on fresh Play Pattern captures before declaring the overlay path stable.
-3. Capture 10/20/30 WPM Play Pattern sweeps (torch off, brightness boost on); verify <20 ms audio->flash/haptic, confirm `nativeFlashAvailable`/`nativeHandled` coverage, archive logs and notes.
-4. Mirror the screen-flash overlay + brightness boost plumbing on iOS so both platforms expose the same toggle and telemetry.
-5. Once sweeps pass, re-enable torch plus SOS/receive validations, archive the data, and refresh investigation docs.
+2. Investigate `overlay_reset_failed` results coming from `setFlashOverlayState(false, …)` so the dispatcher can attach the native view before playback begins.
+3. Sanity-check the updated analyzer (`nativeFlashAvailable` / `outputs.flashPulse.nativeFallback`) on fresh Play Pattern captures before declaring the overlay path stable.
+4. Capture 10/20/30 WPM Play Pattern sweeps (torch off, brightness boost on); verify <20 ms audio->flash/haptic, confirm `nativeFlashAvailable`/`nativeHandled` coverage, archive logs and notes.
+5. Mirror the screen-flash overlay + brightness boost plumbing on iOS so both platforms expose the same toggle and telemetry.
+6. Once sweeps pass, re-enable torch plus SOS/receive validations, archive the data, and refresh investigation docs.
 ## Verification
 - `npm run lint` *(fails)* - command timed out after ESLint attempted to parse generated bundle artifacts (`..bundle.js`, `..virtual-entry.bundle.js`), which already trigger thousands of legacy lint errors.
 

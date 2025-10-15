@@ -12,7 +12,8 @@
 - Threaded replay flash brightness percentages through session/console flows and logged `flashIntensity` so the upcoming native flash path inherits the user's intensity settings.
 - Implemented a native `ScreenFlasherView` overlay driven via JNI (`setFlashOverlayState`/`setFlashIntensity`), plumbed `flashHandledNatively` through dispatch events, and taught the JS layer to treat Nitro-controlled flashes as telemetry-only fallbacks.
 - Updated `scripts/analyze-logcat.ps1` to understand `outputs.flashPulse.nativeHandled`, mark native-handled flashes in the symbol queue, and report overlay coverage alongside existing phase stats.
-- Extended overlay telemetry end-to-end: Kotlin logs structured availability transitions, playback dispatch events expose `nativeFlashAvailable`, JS traces emit `outputs.flashPulse.nativeFallback`, and the analyzer now reports native availability/fallback summaries.
+- Extended overlay telemetry end-to-end: Kotlin logs structured availability transitions, playback dispatch events expose `nativeFlashAvailable`, JS traces emit `outputs.flashPulse.nativeFallback`, the analyzer now reports native availability/fallback summaries, and `OutputsAudio` logs include the dispatcher's availability state for each failure.
+- Hardened the Android overlay host: cached the current `Activity`, added `ScreenFlasherView` intensity logging, and validated 10 / 20 / 30 WPM sweeps (`docs/logs/console-replay-20251014-220656-play-pattern.txt`) with 100 % native coverage (no JS fallback) while keeping brightness boost in sync.
 - Added a screen brightness boost toggle (settings + dev console) that threads `screenBrightnessBoost` through Nitro so native flashes can temporarily raise display brightness while analyzer coverage reflects `nativeFlashHandled`.
 
 ## Completed (2025-10-13)
@@ -81,10 +82,11 @@
 
 ## Next Steps
 
-- Surface the `nativeFlashAvailable` signal inside the developer console diagnostics so we can see overlay status/fallback counts without digging through logcat.
-- Sanity-check the new analyzer availability/fallback output on fresh Play Pattern captures before we declare the overlay path production-ready.
-- Capture fresh Play Pattern sweeps at 10/20/30 WPM (torch still disabled), verify `<20 ms` audio->flash/haptic, confirm the `nativeFlashAvailable`/`nativeHandled` coverage, then decide when to re-enable Torch Mode plus SOS/receive validations.
-- Mirror the overlay dispatcher on iOS (UIView mount + brightness hook) once Android stabilises so cross-platform behaviour and telemetry stay aligned.
+- Introduce a React `FlashOverlayHost` (background container + foreground content) and update the Android dispatcher to attach `ScreenFlasherView` to that host so only the black background flashes.
+- After the host lands, fine-tune overlay appearance (alpha/tint, dev-console toggle) and rerun the 10 / 20 / 30 WPM sweeps to confirm the native overlay stays 100 % available behind cards/buttons.
+- Re-enable torch timing via the native dispatcher once the flash host is in place; run send/receive sweeps to validate before flipping the feature back on.
+- Surface the `nativeFlashAvailable` flag and overlay intensity stats directly in the developer console so testers don’t need logcat for health checks.
+- Mirror the overlay + brightness boost plumbing on iOS (UIView host + dispatcher wiring) once the Android background work ships.
 ### Deferred: Outputs Testing
 
 - Extend the freeform sweeps to high-WPM stress cases and confirm the relaxed classifiers still hold; log any misreads or latency drifts in `docs/outputs-investigation.md`.
@@ -171,3 +173,4 @@
 
 
 
+- Latest 10/20/30 WPM sweeps still show audio/haptic alignment within bounds but every flash continues to fall back to the JS overlay; new logs report `state=unavailable reason=overlay_reset_failed`, so the dispatcher never reports a successful attach.

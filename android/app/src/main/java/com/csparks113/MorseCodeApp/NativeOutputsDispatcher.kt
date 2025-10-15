@@ -1,4 +1,4 @@
-package com.csparks113.MorseCodeApp
+﻿package com.csparks113.MorseCodeApp
 
 import android.app.Activity
 import android.app.Application
@@ -18,6 +18,7 @@ import android.util.Log
 import android.view.ViewGroup
 import com.facebook.react.bridge.ReactApplicationContext
 import java.lang.ref.WeakReference
+import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -46,6 +47,7 @@ object NativeOutputsDispatcher {
   private val overlayBrightnessBoosted = AtomicBoolean(false)
 
   @Volatile private var currentActivityRef: WeakReference<Activity>? = null
+  @Volatile private var currentActivityStrong: Activity? = null
   @Volatile private var overlayViewRef: WeakReference<ScreenFlasherView>? = null
   @Volatile private var originalBrightness: Float? = null
   @Volatile private var overlayAvailabilityState = OverlayAvailabilityState.UNKNOWN
@@ -89,6 +91,7 @@ object NativeOutputsDispatcher {
     registerActivityCallbacks(appContext)
     context.currentActivity?.let {
       currentActivityRef = WeakReference(it)
+      currentActivityStrong = it
     }
   }
 
@@ -151,10 +154,37 @@ object NativeOutputsDispatcher {
   fun setFlashOverlayState(enabled: Boolean, brightnessPercent: Double): Boolean {
     if (!enabled) {
       val result = runOnMainSync {
-        val activity = currentActivity()
-        val view = if (activity != null) ensureOverlayView(activity) else overlayViewRef?.get()
+        val previousState = overlayAvailabilityState
+        val previousReason = overlayAvailabilityReason
+        var view = overlayViewRef?.get()
+        if (view == null) {
+          val activity = currentActivity()
+          if (activity == null) {
+            Log.d(
+              TAG,
+              "[outputs-native] overlay.reset.no_view activity=null prevState=$previousState prevReason=$previousReason",
+            )
+          } else {
+            Log.d(
+              TAG,
+              "[outputs-native] overlay.reset.no_view activity=${activity::class.java.simpleName} prevState=$previousState prevReason=$previousReason",
+            )
+            view = ensureOverlayView(activity)
+            if (view != null) {
+              Log.d(TAG, "[outputs-native] overlay.reset.recovered view=${view::class.java.simpleName}")
+            }
+          }
+          if (view == null) {
+            Log.w(
+              TAG,
+              "[outputs-native] overlay.reset.attach_failed prevState=$previousState prevReason=$previousReason",
+            )
+          }
+        }
         view?.setIntensity(0f)
-        view != null
+        // If the overlay view isn't attached yet we treat this as a no-op reset
+        // and preserve the previous availability state so subsequent enable attempts can retry.
+        true
       }
       return result == true
     }
@@ -162,9 +192,17 @@ object NativeOutputsDispatcher {
     val result = runOnMainSync {
       val activity = currentActivity()
       if (activity == null) {
+        Log.w(
+          TAG,
+          "[outputs-native] overlay.enable.no_activity state=$overlayAvailabilityState reason=$overlayAvailabilityReason",
+        )
         recordOverlayAvailability(false, "activity_missing")
         false
       } else if (activity.isFinishing) {
+        Log.w(
+          TAG,
+          "[outputs-native] overlay.enable.finishing activity=${activity::class.java.simpleName}",
+        )
         recordOverlayAvailability(false, "activity_finishing")
         false
       } else {
@@ -210,18 +248,39 @@ object NativeOutputsDispatcher {
     }
   }
 
+  @JvmStatic
+  fun getOverlayAvailabilityDebugString(): String {
+    val state = overlayAvailabilityState
+    val reason = overlayAvailabilityReason
+    return buildString {
+      append("state=")
+      append(state.name.lowercase(Locale.ROOT))
+      if (!reason.isNullOrEmpty()) {
+        append(" reason=")
+        append(reason)
+      }
+    }
+  }
+
   private fun registerActivityCallbacks(context: Context) {
     if (!activityCallbacksRegistered.compareAndSet(false, true)) {
       return
     }
     val application = context as? Application ?: return
     application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
-      override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+      override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+        currentActivityRef = WeakReference(activity)
+        currentActivityStrong = activity
+      }
 
-      override fun onActivityStarted(activity: Activity) {}
+      override fun onActivityStarted(activity: Activity) {
+        currentActivityRef = WeakReference(activity)
+        currentActivityStrong = activity
+      }
 
       override fun onActivityResumed(activity: Activity) {
         currentActivityRef = WeakReference(activity)
+        currentActivityStrong = activity
       }
 
       override fun onActivityPaused(activity: Activity) {
@@ -239,21 +298,43 @@ object NativeOutputsDispatcher {
         if (currentActivityRef?.get() === activity) {
           currentActivityRef = null
         }
+        if (currentActivityStrong === activity) {
+          currentActivityStrong = null
+        }
       }
     })
   }
 
-  private fun currentActivity(): Activity? {
-    val activity = currentActivityRef?.get()
+  @JvmStatic
+  fun updateCurrentActivity(activity: Activity?) {
     if (activity != null) {
-      return activity
+      currentActivityRef = WeakReference(activity)
+      currentActivityStrong = activity
+    } else {
+      currentActivityRef = null
+      currentActivityStrong = null
     }
-    val context = reactContext
-    val current = context?.currentActivity
-    if (current != null) {
-      currentActivityRef = WeakReference(current)
+  }
+
+  private fun currentActivity(): Activity? {
+    currentActivityStrong?.let { strong ->
+      return strong
     }
-    return current
+    currentActivityRef?.get()?.let { cached ->
+      currentActivityStrong = cached
+      return cached
+    }
+    val contextCurrent = reactContext?.currentActivity
+    if (contextCurrent != null) {
+      currentActivityRef = WeakReference(contextCurrent)
+      currentActivityStrong = contextCurrent
+      return contextCurrent
+    }
+    Log.v(
+      TAG,
+      "[outputs-native] overlay.current_activity.missing state=$overlayAvailabilityState reason=$overlayAvailabilityReason",
+    )
+    return null
   }
 
   private fun ensureOverlayView(activity: Activity): ScreenFlasherView? {
@@ -288,6 +369,7 @@ object NativeOutputsDispatcher {
             ViewGroup.LayoutParams.MATCH_PARENT,
           )
         decor.addView(view, 0, params)
+        view.bringToFront()
         recordOverlayAvailability(true, "overlay_reparented")
       } else {
         recordOverlayAvailability(true, "overlay_reused")
@@ -373,3 +455,13 @@ object NativeOutputsDispatcher {
     }
   }
 }
+
+
+
+
+
+
+
+
+
+

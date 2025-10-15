@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <iomanip>
 #include <sstream>
+#include <string>
 #include <thread>
 #include <utility>
 #include <exception>
@@ -112,6 +113,22 @@ bool setNativeFlashOverlayState(bool enabled, double brightnessPercent) {
   } catch (...) {
     __android_log_print(ANDROID_LOG_WARN, kTag, "%s brightness boost failed", kLogPrefix);
   }
+}
+
+std::string getNativeOverlayAvailabilityDebugString() {
+  try {
+    facebook::jni::Environment::ensureCurrentThreadIsAttached();
+    auto& clazz = getNativeDispatcherClass();
+    static auto method =
+        clazz->getStaticMethod<facebook::jni::local_ref<jstring>()>("getOverlayAvailabilityDebugString");
+    auto result = method(clazz);
+    if (result) {
+      return result->toStdString();
+    }
+  } catch (...) {
+    __android_log_print(ANDROID_LOG_WARN, kTag, "%s overlay.debug.failed", kLogPrefix);
+  }
+  return std::string();
 }
 } // namespace
 
@@ -562,7 +579,15 @@ void OutputsAudio::playMorse(const PlaybackRequest& request) {
         setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
     mNativeOverlayAvailable.store(overlayReady, std::memory_order_release);
     if (!overlayReady) {
-      logEvent("overlay.prepare.failed", "brightness=%.1f", mReplayFlashBrightnessPercent);
+      const auto overlayDebug = getNativeOverlayAvailabilityDebugString();
+      if (!overlayDebug.empty()) {
+        logEvent("overlay.prepare.failed",
+                 "brightness=%.1f %s",
+                 mReplayFlashBrightnessPercent,
+                 overlayDebug.c_str());
+      } else {
+        logEvent("overlay.prepare.failed", "brightness=%.1f", mReplayFlashBrightnessPercent);
+      }
       mNativeOverlayActive.store(false, std::memory_order_release);
       screenBrightnessBoostEnabled = false;
     }
@@ -747,10 +772,19 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
       overlayActiveForSymbol = setNativeFlashOverlayState(true, mReplayFlashBrightnessPercent);
       if (!overlayActiveForSymbol) {
         mNativeOverlayAvailable.store(false, std::memory_order_release);
-        logEvent("overlay.symbol.unavailable",
-                 "sequence=%llu brightness=%.1f",
-                 static_cast<unsigned long long>(sequenceValue),
-                 mReplayFlashBrightnessPercent);
+        const auto overlayDebug = getNativeOverlayAvailabilityDebugString();
+        if (!overlayDebug.empty()) {
+          logEvent("overlay.symbol.unavailable",
+                   "sequence=%llu brightness=%.1f %s",
+                   static_cast<unsigned long long>(sequenceValue),
+                   mReplayFlashBrightnessPercent,
+                   overlayDebug.c_str());
+        } else {
+          logEvent("overlay.symbol.unavailable",
+                   "sequence=%llu brightness=%.1f",
+                   static_cast<unsigned long long>(sequenceValue),
+                   mReplayFlashBrightnessPercent);
+        }
         if (mScreenBrightnessBoostEnabled.load(std::memory_order_acquire)) {
           mScreenBrightnessBoostEnabled.store(false, std::memory_order_release);
           setNativeScreenBrightnessBoost(false);

@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import kotlin.math.max
 import kotlin.math.min
@@ -41,6 +42,11 @@ class ScreenFlasherView @JvmOverloads constructor(
     val alpha = (clamped * 255f).toInt().coerceIn(0, 255)
     paint.alpha = alpha
     visibility = if (alpha > 0) VISIBLE else INVISIBLE
+    Log.d(
+      TAG,
+      "overlay.intensity clamped=$clamped alpha=$alpha visibility=$visibility " +
+        "attached=$isAttachedToWindow size=${width}x$height",
+    )
     if (isAttachedToWindow) {
       postInvalidateOnAnimation()
     } else {
@@ -55,5 +61,7 @@ class ScreenFlasherView @JvmOverloads constructor(
     }
     canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
   }
+  companion object {
+    private const val TAG = "ScreenFlasherView"
+  }
 }
-

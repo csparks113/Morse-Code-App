@@ -11,6 +11,7 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 import android.util.Log
 
 import expo.modules.ReactActivityDelegateWrapper
+import com.csparks113.MorseCodeApp.NativeOutputsDispatcher
 
 class MainActivity : ReactActivity() {
   companion object {
@@ -25,6 +26,16 @@ class MainActivity : ReactActivity() {
     SplashScreenManager.registerOnActivity(this)
     // @generated end expo-splashscreen
     super.onCreate(null)
+  }
+
+  override fun onResume() {
+    super.onResume()
+    NativeOutputsDispatcher.updateCurrentActivity(this)
+  }
+
+  override fun onPause() {
+    NativeOutputsDispatcher.updateCurrentActivity(null)
+    super.onPause()
   }
 
   /**
