@@ -15,10 +15,13 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
+import android.view.View
 import android.view.ViewGroup
 import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.R as ReactR
 import java.lang.ref.WeakReference
 import java.util.Locale
+import java.util.ArrayDeque
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -27,6 +30,7 @@ object NativeOutputsDispatcher {
   private const val TAG = "NativeOutputsDispatcher"
   private const val BRIGHTNESS_BOOST_TARGET = 0.8f
   private const val MAIN_THREAD_TIMEOUT_MS = 120L
+  private const val FLASH_OVERLAY_HOST_NATIVE_ID = "flash-overlay-background"
 
   private enum class OverlayAvailabilityState {
     UNKNOWN,
@@ -45,10 +49,14 @@ object NativeOutputsDispatcher {
   private val vibrateUnavailableLogged = AtomicBoolean(false)
   private val activityCallbacksRegistered = AtomicBoolean(false)
   private val overlayBrightnessBoosted = AtomicBoolean(false)
+  private val overlayHostMissingLogged = AtomicBoolean(false)
 
   @Volatile private var currentActivityRef: WeakReference<Activity>? = null
   @Volatile private var currentActivityStrong: Activity? = null
+  @Volatile private var overlayHostRef: WeakReference<ViewGroup>? = null
   @Volatile private var overlayViewRef: WeakReference<ScreenFlasherView>? = null
+  @Volatile private var overlayLayoutListenerRef: WeakReference<View.OnLayoutChangeListener>? = null
+  @Volatile private var overlayLayoutParentRef: WeakReference<ViewGroup>? = null
   @Volatile private var originalBrightness: Float? = null
   @Volatile private var overlayAvailabilityState = OverlayAvailabilityState.UNKNOWN
   @Volatile private var overlayAvailabilityReason: String? = null
@@ -347,6 +355,7 @@ object NativeOutputsDispatcher {
       return null
     }
     synchronized(overlayLock) {
+      val (targetParent, attachedToHost) = resolveOverlayParent(decor)
       var view = overlayViewRef?.get()
       if (view != null && view.context !== activity) {
         (view.parent as? ViewGroup)?.removeView(view)
@@ -355,34 +364,89 @@ object NativeOutputsDispatcher {
       if (view == null) {
         view = ScreenFlasherView(activity)
         overlayViewRef = WeakReference(view)
-        val params = ViewGroup.LayoutParams(
+      }
+      val currentParent = view!!.parent as? ViewGroup
+      if (currentParent !== targetParent) {
+        currentParent?.removeView(view)
+        val layoutParams = ViewGroup.LayoutParams(
           ViewGroup.LayoutParams.MATCH_PARENT,
           ViewGroup.LayoutParams.MATCH_PARENT,
         )
-        decor.addView(view, 0, params)
-        recordOverlayAvailability(true, "overlay_attached")
-      } else if (view.parent != decor) {
-        (view.parent as? ViewGroup)?.removeView(view)
-        val params = view.layoutParams
-          ?: ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-          )
-        decor.addView(view, 0, params)
-        view.bringToFront()
-        recordOverlayAvailability(true, "overlay_reparented")
+        if (attachedToHost) {
+          targetParent.addView(view, 0, layoutParams)
+          recordOverlayAvailability(true, "overlay_attached_host")
+        } else {
+          targetParent.addView(view, 0, layoutParams)
+          view.bringToFront()
+          recordOverlayAvailability(true, "overlay_attached_decor")
+        }
       } else {
-        recordOverlayAvailability(true, "overlay_reused")
+        val reason = if (attachedToHost) {
+          "overlay_reused_host"
+        } else {
+          "overlay_reused_decor"
+        }
+        recordOverlayAvailability(true, reason)
+      }
+      if (attachedToHost) {
+        ensureOverlayLayout(targetParent, view)
       }
       return view
     }
+  }
+
+  private fun resolveOverlayParent(decor: ViewGroup): Pair<ViewGroup, Boolean> {
+    overlayHostRef?.get()?.let { cached ->
+      if (cached.parent != null) {
+        return Pair(cached, true)
+      }
+      overlayHostRef = null
+    }
+    val host = findFlashOverlayHost(decor)
+    if (host != null) {
+      overlayHostRef = WeakReference(host)
+      overlayHostMissingLogged.set(false)
+      return Pair(host, true)
+    }
+    if (overlayHostMissingLogged.compareAndSet(false, true)) {
+      Log.w(TAG, "[outputs-native] overlay.host.missing fallback=decor_view")
+    }
+    return Pair(decor, false)
+  }
+
+  private fun findFlashOverlayHost(root: ViewGroup): ViewGroup? {
+    val queue: ArrayDeque<View> = ArrayDeque()
+    queue.add(root)
+    while (queue.isNotEmpty()) {
+      val candidate = queue.removeFirst()
+      val nativeId = candidate.getTag(ReactR.id.view_tag_native_id)
+      if (nativeId is String && nativeId == FLASH_OVERLAY_HOST_NATIVE_ID && candidate is ViewGroup) {
+        return candidate
+      }
+      if (candidate is ViewGroup) {
+        for (index in 0 until candidate.childCount) {
+          queue.addLast(candidate.getChildAt(index))
+        }
+      }
+    }
+    return null
   }
 
   private fun detachOverlayFor(activity: Activity) {
     synchronized(overlayLock) {
       val view = overlayViewRef?.get() ?: return
       if (view.context === activity) {
-        (view.parent as? ViewGroup)?.removeView(view)
+        val parent = view.parent as? ViewGroup
+        parent?.removeView(view)
+        if (overlayHostRef?.get() === parent) {
+          overlayHostRef = null
+        }
+        overlayLayoutListenerRef?.get()?.let { listener ->
+          overlayLayoutParentRef?.get()?.removeOnLayoutChangeListener(listener)
+        }
+        overlayLayoutListenerRef = null
+        overlayLayoutParentRef = null
+        overlayHostMissingLogged.set(false)
         overlayViewRef = null
         recordOverlayAvailability(false, "overlay_detached")
       }
@@ -418,6 +482,42 @@ object NativeOutputsDispatcher {
       Log.w(TAG, "Unexpected error while querying camera characteristics", error)
       null
     }
+  }
+
+  private fun ensureOverlayLayout(parent: ViewGroup, view: ScreenFlasherView) {
+    overlayLayoutListenerRef?.get()?.let { listener ->
+      overlayLayoutParentRef?.get()?.removeOnLayoutChangeListener(listener)
+    }
+    val layoutListener = View.OnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
+      updateOverlayBounds(view, right - left, bottom - top)
+    }
+    parent.addOnLayoutChangeListener(layoutListener)
+    overlayLayoutListenerRef = WeakReference(layoutListener)
+    overlayLayoutParentRef = WeakReference(parent)
+    val width = parent.width
+    val height = parent.height
+    if (width == 0 || height == 0) {
+      parent.post {
+        updateOverlayBounds(view, parent.width, parent.height)
+      }
+    } else {
+      updateOverlayBounds(view, width, height)
+    }
+  }
+
+  private fun updateOverlayBounds(view: ScreenFlasherView, width: Int, height: Int) {
+    if (width <= 0 || height <= 0) {
+      return
+    }
+    val layoutParams = view.layoutParams
+      ?: ViewGroup.LayoutParams(width, height)
+    layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+    layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+    view.layoutParams = layoutParams
+    val widthSpec = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY)
+    val heightSpec = View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
+    view.measure(widthSpec, heightSpec)
+    view.layout(0, 0, width, height)
   }
 
   private fun resolveVibrator(context: Context?): Vibrator? {

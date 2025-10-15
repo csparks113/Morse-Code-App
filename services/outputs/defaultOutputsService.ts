@@ -10,6 +10,7 @@ import { traceOutputs } from './trace';
 import { updateTorchSupport, recordTorchPulse, recordTorchFailure } from '@/store/useOutputsDiagnosticsStore';
 import { recordLatencySample } from '@/store/useOutputsLatencyStore';
 import { createPressCorrelation, createPressTracker, normalizePressTimestamp, type PressCorrelation } from '@/services/latency/pressTracker';
+import { setNativeFlashOverlayState, setNativeScreenBrightnessBoost } from './nativeFlashOverlay';
 import type {
   OutputsService,
   FlashPulseOptions,
@@ -293,6 +294,8 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   let flashActive = false;
   let torchTimeout: ReturnType<typeof setTimeout> | null = null;
   let torchScheduleInfo: TorchScheduleOptions | null = null;
+  let nativeFlashOwned = false;
+  let nativeBrightnessBoostActive = false;
 
   const shouldWatchdog = contextSource.startsWith('console.');
   let pressWatchdog: ReturnType<typeof setTimeout> | null = null;
@@ -404,11 +407,61 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   const resolveToneHz = () => clampToneHz(options.toneHz);
   const resolveToneVolume = () => clampPercentToScalar(options.audioVolumePercent);
   const resolveFlashIntensity = () => clampPercentToScalar(options.flashBrightnessPercent);
+  const resolveFlashBrightnessPercent = () => Math.max(0, Math.min(100, Math.round(options.flashBrightnessPercent)));
 
   const flashOn = (startedAt: number) => {
-    if (!options.lightEnabled) return;
+    if (!options.lightEnabled) {
+      return;
+    }
     flashActive = true;
     const intensity = resolveFlashIntensity();
+    const brightnessPercent = resolveFlashBrightnessPercent();
+    const latencyMs = nowMs() - startedAt;
+    let nativeHandled = false;
+    if (brightnessPercent > 0) {
+      nativeHandled = setNativeFlashOverlayState(true, brightnessPercent);
+      nativeFlashOwned = nativeHandled;
+      if (nativeHandled) {
+        if (options.screenBrightnessBoost && !nativeBrightnessBoostActive) {
+          setNativeScreenBrightnessBoost(true);
+          nativeBrightnessBoostActive = true;
+        } else if (!options.screenBrightnessBoost && nativeBrightnessBoostActive) {
+          setNativeScreenBrightnessBoost(false);
+          nativeBrightnessBoostActive = false;
+        }
+      } else if (nativeBrightnessBoostActive) {
+        setNativeScreenBrightnessBoost(false);
+        nativeBrightnessBoostActive = false;
+      }
+    } else {
+      nativeFlashOwned = false;
+      if (nativeBrightnessBoostActive) {
+        setNativeScreenBrightnessBoost(false);
+        nativeBrightnessBoostActive = false;
+      }
+    }
+    const latencyMetadata: Record<string, string | number | boolean> = { intensity };
+    if (nativeHandled) {
+      latencyMetadata.nativeOverlay = true;
+    }
+    traceOutputs('keyer.flash.start', {
+      latencyMs,
+      intensity,
+      monotonicTimestampMs: startedAt,
+      nativeOverlay: nativeHandled,
+    });
+    recordChannelLatency('touchToFlash', startedAt, latencyMs, {
+      metadata: latencyMetadata,
+    });
+    if (nativeHandled) {
+      try {
+        flashOpacity.stopAnimation?.(() => {});
+      } catch {
+        // ignore
+      }
+      flashOpacity.setValue(0);
+      return;
+    }
     try {
       flashOpacity.stopAnimation?.(() => {});
     } catch {
@@ -419,28 +472,40 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       duration: 0,
       useNativeDriver: true,
     }).start();
-    const latencyMs = nowMs() - startedAt;
-    traceOutputs('keyer.flash.start', {
-      latencyMs,
-      intensity,
-      monotonicTimestampMs: startedAt,
-    });
-    recordChannelLatency('touchToFlash', startedAt, latencyMs, {
-      metadata: { intensity },
-    });
   };
 
   const flashOff = (endedAt: number) => {
-    if (!flashActive) return;
+    if (!flashActive) {
+      return;
+    }
     flashActive = false;
-    Animated.timing(flashOpacity, {
-      toValue: 0,
-      duration: 140,
-      useNativeDriver: true,
-    }).start();
+    const previouslyNative = nativeFlashOwned;
+    if (nativeFlashOwned) {
+      setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+      nativeFlashOwned = false;
+    }
+    if (nativeBrightnessBoostActive) {
+      setNativeScreenBrightnessBoost(false);
+      nativeBrightnessBoostActive = false;
+    }
+    if (!previouslyNative) {
+      Animated.timing(flashOpacity, {
+        toValue: 0,
+        duration: 140,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      try {
+        flashOpacity.stopAnimation?.(() => {});
+      } catch {
+        // ignore
+      }
+      flashOpacity.setValue(0);
+    }
     traceOutputs('keyer.flash.stop', {
       latencyMs: nowMs() - endedAt,
       monotonicTimestampMs: endedAt,
+      nativeOverlay: previouslyNative,
     });
   };
 
@@ -703,6 +768,14 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       // ignore
     }
     flashOpacity.setValue(0);
+    if (nativeFlashOwned) {
+      setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+      nativeFlashOwned = false;
+    }
+    if (nativeBrightnessBoostActive) {
+      setNativeScreenBrightnessBoost(false);
+      nativeBrightnessBoostActive = false;
+    }
 
     await disableTorch(nowMs(), { source: contextSource }).catch(() => {});
     try {
@@ -790,6 +863,32 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
         // ignore
       }
       flashOpacity.setValue(0);
+      if (nativeFlashOwned) {
+        setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+        nativeFlashOwned = false;
+      }
+      if (nativeBrightnessBoostActive) {
+        setNativeScreenBrightnessBoost(false);
+        nativeBrightnessBoostActive = false;
+      }
+    } else if (nativeFlashOwned) {
+      const nextBrightness = resolveFlashBrightnessPercent();
+      if (nextBrightness <= 0) {
+        setNativeFlashOverlayState(false, nextBrightness);
+        nativeFlashOwned = false;
+      } else {
+        setNativeFlashOverlayState(true, nextBrightness);
+      }
+      if (options.screenBrightnessBoost && !nativeBrightnessBoostActive) {
+        setNativeScreenBrightnessBoost(true);
+        nativeBrightnessBoostActive = true;
+      } else if (!options.screenBrightnessBoost && nativeBrightnessBoostActive) {
+        setNativeScreenBrightnessBoost(false);
+        nativeBrightnessBoostActive = false;
+      }
+    } else if (!options.screenBrightnessBoost && nativeBrightnessBoostActive) {
+      setNativeScreenBrightnessBoost(false);
+      nativeBrightnessBoostActive = false;
     }
     if (!options.torchEnabled && torchActive) {
       disableTorch(nowMs(), { source: contextSource }).catch(() => {});

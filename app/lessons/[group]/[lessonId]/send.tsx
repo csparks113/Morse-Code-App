@@ -26,7 +26,7 @@ import PromptCard from '../../../../components/session/PromptCard';
 import OutputTogglesRow from '../../../../components/session/OutputTogglesRow';
 import TorchDiagnosticsNotice from '../../../../components/session/TorchDiagnosticsNotice';
 import KeyerButton from '../../../../components/session/KeyerButton';
-import FlashOverlay from '../../../../components/session/FlashOverlay';
+import FlashOverlayHost from '../../../../components/session/FlashOverlayHost';
 import MorseCompare from '../../../../components/session/MorseCompare';
 import { colors, status, sessionLayoutTheme } from '../../../../theme/lessonTheme';
 import { sessionStyleSheet, sessionContainerPadding } from '../../../../theme/sessionStyles';
@@ -164,13 +164,15 @@ export default function SendSessionScreen() {
 
   return (
     <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
-      <View
+      <FlashOverlayHost
         style={[
           sessionStyleSheet.container,
           sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'standard' }),
         ]}
+        fallbackOpacity={flashOpacity}
+        fallbackColor={colors.text}
+        fallbackMaxOpacity={flashMaxOpacity}
       >
-        <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={flashMaxOpacity} />
         <View style={sessionStyleSheet.topGroup}>
           <SessionHeader
             labelTop={meta.headerTop}
@@ -237,7 +239,7 @@ export default function SendSessionScreen() {
             />
           </View>
         </View>
-      </View>
+      </FlashOverlayHost>
     </SafeAreaView>
   );
 }

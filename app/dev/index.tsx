@@ -32,7 +32,7 @@ import {
   resetLatencyMetrics,
   type LatencyChannel,
 } from '@/store/useOutputsLatencyStore';
-import FlashOverlay from '@/components/session/FlashOverlay';
+import FlashOverlayHost from '@/components/session/FlashOverlayHost';
 import { nowMs } from '@/utils/time';
 import { scheduleMonotonic } from '@/utils/scheduling';
 
@@ -585,13 +585,15 @@ export default function DeveloperConsoleScreen() {
 
   return (
     <SafeAreaView style={sessionStyleSheet.safe} edges={['top']}>
-      <View
+      <FlashOverlayHost
         style={[
           sessionStyleSheet.container,
           sessionContainerPadding(insets, { footerVariant: 'dev' }),
         ]}
+        fallbackOpacity={manualFlashValue}
+        fallbackColor={lessonColors.text}
+        fallbackMaxOpacity={0.28}
       >
-        <FlashOverlay opacity={manualFlashValue} color={lessonColors.text} maxOpacity={0.28} />
 
         <View style={sessionStyleSheet.topGroup}>
           <SessionHeader
@@ -1072,7 +1074,7 @@ export default function DeveloperConsoleScreen() {
             </View>
           </ScrollView>
         </View>
-      </View>
+      </FlashOverlayHost>
     </SafeAreaView>
   );
 }

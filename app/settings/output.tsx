@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import FlashOverlay from '@/components/session/FlashOverlay';
+import FlashOverlayHost from '@/components/session/FlashOverlayHost';
 import KeyerButton from '@/components/session/KeyerButton';
 import OutputTogglesRow from '@/components/session/OutputTogglesRow';
 import { useOutputsService, type KeyerOutputsHandle } from '@/services/outputs/OutputsService';
@@ -281,11 +281,12 @@ export default function OutputSettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.container}>
-        {flashOpacity ? (
-          <FlashOverlay opacity={flashOpacity} color={theme.colors.textPrimary} maxOpacity={flashMaxOpacity} />
-        ) : null}
-
+      <FlashOverlayHost
+        style={styles.container}
+        fallbackOpacity={flashOpacity ?? undefined}
+        fallbackColor={theme.colors.textPrimary}
+        fallbackMaxOpacity={flashMaxOpacity}
+      >
         <View style={styles.header}>
           <Pressable
             onPress={() => router.back()}
@@ -390,7 +391,7 @@ export default function OutputSettingsScreen() {
             />
           </View>
         </ScrollView>
-      </View>
+      </FlashOverlayHost>
     </SafeAreaView>
   );
 }

@@ -21,7 +21,7 @@ import { SessionSummaryContent, SessionSummaryContinue } from '../../../../compo
 import PromptCard from '../../../../components/session/PromptCard';
 import OutputTogglesRow from '../../../../components/session/OutputTogglesRow';
 import TorchDiagnosticsNotice from '../../../../components/session/TorchDiagnosticsNotice';
-import FlashOverlay from '../../../../components/session/FlashOverlay';
+import FlashOverlayHost from '../../../../components/session/FlashOverlayHost';
 import LessonChoices from '../../../../components/session/LessonChoices';
 import MorseCompare from '../../../../components/session/MorseCompare';
 import ChallengeKeyboard from '../../../../components/session/ChallengeKeyboard';
@@ -163,8 +163,12 @@ export default function ReceiveSessionScreen() {
 
   return (
     <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
-      <View style={[sessionStyleSheet.container, sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'summary' })]}>
-        <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={flashMaxOpacity} />
+      <FlashOverlayHost
+        style={[sessionStyleSheet.container, sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'summary' })]}
+        fallbackOpacity={flashOpacity}
+        fallbackColor={colors.text}
+        fallbackMaxOpacity={flashMaxOpacity}
+      >
         {/* --- TOP (fixed): header + progress --- */}
         <View style={sessionStyleSheet.topGroup}>
           <SessionHeader
@@ -242,7 +246,7 @@ export default function ReceiveSessionScreen() {
             )}
           </View>
         </View>
-      </View>
+      </FlashOverlayHost>
     </SafeAreaView>
   );
 }

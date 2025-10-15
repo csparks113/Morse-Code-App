@@ -9,7 +9,7 @@ import SessionHeader from '@/components/session/SessionHeader';
 import OutputTogglesRow from '@/components/session/OutputTogglesRow';
 import TorchDiagnosticsNotice from '@/components/session/TorchDiagnosticsNotice';
 import KeyerButton from '@/components/session/KeyerButton';
-import FlashOverlay from '@/components/session/FlashOverlay';
+import FlashOverlayHost from '@/components/session/FlashOverlayHost';
 import { useKeyerOutputs } from '@/hooks/useKeyerOutputs';
 import { createPressTracker } from '@/services/latency/pressTracker';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -77,7 +77,7 @@ export default function PracticeKeyerScreen() {
 
   return (
     <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
-      <View
+      <FlashOverlayHost
         style={[
           sessionStyleSheet.container,
           sessionContainerPadding(insets, {
@@ -85,8 +85,10 @@ export default function PracticeKeyerScreen() {
             footerVariant: 'practice',
           }),
         ]}
+        fallbackOpacity={flashOpacity}
+        fallbackColor={colors.text}
+        fallbackMaxOpacity={flashMaxOpacity}
       >
-        <FlashOverlay opacity={flashOpacity} color={colors.text} maxOpacity={flashMaxOpacity} />
         <View style={sessionStyleSheet.topGroup}>
           <SessionHeader
             labelTop={t('keyerLabHeaderTop')}
@@ -125,7 +127,7 @@ export default function PracticeKeyerScreen() {
             />
           </View>
         </View>
-      </View>
+      </FlashOverlayHost>
     </SafeAreaView>
   );
 }

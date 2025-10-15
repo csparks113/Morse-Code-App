@@ -5,6 +5,12 @@
 - When you pick up a task, copy the relevant bullet into your working notes and expand it with acceptance criteria, links, or test plans.
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
 
+## Completed (2025-10-15)
+
+- Added a reusable React `FlashOverlayHost` wrapper around session, keyer, developer console, and output settings surfaces so the native overlay can inhabit a dedicated background container while the JS fallback stays available for telemetry.
+- Updated `NativeOutputsDispatcher` to locate the host by `nativeID`, cache it between flashes, and mount `ScreenFlasherView` into that background node (with decor-view fallback logging) so native flashes now sit underneath foreground UI instead of above it.
+- Keyer-driven flashes (lesson send/receive, practice keyer, output settings preview) now hit the native overlay + screen-brightness boost path directly—JS overlay stays as a fallback, and slider changes reapply the native brightness scalar in real time.
+
 ## Completed (2025-10-14)
 
 - Added `android/app/src/main/java/com/csparks113/MorseCodeApp/NativeOutputsDispatcher.kt` so Nitro playback can toggle torch and vibration with basic hardware guards and main-thread marshaling.
@@ -82,9 +88,8 @@
 
 ## Next Steps
 
-- Introduce a React `FlashOverlayHost` (background container + foreground content) and update the Android dispatcher to attach `ScreenFlasherView` to that host so only the black background flashes.
-- After the host lands, fine-tune overlay appearance (alpha/tint, dev-console toggle) and rerun the 10 / 20 / 30 WPM sweeps to confirm the native overlay stays 100 % available behind cards/buttons.
-- Re-enable torch timing via the native dispatcher once the flash host is in place; run send/receive sweeps to validate before flipping the feature back on.
+- Fine-tune overlay appearance (alpha/tint, dev-console toggle) against the new host background and rerun the 10 / 20 / 30 WPM sweeps to confirm the native overlay stays 100 % available behind cards/buttons.
+- Re-enable torch timing via the native dispatcher now that the keyer and replays both hit the native overlay; run send/receive sweeps to validate before flipping the feature back on.
 - Surface the `nativeFlashAvailable` flag and overlay intensity stats directly in the developer console so testers don’t need logcat for health checks.
 - Mirror the overlay + brightness boost plumbing on iOS (UIView host + dispatcher wiring) once the Android background work ships.
 ### Deferred: Outputs Testing
