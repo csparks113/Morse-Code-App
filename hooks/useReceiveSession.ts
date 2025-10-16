@@ -142,7 +142,7 @@ export function useReceiveSession({
       const metadata = buildPlaybackMetadata(context);
       outputs.flashPulse({
         enabled: lightEnabled,
-        torchEnabled: lightEnabled && context?.dispatchPhase !== 'scheduled',
+        torchEnabled: false,
         durationMs,
         flashValue: flash,
         source: context?.source ?? 'session.receive',
@@ -190,7 +190,7 @@ export function useReceiveSession({
         audioVolumePercent,
         flashEnabled: lightEnabled,
         hapticsEnabled,
-        torchEnabled: lightEnabled,
+        torchEnabled: false,
         flashBrightnessPercent,
         screenBrightnessBoost,
         onSymbolStart: (symbol, duration, context) => {

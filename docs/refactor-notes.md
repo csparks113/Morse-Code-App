@@ -7,9 +7,23 @@
 
 ## Completed (2025-10-15)
 
+- Keyer flashes now stay on the native overlay end-to-end: extended the Nitro `OutputsAudio` bridge to expose `setFlashOverlayState`/`setScreenBrightnessBoost`, plumbed the boolean result through `utils/audio.ts`, and updated the keyer service to prefer the Nitro dispatcher before touching the legacy bridge.
+- Hardened the native dispatcher so `setFlashOverlayState` only detaches the view when the toggle originated from Nitro (tracked via `mExternalOverlayActive`), preventing mid-press cutoffs while force-cutting playback or replaying symbols.
+- Ensured `ScreenFlasherView` reattaches on `onActivityResumed`, sits beneath the React content, and passes touches through so the native overlay survives session switches without blocking UI interaction.
+- Validated on-device that Android keyer presses now log `nativeOverlay:true`, brightness boost stays active until JS explicitly disables it, and the fallback overlay no longer renders during native-controlled pulses.
+
+## Completed (2025-10-15)
+
+- Reverted the short-lived overlay "await" attempt that regressed the keyer path, and restored the previous Nitro bridge logic inside `defaultOutputsService` so we can keep iterating on the earlier baseline. The keyer still logs `FlashOverlayModule unavailable`, which means JS cannot yet resolve the native dispatcher.
+- Verified receive/playback flashes continue to hit the native overlay while keyer flashes stay on the JS fallback, highlighting that the Nitro module currently fails to resolve on the JS path.
+
+## Completed (2025-10-15)
+
 - Added a reusable React `FlashOverlayHost` wrapper around session, keyer, developer console, and output settings surfaces so the native overlay can inhabit a dedicated background container while the JS fallback stays available for telemetry.
 - Updated `NativeOutputsDispatcher` to locate the host by `nativeID`, cache it between flashes, and mount `ScreenFlasherView` into that background node (with decor-view fallback logging) so native flashes now sit underneath foreground UI instead of above it.
 - Keyer-driven flashes (lesson send/receive, practice keyer, output settings preview) now hit the native overlay + screen-brightness boost path directly—JS overlay stays as a fallback, and slider changes reapply the native brightness scalar in real time.
+- Added Nitro/JSI hooks so keyer flashes call `NativeOutputsDispatcher` via `OutputsAudio` (JS-only module kept as a fallback); awaiting rebuild/verification to ensure keyer flashes report `nativeOverlay: true` without warnings.
+- JS lookup now falls back to `__turboModuleProxy` before touching `NativeModules`, so the native overlay bridge is resolved as soon as the TurboModule is available (otherwise we keep warning and stay on the JS overlay).
 
 ## Completed (2025-10-14)
 
@@ -88,10 +102,12 @@
 
 ## Next Steps
 
-- Fine-tune overlay appearance (alpha/tint, dev-console toggle) against the new host background and rerun the 10 / 20 / 30 WPM sweeps to confirm the native overlay stays 100 % available behind cards/buttons.
-- Re-enable torch timing via the native dispatcher now that the keyer and replays both hit the native overlay; run send/receive sweeps to validate before flipping the feature back on.
-- Surface the `nativeFlashAvailable` flag and overlay intensity stats directly in the developer console so testers don’t need logcat for health checks.
-- Mirror the overlay + brightness boost plumbing on iOS (UIView host + dispatcher wiring) once the Android background work ships.
+- Reproduce and diagnose the "overlay missing after early session exit" regression: instrument `NativeOutputsDispatcher` attach/detach paths, capture `overlay.availability` logs, and confirm `ensureOverlayView` fires when `setFlashOverlayState(true, …)` is called after quitting mid-session.
+- Implement the native `awaitReady(timeout)` handshake so Nitro only reports success once the overlay view is attached and visible; on timeout, fall back to the JS flash just for that playback and surface structured telemetry.
+- Finish exporting `NativeOutputsDispatcher` as a TurboModule so the JS bridge can bind to it directly, keeping the current Nitro path as the preferred implementation and treating the RN module as a fallback.
+- Rerun 10 / 20 / 30 WPM sweeps (torch off, brightness boost on) plus keyer holds to confirm `nativeFlashAvailable=true` across receive + keyer flows, then move on to torch re-enable/testing and the telemetry surfacing work.
+- Mirror the overlay + brightness boost plumbing on iOS once the Android baseline holds so both platforms expose the same toggle and diagnostics.
+
 ### Deferred: Outputs Testing
 
 - Extend the freeform sweeps to high-WPM stress cases and confirm the relaxed classifiers still hold; log any misreads or latency drifts in `docs/outputs-investigation.md`.
@@ -113,7 +129,7 @@
 ### Outputs Alignment Monitoring
 
 1. Keep Nitro timestamp threading in place (monotonic timeline, torch scheduling) and validate via the Play Pattern captures.
-2. Watch for recurring ``playMorse.nativeOffset.spike`` events; if they cluster, document hypotheses plus log snippets we can revisit when tuning the native timeline.
+2. Watch for recurring `playMorse.nativeOffset.spike` events; if they cluster, document hypotheses plus log snippets we can revisit when tuning the native timeline.
 3. After each meaningful change, archive the relevant logcat file and refresh both the alignment and investigation docs with the deltas.
 
 ### Operational Follow-ups
@@ -168,14 +184,5 @@
 - Completed 2025-10-09: `forceCutOutputs` now runs whenever verdicts queue or sessions end, and the keyer release signal clears button state so outputs never stay latched between questions.
 - Completed 2025-10-08: Added watchdog logging when manual/dev-console handles fail to release tone/flash within expected timeouts (default outputs service records pressTimeout samples and force-cuts handles).
 - Follow up with send/practice flows to ensure the verdict timers cancel pending pressStart correlations before queuing the next prompt (verify practice/send flows honour the cutActiveOutputs path).
-
-
-
-
-
-
-
-
-
 
 - Latest 10/20/30 WPM sweeps still show audio/haptic alignment within bounds but every flash continues to fall back to the JS overlay; new logs report `state=unavailable reason=overlay_reset_failed`, so the dispatcher never reports a successful attach.

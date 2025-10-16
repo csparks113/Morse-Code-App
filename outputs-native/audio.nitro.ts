@@ -61,6 +61,8 @@ export interface OutputsAudio extends HybridObject<{ android: 'c++' }> {
   stopTone(): void;
   playMorse(request: PlaybackRequest): void;
   setSymbolDispatchCallback(callback: ((event: PlaybackDispatchEvent) => void) | null): void;
+  setFlashOverlayState?(enabled: boolean, brightnessPercent: number): boolean;
+  setScreenBrightnessBoost?(enabled: boolean): void;
   getLatestSymbolInfo?(): string | null;
   getScheduledSymbols?(): string | null;
   teardown(): void;

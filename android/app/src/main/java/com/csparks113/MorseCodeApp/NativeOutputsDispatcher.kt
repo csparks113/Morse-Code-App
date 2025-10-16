@@ -289,6 +289,9 @@ object NativeOutputsDispatcher {
       override fun onActivityResumed(activity: Activity) {
         currentActivityRef = WeakReference(activity)
         currentActivityStrong = activity
+        mainHandler.post {
+          ensureOverlayView(activity)
+        }
       }
 
       override fun onActivityPaused(activity: Activity) {
@@ -555,7 +558,6 @@ object NativeOutputsDispatcher {
     }
   }
 }
-
 
 
 

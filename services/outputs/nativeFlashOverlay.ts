@@ -14,6 +14,11 @@ const resolveNativeModule = (): FlashOverlayNativeModule | undefined => {
   if (!isAndroid) {
     return undefined;
   }
+  const dispatcher = NativeModules.NativeOutputsDispatcher as FlashOverlayNativeModule | undefined;
+  if (dispatcher && typeof dispatcher.setFlashOverlayStateSync === 'function') {
+    hasLoggedMissingModule = false;
+    return dispatcher;
+  }
   const module = NativeModules.FlashOverlayModule as FlashOverlayNativeModule | undefined;
   if (module && typeof module.setFlashOverlayStateSync === 'function') {
     hasLoggedMissingModule = false;

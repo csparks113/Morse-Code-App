@@ -1,7 +1,7 @@
 import { Animated, Platform, Vibration } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { playMorseCode, stopPlayback, createToneController } from '@/utils/audio';
+import { playMorseCode, stopPlayback, createToneController, setOutputsFlashOverlayState, setOutputsScreenBrightnessBoost } from '@/utils/audio';
 import type { NativeSymbolTimingContext } from '@/utils/audio';
 import { acquireTorch, releaseTorch, resetTorch, isTorchAvailable, forceTorchOff } from '@/utils/torch';
 import { nowMs, toMonotonicTime } from '@/utils/time';
@@ -419,24 +419,53 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     const latencyMs = nowMs() - startedAt;
     let nativeHandled = false;
     if (brightnessPercent > 0) {
-      nativeHandled = setNativeFlashOverlayState(true, brightnessPercent);
+      if (Platform.OS === 'android') {
+        nativeHandled = setOutputsFlashOverlayState(true, brightnessPercent);
+      }
+      if (!nativeHandled) {
+        nativeHandled = setNativeFlashOverlayState(true, brightnessPercent);
+      }
       nativeFlashOwned = nativeHandled;
       if (nativeHandled) {
         if (options.screenBrightnessBoost && !nativeBrightnessBoostActive) {
-          setNativeScreenBrightnessBoost(true);
+          let boostHandled = false;
+          if (Platform.OS === 'android') {
+            boostHandled = setOutputsScreenBrightnessBoost(true);
+          }
+          if (!boostHandled) {
+            setNativeScreenBrightnessBoost(true);
+          }
           nativeBrightnessBoostActive = true;
         } else if (!options.screenBrightnessBoost && nativeBrightnessBoostActive) {
-          setNativeScreenBrightnessBoost(false);
+          if (Platform.OS === 'android') {
+            if (!setOutputsScreenBrightnessBoost(false)) {
+              setNativeScreenBrightnessBoost(false);
+            }
+          } else {
+            setNativeScreenBrightnessBoost(false);
+          }
           nativeBrightnessBoostActive = false;
         }
       } else if (nativeBrightnessBoostActive) {
-        setNativeScreenBrightnessBoost(false);
+        if (Platform.OS === 'android') {
+          if (!setOutputsScreenBrightnessBoost(false)) {
+            setNativeScreenBrightnessBoost(false);
+          }
+        } else {
+          setNativeScreenBrightnessBoost(false);
+        }
         nativeBrightnessBoostActive = false;
       }
     } else {
       nativeFlashOwned = false;
       if (nativeBrightnessBoostActive) {
-        setNativeScreenBrightnessBoost(false);
+        if (Platform.OS === 'android') {
+          if (!setOutputsScreenBrightnessBoost(false)) {
+            setNativeScreenBrightnessBoost(false);
+          }
+        } else {
+          setNativeScreenBrightnessBoost(false);
+        }
         nativeBrightnessBoostActive = false;
       }
     }
@@ -481,11 +510,23 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     flashActive = false;
     const previouslyNative = nativeFlashOwned;
     if (nativeFlashOwned) {
-      setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+      let cleared = false;
+      if (Platform.OS === 'android') {
+        cleared = setOutputsFlashOverlayState(false, resolveFlashBrightnessPercent());
+      }
+      if (!cleared) {
+        setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+      }
       nativeFlashOwned = false;
     }
     if (nativeBrightnessBoostActive) {
-      setNativeScreenBrightnessBoost(false);
+      if (Platform.OS === 'android') {
+        if (!setOutputsScreenBrightnessBoost(false)) {
+          setNativeScreenBrightnessBoost(false);
+        }
+      } else {
+        setNativeScreenBrightnessBoost(false);
+      }
       nativeBrightnessBoostActive = false;
     }
     if (!previouslyNative) {
@@ -769,11 +810,23 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     }
     flashOpacity.setValue(0);
     if (nativeFlashOwned) {
-      setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+      let cleared = false;
+      if (Platform.OS === 'android') {
+        cleared = setOutputsFlashOverlayState(false, resolveFlashBrightnessPercent());
+      }
+      if (!cleared) {
+        setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+      }
       nativeFlashOwned = false;
     }
     if (nativeBrightnessBoostActive) {
-      setNativeScreenBrightnessBoost(false);
+      if (Platform.OS === 'android') {
+        if (!setOutputsScreenBrightnessBoost(false)) {
+          setNativeScreenBrightnessBoost(false);
+        }
+      } else {
+        setNativeScreenBrightnessBoost(false);
+      }
       nativeBrightnessBoostActive = false;
     }
 
@@ -864,30 +917,72 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       }
       flashOpacity.setValue(0);
       if (nativeFlashOwned) {
-        setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+        let cleared = false;
+        if (Platform.OS === 'android') {
+          cleared = setOutputsFlashOverlayState(false, resolveFlashBrightnessPercent());
+        }
+        if (!cleared) {
+          setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+        }
         nativeFlashOwned = false;
       }
       if (nativeBrightnessBoostActive) {
-        setNativeScreenBrightnessBoost(false);
+        if (Platform.OS === 'android') {
+          if (!setOutputsScreenBrightnessBoost(false)) {
+            setNativeScreenBrightnessBoost(false);
+          }
+        } else {
+          setNativeScreenBrightnessBoost(false);
+        }
         nativeBrightnessBoostActive = false;
       }
     } else if (nativeFlashOwned) {
       const nextBrightness = resolveFlashBrightnessPercent();
       if (nextBrightness <= 0) {
-        setNativeFlashOverlayState(false, nextBrightness);
+        if (Platform.OS === 'android') {
+          if (!setOutputsFlashOverlayState(false, nextBrightness)) {
+            setNativeFlashOverlayState(false, nextBrightness);
+          }
+        } else {
+          setNativeFlashOverlayState(false, nextBrightness);
+        }
         nativeFlashOwned = false;
       } else {
-        setNativeFlashOverlayState(true, nextBrightness);
+        let refreshed = false;
+        if (Platform.OS === 'android') {
+          refreshed = setOutputsFlashOverlayState(true, nextBrightness);
+        }
+        if (!refreshed) {
+          setNativeFlashOverlayState(true, nextBrightness);
+        }
       }
       if (options.screenBrightnessBoost && !nativeBrightnessBoostActive) {
-        setNativeScreenBrightnessBoost(true);
+        let boostHandled = false;
+        if (Platform.OS === 'android') {
+          boostHandled = setOutputsScreenBrightnessBoost(true);
+        }
+        if (!boostHandled) {
+          setNativeScreenBrightnessBoost(true);
+        }
         nativeBrightnessBoostActive = true;
       } else if (!options.screenBrightnessBoost && nativeBrightnessBoostActive) {
-        setNativeScreenBrightnessBoost(false);
+        if (Platform.OS === 'android') {
+          if (!setOutputsScreenBrightnessBoost(false)) {
+            setNativeScreenBrightnessBoost(false);
+          }
+        } else {
+          setNativeScreenBrightnessBoost(false);
+        }
         nativeBrightnessBoostActive = false;
       }
     } else if (!options.screenBrightnessBoost && nativeBrightnessBoostActive) {
-      setNativeScreenBrightnessBoost(false);
+      if (Platform.OS === 'android') {
+        if (!setOutputsScreenBrightnessBoost(false)) {
+          setNativeScreenBrightnessBoost(false);
+        }
+      } else {
+        setNativeScreenBrightnessBoost(false);
+      }
       nativeBrightnessBoostActive = false;
     }
     if (!options.torchEnabled && torchActive) {

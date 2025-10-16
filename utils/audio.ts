@@ -1458,6 +1458,47 @@ export async function playMorseCode(code: string, unitMsArg?: number, opts: Play
   return playMorseCodeExpoNative(code, unitMsArg, normalizedOpts);
 }
 
+export function setOutputsFlashOverlayState(enabled: boolean, brightnessPercent: number): boolean {
+  if (!shouldPreferNitroOutputs()) {
+    return false;
+  }
+  const outputsAudio = loadOutputsAudio();
+  if (!outputsAudio || typeof outputsAudio.setFlashOverlayState !== 'function') {
+    return false;
+  }
+  try {
+    const result = outputsAudio.setFlashOverlayState(enabled, brightnessPercent);
+    if (typeof result === 'boolean') {
+      return result;
+    }
+    return true;
+  } catch (error) {
+    if (__DEV__) {
+      console.warn('[outputs] nitro setFlashOverlayState error', error);
+    }
+    return false;
+  }
+}
+
+export function setOutputsScreenBrightnessBoost(enabled: boolean): boolean {
+  if (!shouldPreferNitroOutputs()) {
+    return false;
+  }
+  const outputsAudio = loadOutputsAudio();
+  if (!outputsAudio || typeof outputsAudio.setScreenBrightnessBoost !== 'function') {
+    return false;
+  }
+  try {
+    outputsAudio.setScreenBrightnessBoost(enabled);
+    return true;
+  } catch (error) {
+    if (__DEV__) {
+      console.warn('[outputs] nitro setScreenBrightnessBoost error', error);
+    }
+    return false;
+  }
+}
+
 export async function playTextAsMorse(text: string, opts: PlayOpts = {}) {
   const unitMs = opts.unitMsOverride ?? getMorseUnitMs();
   const chars = text.split('');

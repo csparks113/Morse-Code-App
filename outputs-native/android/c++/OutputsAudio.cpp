@@ -161,6 +161,7 @@ OutputsAudio::OutputsAudio()
       mReplayFlashBrightnessPercent(0.0),
       mNativeOverlayAvailable(false),
       mNativeOverlayActive(false),
+      mExternalOverlayActive(false),
       mScreenBrightnessBoostEnabled(false) {
   logEvent("constructor");
 }
@@ -173,6 +174,8 @@ void OutputsAudio::loadHybridMethods() {
   HybridOutputsAudioSpec::loadHybridMethods();
   registerHybrids(this, [](Prototype& prototype) {
     prototype.registerHybridMethod("setSymbolDispatchCallback", &OutputsAudio::setSymbolDispatchCallback);
+    prototype.registerHybridMethod("setFlashOverlayState", &OutputsAudio::setFlashOverlayState);
+    prototype.registerHybridMethod("setScreenBrightnessBoost", &OutputsAudio::setScreenBrightnessBoost);
   });
 }
 
@@ -452,6 +455,58 @@ void OutputsAudio::stopTone() {
   logEvent("stop", "gain=%.3f release=%.2f", current, mEnvelopeConfig.releaseMs);
 }
 
+bool OutputsAudio::setFlashOverlayState(bool enabled, double brightnessPercent) {
+  const double clamped = std::clamp(brightnessPercent, 0.0, 100.0);
+  const bool success = setNativeFlashOverlayState(enabled, clamped);
+  if (enabled) {
+    mNativeOverlayAvailable.store(success, std::memory_order_release);
+    mNativeOverlayActive.store(success, std::memory_order_release);
+    mExternalOverlayActive.store(success, std::memory_order_release);
+    if (success) {
+      logEvent("overlay.external.enable", "brightness=%.1f", clamped);
+    } else {
+      const auto overlayDebug = getNativeOverlayAvailabilityDebugString();
+      if (!overlayDebug.empty()) {
+        logEvent("overlay.external.enable_failed",
+                 "brightness=%.1f %s",
+                 clamped,
+                 overlayDebug.c_str());
+      } else {
+        logEvent("overlay.external.enable_failed", "brightness=%.1f", clamped);
+      }
+    }
+  } else {
+    mExternalOverlayActive.store(false, std::memory_order_release);
+    if (success) {
+      logEvent("overlay.external.disable", "brightness=%.1f", clamped);
+    } else {
+      const auto overlayDebug = getNativeOverlayAvailabilityDebugString();
+      if (!overlayDebug.empty()) {
+        logEvent("overlay.external.disable_failed",
+                 "brightness=%.1f %s",
+                 clamped,
+                 overlayDebug.c_str());
+      } else {
+        logEvent("overlay.external.disable_failed", "brightness=%.1f", clamped);
+      }
+    }
+    mNativeOverlayActive.store(false, std::memory_order_release);
+  }
+  if (!success) {
+    mNativeOverlayAvailable.store(false, std::memory_order_release);
+    if (enabled) {
+      mExternalOverlayActive.store(false, std::memory_order_release);
+    }
+  }
+  return success;
+}
+
+void OutputsAudio::setScreenBrightnessBoost(bool enabled) {
+  mScreenBrightnessBoostEnabled.store(enabled, std::memory_order_release);
+  setNativeScreenBrightnessBoost(enabled);
+  logEvent("overlay.external.brightness_boost", "enabled=%d", enabled ? 1 : 0);
+}
+
 void OutputsAudio::cancelPlaybackThread(bool join) {
   std::thread localThread;
   {
@@ -461,12 +516,15 @@ void OutputsAudio::cancelPlaybackThread(bool join) {
       mPlaybackCancel.store(false, std::memory_order_release);
       resetSymbolInfo();
       setNativeTorchEnabled(false);
-      if (mNativeOverlayAvailable.load(std::memory_order_relaxed)) {
+      const bool externalOverlay = mExternalOverlayActive.load(std::memory_order_acquire);
+      if (mNativeOverlayAvailable.load(std::memory_order_relaxed) && !externalOverlay) {
         setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+        mNativeOverlayActive.store(false, std::memory_order_release);
       }
-      mNativeOverlayActive.store(false, std::memory_order_release);
-      mScreenBrightnessBoostEnabled.store(false, std::memory_order_release);
-      setNativeScreenBrightnessBoost(false);
+      if (!externalOverlay) {
+        mScreenBrightnessBoostEnabled.store(false, std::memory_order_release);
+        setNativeScreenBrightnessBoost(false);
+      }
       return;
     }
     mPlaybackCancel.store(true, std::memory_order_release);
@@ -485,12 +543,15 @@ void OutputsAudio::cancelPlaybackThread(bool join) {
   mPlaybackCancel.store(false, std::memory_order_release);
   resetSymbolInfo();
   setNativeTorchEnabled(false);
-  if (mNativeOverlayAvailable.load(std::memory_order_relaxed)) {
+  const bool externalOverlay = mExternalOverlayActive.load(std::memory_order_acquire);
+  if (mNativeOverlayAvailable.load(std::memory_order_relaxed) && !externalOverlay) {
     setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+    mNativeOverlayActive.store(false, std::memory_order_release);
   }
-  mNativeOverlayActive.store(false, std::memory_order_release);
-  mScreenBrightnessBoostEnabled.store(false, std::memory_order_release);
-  setNativeScreenBrightnessBoost(false);
+  if (!externalOverlay) {
+    mScreenBrightnessBoostEnabled.store(false, std::memory_order_release);
+    setNativeScreenBrightnessBoost(false);
+  }
 }
 
 void OutputsAudio::resetSymbolInfo() {

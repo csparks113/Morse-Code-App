@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
+import android.view.MotionEvent
 import kotlin.math.max
 import kotlin.math.min
 
@@ -60,6 +61,10 @@ class ScreenFlasherView @JvmOverloads constructor(
       return
     }
     canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+  }
+
+  override fun onTouchEvent(event: MotionEvent?): Boolean {
+    return false
   }
   companion object {
     private const val TAG = "ScreenFlasherView"
