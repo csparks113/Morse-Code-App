@@ -52,6 +52,12 @@ object NativeOutputsDispatcher {
     UNAVAILABLE,
   }
 
+  private enum class TorchAvailabilityState {
+    UNKNOWN,
+    AVAILABLE,
+    UNAVAILABLE,
+  }
+
   @Volatile private var applicationContext: Context? = null
   @Volatile private var reactContext: ReactApplicationContext? = null
   @Volatile private var cameraManager: CameraManager? = null
@@ -81,6 +87,8 @@ object NativeOutputsDispatcher {
   @Volatile private var overlayBaseBrightnessScalar =
     brightnessScalarFromPercent(DEFAULT_FLASH_BRIGHTNESS_PERCENT)
   @Volatile private var overlayBaseTintColor: Int = DEFAULT_TINT_COLOR
+  @Volatile private var torchAvailabilityState = TorchAvailabilityState.UNKNOWN
+  @Volatile private var torchAvailabilityReason: String? = null
   @Volatile private var overlayOverrideBrightnessPercent: Double? = null
   @Volatile private var overlayOverrideBrightnessScalar: Float? = null
   @Volatile private var overlayOverrideTintColor: Int? = null
@@ -115,6 +123,39 @@ object NativeOutputsDispatcher {
     }
   }
 
+  private fun computeTorchAvailability(): Pair<Boolean, String> {
+    val manager = cameraManager
+    if (manager == null) {
+      return Pair(false, "camera_manager_unavailable")
+    }
+    val cameraId = torchCameraId
+    if (cameraId.isNullOrEmpty()) {
+      return Pair(false, "camera_id_unresolved")
+    }
+    return Pair(true, "ready")
+  }
+
+  private fun recordTorchAvailability(available: Boolean, reason: String) {
+    val newState = if (available) {
+      TorchAvailabilityState.AVAILABLE
+    } else {
+      TorchAvailabilityState.UNAVAILABLE
+    }
+    val previousState = torchAvailabilityState
+    val previousReason = torchAvailabilityReason
+    val shouldLog = previousState != newState || previousReason != reason
+    torchAvailabilityState = newState
+    torchAvailabilityReason = reason
+    if (!shouldLog) {
+      return
+    }
+    if (available) {
+      Log.i(TAG, "[outputs-native] torch.availability state=available reason=$reason")
+    } else {
+      Log.w(TAG, "[outputs-native] torch.availability state=unavailable reason=$reason")
+    }
+  }
+
   @JvmStatic
   fun initialize(context: ReactApplicationContext) {
     reactContext = context
@@ -122,6 +163,11 @@ object NativeOutputsDispatcher {
     applicationContext = appContext
     cameraManager = appContext.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
     torchCameraId = resolveTorchCameraId(cameraManager, appContext.packageManager)
+    val (torchAvailable, torchReason) = computeTorchAvailability()
+    recordTorchAvailability(torchAvailable, torchReason)
+    if (torchAvailable) {
+      torchUnavailableLogged.set(false)
+    }
     vibrator = resolveVibrator(appContext)
     registerActivityCallbacks(appContext)
     context.currentActivity?.let {
@@ -132,30 +178,22 @@ object NativeOutputsDispatcher {
 
   @JvmStatic
   fun setTorchEnabled(enabled: Boolean) {
-    val manager = cameraManager
-    val cameraId = torchCameraId
-    if (manager == null || cameraId == null) {
-      if (torchUnavailableLogged.compareAndSet(false, true)) {
-        Log.w(TAG, "Torch unavailable; ignoring setTorchEnabled($enabled)")
-      }
-      return
+    setTorchEnabledInternal(enabled, waitForResult = false)
+  }
+
+  @JvmStatic
+  fun setTorchEnabledSync(enabled: Boolean): Boolean {
+    return setTorchEnabledInternal(enabled, waitForResult = true)
+  }
+
+  @JvmStatic
+  fun isTorchAvailable(): Boolean {
+    val (available, reason) = computeTorchAvailability()
+    recordTorchAvailability(available, reason)
+    if (available) {
+      torchUnavailableLogged.set(false)
     }
-    val runnable = Runnable {
-      try {
-        manager.setTorchMode(cameraId, enabled)
-      } catch (error: CameraAccessException) {
-        Log.w(TAG, "Camera access failure while toggling torch", error)
-      } catch (error: SecurityException) {
-        Log.w(TAG, "Missing permission while toggling torch", error)
-      } catch (error: RuntimeException) {
-        Log.w(TAG, "Unexpected error while toggling torch", error)
-      }
-    }
-    if (Looper.myLooper() == mainHandler.looper) {
-      runnable.run()
-    } else {
-      mainHandler.post(runnable)
-    }
+    return available
   }
 
   @JvmStatic
@@ -182,6 +220,76 @@ object NativeOutputsDispatcher {
       Log.w(TAG, "Missing permission while triggering vibration", error)
     } catch (error: RuntimeException) {
       Log.w(TAG, "Unexpected error while triggering vibration", error)
+    }
+  }
+
+  private fun setTorchEnabledInternal(enabled: Boolean, waitForResult: Boolean): Boolean {
+    val manager = cameraManager
+    val cameraId = torchCameraId
+    if (manager == null || cameraId == null) {
+      val reason = if (manager == null) {
+        "camera_manager_unavailable"
+      } else {
+        "camera_id_unresolved"
+      }
+      recordTorchAvailability(false, reason)
+      if (torchUnavailableLogged.compareAndSet(false, true)) {
+        Log.w(TAG, "Torch unavailable; ignoring setTorchEnabled($enabled) reason=$reason")
+      }
+      return false
+    }
+    val toggle = {
+      val success = applyTorchState(manager, cameraId, enabled)
+      if (success) {
+        torchUnavailableLogged.set(false)
+      } else if (torchUnavailableLogged.compareAndSet(false, true)) {
+        val currentReason = torchAvailabilityReason ?: "dispatch_failed"
+        Log.w(
+          TAG,
+          "Torch dispatch failed; ignoring setTorchEnabled($enabled) reason=$currentReason",
+        )
+      }
+      success
+    }
+    if (waitForResult) {
+      val result = runOnMainSync { toggle() }
+      return result ?: false
+    }
+    if (Looper.myLooper() == mainHandler.looper) {
+      toggle()
+    } else {
+      mainHandler.post { toggle() }
+    }
+    return true
+  }
+
+  private fun applyTorchState(
+    manager: CameraManager,
+    cameraId: String,
+    enabled: Boolean,
+  ): Boolean {
+    return try {
+      manager.setTorchMode(cameraId, enabled)
+      val reason = if (enabled) {
+        "set_mode_enabled"
+      } else {
+        "set_mode_disabled"
+      }
+      recordTorchAvailability(true, reason)
+      true
+    } catch (error: CameraAccessException) {
+      recordTorchAvailability(false, "camera_access_exception")
+      Log.w(TAG, "Camera access failure while toggling torch", error)
+      false
+    } catch (error: SecurityException) {
+      recordTorchAvailability(false, "missing_permission")
+      Log.w(TAG, "Missing permission while toggling torch", error)
+      false
+    } catch (error: RuntimeException) {
+      val message = error.javaClass.simpleName.lowercase(Locale.ROOT)
+      recordTorchAvailability(false, "runtime_exception_$message")
+      Log.w(TAG, "Unexpected error while toggling torch", error)
+      false
     }
   }
 

@@ -291,6 +291,66 @@ type TorchScheduleOptions = {
   torchEnabled?: boolean;
 };
 
+const replayTorchTimers = new Set<ReturnType<typeof setTimeout>>();
+
+function clearReplayTorchTimers(): void {
+  if (replayTorchTimers.size === 0) {
+    return;
+  }
+  for (const timer of replayTorchTimers) {
+    clearTimeout(timer);
+  }
+  replayTorchTimers.clear();
+}
+
+function scheduleReplayTorchPulse(
+  startedAt: number,
+  holdMs: number,
+  fadeMs: number,
+  options: TorchScheduleOptions,
+): void {
+  const supported = isTorchAvailable();
+  updateTorchSupport(supported);
+  if (!supported) {
+    return;
+  }
+  const normalizedOffset = normalizeTimelineOffset(options.timelineOffsetMs);
+  const effectiveStartedAt = applyTimelineOffset(startedAt, normalizedOffset);
+  acquireTorch()
+    .then(() => {
+      const latencyMs = Math.max(0, nowMs() - effectiveStartedAt);
+      traceOutputs('replay.torch.start', {
+        latencyMs,
+        source: options.source ?? 'replay',
+        correlationId: options.correlationId ?? null,
+        timelineOffsetMs: normalizedOffset,
+      });
+      recordTorchPulse(latencyMs, options.source ?? 'replay');
+    })
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      recordTorchFailure(message, 'replay');
+    });
+
+  const releaseDelay = Math.max(0, holdMs + fadeMs);
+  const timer = setTimeout(() => {
+    replayTorchTimers.delete(timer);
+    releaseTorch()
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+    recordTorchFailure(message, 'replay.release');
+    forceTorchOff().catch(() => {});
+  })
+  .finally(() => {
+    traceOutputs('replay.torch.stop', {
+      source: options.source ?? 'replay',
+      correlationId: options.correlationId ?? null,
+    });
+  });
+}, releaseDelay);
+replayTorchTimers.add(timer);
+}
+
 function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?: KeyerOutputsContext): KeyerOutputsHandle {
   let options: KeyerOutputsOptions = { ...initialOptions };
   const contextSource = context?.source ?? 'unspecified';
@@ -1109,18 +1169,20 @@ const defaultOutputsService: OutputsService = {
   const flashPath = nativeFlashHandled ? 'native' : 'fallback';
 
     if (!enabled) {
-      if (pendingFlashPulseTimeout) {
-        clearTimeout(pendingFlashPulseTimeout);
-        pendingFlashPulseTimeout = null;
-      }
-      if (pendingFlashPulseFrame != null && caf) {
-        caf(pendingFlashPulseFrame);
-        pendingFlashPulseFrame = null;
-      }
-      return;
+    if (pendingFlashPulseTimeout) {
+      clearTimeout(pendingFlashPulseTimeout);
+      pendingFlashPulseTimeout = null;
     }
+    if (pendingFlashPulseFrame != null && caf) {
+      caf(pendingFlashPulseFrame);
+      pendingFlashPulseFrame = null;
+    }
+    clearReplayTorchTimers();
+    return;
+  }
 
-    if (nativeFlashHandled && dispatchPhase === 'actual') {
+    const isNativeHandled = nativeFlashHandled && dispatchPhase === 'actual';
+    if (isNativeHandled) {
       if (pendingFlashPulseTimeout) {
         clearTimeout(pendingFlashPulseTimeout);
         pendingFlashPulseTimeout = null;
@@ -1141,10 +1203,7 @@ const defaultOutputsService: OutputsService = {
         ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
         ...(nativeFlashAvailable !== null ? { nativeFlashAvailable } : {}),
       });
-      return;
-    }
-
-    if (!nativeFlashHandled && nativeFlashAvailable === false && dispatchPhase === 'actual') {
+    } else if (!nativeFlashHandled && nativeFlashAvailable === false && dispatchPhase === 'actual') {
       traceOutputs('outputs.flashPulse.nativeFallback', {
         durationMs,
         source: eventSource,
@@ -1447,16 +1506,16 @@ const defaultOutputsService: OutputsService = {
     });
 
     const startSequence = () => {
-      flashValue.setValue(flashIntensity);
       const commitAt = nowMs();
+      if (!isNativeHandled) {
+        flashValue.setValue(flashIntensity);
+      }
       const scheduleSkewMs = commitAt - targetStart;
       const latencyMs = Math.max(0, commitAt - effectiveRequestedAt);
       if (schedulingMode === 'audio-start') {
         recordFlashPreScheduleSkew(scheduleSkewMs);
       }
-      const isReplaySource =
-        typeof eventSource === 'string' && eventSource.toLowerCase().includes('replay');
-      const shouldEnableTorch = torchEnabled && !isReplaySource;
+      const shouldEnableTorch = torchEnabled;
       if (shouldEnableTorch) {
         const torchOptions: TorchScheduleOptions = {
           source: eventSource,
@@ -1464,12 +1523,11 @@ const defaultOutputsService: OutputsService = {
           timelineOffsetMs: normalizedTimelineOffset,
           torchEnabled: true,
         };
-        enableTorch(commitAt, torchOptions).catch(() => {});
-        clearTorchTimeout();
-        const torchHoldDuration = Math.max(0, holdMs + fadeMs);
-        torchTimeout = setTimeout(() => {
-          disableTorch(nowMs(), torchOptions).catch(() => {});
-        }, torchHoldDuration);
+        clearReplayTorchTimers();
+        scheduleReplayTorchPulse(commitAt, holdMs, fadeMs, torchOptions);
+      }
+      if (isNativeHandled) {
+        return;
       }
       traceOutputs('outputs.flashPulse.commit', {
         durationMs,

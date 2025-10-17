@@ -1,4 +1,4 @@
-﻿# Codex Handoff Log
+# Codex Handoff Log
 
 Use this document to capture the single source of truth after each working session. Update the sections below before ending work so future chats can resume without reconstructing context.
 
@@ -8,21 +8,27 @@ Use this document to capture the single source of truth after each working sessi
 - **Owner:** Codex pairing session (update with your initials if another contributor takes over).
 
 ## Latest Update
-- **Summary:** Delivered configurable flash appearance end-to-end. The native overlay now renders a tinted layer with gamma-mapped brightness, the JS fallback mirrors the same opacity curve, Nitro pulses honour per-symbol brightness (including overrides), and the settings slider clamps to a 25% floor while migrating persisted values.
+- **Summary:** Routed Android torch pulses through the native dispatcher across keyer and replay flows. Nitro playback now drives hardware toggles end-to-end, replay scheduling keeps torch latency aligned with the native flash pipeline, and new `replay.torch.*` traces document the hardware path while Expo remains a guarded fallback.
 - **Key File Touchpoints:**
-  - `android/app/src/main/java/com/csparks113/MorseCodeApp/ScreenFlasherView.kt`, `NativeOutputsDispatcher.kt`: apply gamma-adjusted tint blending, reuse cached activity/host safely, and log appearance events with brightness telemetry.
+  - `android/app/src/main/java/com/csparks113/MorseCodeApp/ScreenFlasherView.kt`: apply gamma-adjusted tint blending, reuse cached activity/host safely, and log appearance events with brightness telemetry.
+  - `android/app/src/main/java/com/csparks113/MorseCodeApp/NativeOutputsDispatcher.kt`, `TorchModule.kt`, `specs/NativeTorchModuleSpec.kt`, `FlashOverlayPackage.kt`: add torch availability logging, synchronous toggle hooks, and TurboModule wiring so Nitro + JS callers can drive hardware pulses natively.
   - `outputs-native/android/c++/OutputsAudio.cpp`: pulse brightness now matches the configured percentage (no more 100% hard code) and exposes override hooks for JS.
   - `components/session/FlashOverlay.tsx`, `FlashOverlayHost.tsx`, `services/outputs/defaultOutputsService.ts`, `services/outputs/nativeFlashOverlay.ts`, `utils/audio.ts`: mirrored opacity logic for the fallback overlay, threaded brightness/appearance overrides through Nitro + JS, and clamped the slider/storage to the new 25% floor.
-  - Docs (`docs/refactor-notes.md`, `docs/outputs-investigation.md`, `docs/living-spec.md`, `README.md`): captured the new behaviour and repositioned follow-up work.
-- **State:** Send and receive flashes now share the same native brightness curve and respect the settings slider; Nitro logs confirm both paths run at the configured percentage. Torch remains on the fallback path and timing spikes are still visible in receive replays.
+  - `android/app/src/main/AndroidManifest.xml`: added `WAKE_LOCK` permission so Expo keep-awake hooks stop failing on the dev client.
+  - `utils/nativeTorch.ts`, `utils/torch.ts`: prefer the native dispatcher for torch control, keep Expo as a fallback, enforce ref-counted toggles, and harden force-off handling.
+  - `hooks/useReceiveSession.ts`, `app/lessons/[group]/[lessonId]/receive.tsx`, `services/outputs/defaultOutputsService.ts`: replay flows now pass the torch toggle through to native playback, schedule torch pulses alongside flashes, and ensure JS only animates when the overlay is unavailable.
+  - Docs (`docs/refactor-notes.md`, `docs/outputs-investigation.md`, `docs/living-spec.md`, `README.md`): captured the native torch rollout and outlined the remaining timing, telemetry, and parity work.
+- **State:** Android send/replay flashes share the native brightness curve, torch pulses are fully native with Expo as a safety fallback, telemetry covers both keyer and replay hardware pulses, and receive replays still surface ~160 ms timing spikes that must be tightened before we pivot to lessons restructuring.
 
 ## Next Steps
-1. Rewire the torch channel on Nitro (respect the settings toggle, capture reference logs, then mirror on iOS).
-2. Reduce Nitro timing spikes so receive/send Play Pattern sweeps keep tone/flash/haptic/torch within ~5 ms.
-3. Audit the send verdict pipeline once timing stabilises; resolve inconsistent scoring on long presses/high WPM.
-4. Plan the iOS parity pass (overlay, brightness, torch) once Android work lands and hardware is available.
+1. Capture and archive fresh Play Pattern + receive replay logs (25% and 50% brightness) to baseline torch latency and verify fallback warnings stay quiet on healthy hardware.
+2. Reduce Nitro timing spikes to +/- 5 ms by tuning dispatcher leads and adaptive scheduling; update diagnostics once drift drops.
+3. Audit the send verdict pipeline (long holds/high WPM) with the stabilised timeline so classifier + verdict clocks stay in sync.
+4. Promote flash tint/brightness into shared theme tokens so native and JS overlays read identical values.
+5. Map the Android torch work onto iOS (overlay, brightness, torch) once devices are available.
+6. With outputs stabilised, shift focus to the lessons restructuring backlog.
 ## Verification
-- `npm run lint` *(fails)* - command timed out after ESLint attempted to parse generated bundle artifacts (`..bundle.js`, `..virtual-entry.bundle.js`), which already trigger thousands of legacy lint errors.
+- Not run (torch requires on-device validation); lint remains blocked by generated Metro bundles until we exclude `..bundle.js` artifacts.
 
 1. **Stop Metro** if it is running (`Ctrl+C` in the terminal hosting `npx expo start`).
 2. **Reinstall the dev client** (PowerShell from `C:\dev\Morse`):
@@ -41,12 +47,12 @@ Use this document to capture the single source of truth after each working sessi
 4. **Capture Nitro logs** (new PowerShell window):
    ```powershell
    adb logcat -c
-   adb logcat ReactNativeJS:D OutputsAudio:D ReactNative:W *:S | findstr /R /C:"keyer.prepare" /C:"keyer.tone"
+   adb logcat ReactNativeJS:D OutputsAudio:D NativeOutputsDispatcher:D ReactNative:W *:S | findstr /R /C:"keyer.prepare" /C:"keyer.tone" /C:"torch.availability"
    ```
    Trigger the Developer Console latency tests, then `Ctrl+C` to stop the log stream.
    To inspect Nitro playback details, run a second tail:
    ```powershell
-   adb logcat ReactNativeJS:D OutputsAudio:D ReactNative:W *:S | findstr /C:"outputs-audio"
+   adb logcat ReactNativeJS:D OutputsAudio:D NativeOutputsDispatcher:D ReactNative:W *:S | findstr /C:"outputs-audio" /C:"torch.availability"
    ```
 
 ## Device Smoke Test Checklist
@@ -78,6 +84,8 @@ Use this document to capture the single source of truth after each working sessi
 - [ ] Run `npm run verify:handoff` and resolve any failures.
 
 _Tip: Keep entries terse but explicit enough that a new chat can resume work immediately._
+
+
 
 
 

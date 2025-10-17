@@ -31,6 +31,7 @@ type UseReceiveSessionArgs = {
   audioVolumePercent: number;
   flashBrightnessPercent: number;
   screenBrightnessBoost: boolean;
+  torchEnabled: boolean;
   flashOffsetMs?: number;
   hapticOffsetMs?: number;
   actionLabels: PromptActionLabels;
@@ -91,6 +92,7 @@ export function useReceiveSession({
   audioVolumePercent,
   flashBrightnessPercent,
   screenBrightnessBoost,
+  torchEnabled,
   flashOffsetMs = 0,
   hapticOffsetMs = 0,
   actionLabels,
@@ -142,7 +144,7 @@ export function useReceiveSession({
       const metadata = buildPlaybackMetadata(context);
       outputs.flashPulse({
         enabled: lightEnabled,
-        torchEnabled: false,
+        torchEnabled,
         durationMs,
         flashValue: flash,
         source: context?.source ?? 'session.receive',
@@ -153,7 +155,7 @@ export function useReceiveSession({
         metadata,
       });
     },
-    [outputs, lightEnabled, flashBrightnessPercent, flash],
+    [outputs, lightEnabled, torchEnabled, flashBrightnessPercent, flash],
   );
 
   const hapticTick = React.useCallback(
@@ -190,7 +192,7 @@ export function useReceiveSession({
         audioVolumePercent,
         flashEnabled: lightEnabled,
         hapticsEnabled,
-        torchEnabled: false,
+        torchEnabled,
         flashBrightnessPercent,
         screenBrightnessBoost,
         onSymbolStart: (symbol, duration, context) => {
@@ -239,6 +241,7 @@ export function useReceiveSession({
     hapticsEnabled,
     flashBrightnessPercent,
     screenBrightnessBoost,
+    torchEnabled,
   ]);
 
   const playTargetRef = React.useRef<() => Promise<void> | void>(() => {});

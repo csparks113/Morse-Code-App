@@ -97,6 +97,7 @@ export default function ReceiveSessionScreen() {
     hapticsEnabled,
     flashBrightnessPercent,
     screenBrightnessBoost,
+    torchEnabled,
     flashOffsetMs,
     hapticOffsetMs,
     actionLabels: {

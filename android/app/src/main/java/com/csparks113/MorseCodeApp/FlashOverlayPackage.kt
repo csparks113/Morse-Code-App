@@ -8,14 +8,17 @@ import com.facebook.react.module.model.ReactModuleInfoProvider
 
 class FlashOverlayPackage : TurboReactPackage() {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-    return listOf(FlashOverlayModule(reactContext))
+    return listOf(
+      FlashOverlayModule(reactContext),
+      TorchModule(reactContext),
+    )
   }
 
   override fun getModule(name: String, reactContext: ReactApplicationContext): NativeModule? {
-    return if (name == FlashOverlayModule.NAME) {
-      FlashOverlayModule(reactContext)
-    } else {
-      null
+    return when (name) {
+      FlashOverlayModule.NAME -> FlashOverlayModule(reactContext)
+      TorchModule.NAME -> TorchModule(reactContext)
+      else -> null
     }
   }
 
@@ -24,6 +27,15 @@ class FlashOverlayPackage : TurboReactPackage() {
       FlashOverlayModule.NAME to ReactModuleInfo(
         FlashOverlayModule.NAME,
         FlashOverlayModule::class.java.name,
+        false, // canOverrideExistingModule
+        false, // needsEagerInit
+        false, // hasConstants
+        false, // isCxxModule
+        true, // isTurboModule
+      ),
+      TorchModule.NAME to ReactModuleInfo(
+        TorchModule.NAME,
+        TorchModule::class.java.name,
         false, // canOverrideExistingModule
         false, // needsEagerInit
         false, // hasConstants

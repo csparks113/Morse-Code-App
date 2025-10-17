@@ -7,6 +7,7 @@
 
 ## Completed (2025-10-17)
 
+- Rewired Android torch control through the native dispatcher: added TurboModule hooks (`TorchModule`, `NativeTorchModuleSpec`), torch availability logging in `NativeOutputsDispatcher`, and JS helpers (`utils/nativeTorch.ts`, `utils/torch.ts`) so Nitro playback, keyer toggles, manual pulses, and receive replays prefer hardware torch with replay-specific logging and Expo fallback hardening.
 - Stabilised Android native flashes after early session exits by guarding `awaitOverlayReady`, falling back to the decor root while the host remounts, and clearing the cached `ScreenFlasherView` whenever attach attempts report a stale parent so Nitro no longer crashes.
 - Added host attach listeners and richer dispatcher telemetry (`overlay.attach.retry`, `overlay.attach.failed`, `view_not_attached`) so JS fallbacks surface clean diagnostics while Nitro rebuilds the overlay.
 - Re-validated receive/keyer flows on-device after the fix-native flashes stay active across repeated bail-outs, JS fallbacks only log transient warnings, and the app remains stable.
@@ -109,9 +110,10 @@
 
 ## Next Steps
 
-- Rewire the torch channel on Nitro: honour the settings toggle, surface availability telemetry, and capture fresh logcat references once hardware pulses ride the native dispatcher again.
-- Tackle replay/send timing drift by tightening native scheduling (eliminate the 160-320 ms spikes) and smoothing JS fallbacks so gaps no longer blur in Play Pattern sweeps.
-- Audit the send verdict pipeline to resolve inconsistent question scoring (dot/dash classification edge cases, deferred verdict timing) after timing fixes land.
+- Capture and archive fresh Play Pattern + receive replay logcat bundles (25%/50% brightness) that confirm native torch latency, flash brightness parity, and quiet fallback traces.
+- Promote the flash tint/brightness configuration into shared theme tokens so JS and native overlays consume an identical source of truth.
+- Tackle replay/send timing drift by tightening native scheduling (eliminate the 160–320 ms spikes) and smoothing JS fallbacks so gaps stay within ±5 ms in Play Pattern sweeps.
+- Audit the send verdict pipeline to resolve inconsistent question scoring (dot/dash classification edge cases, deferred verdict timing) once timing stabilises.
 - Plan the iOS parity pass after Android torch + timing settle; mirror the native overlay/brightness work and bring Nitro outputs online once hardware is available.
 
 ### Deferred: Outputs Testing

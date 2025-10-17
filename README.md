@@ -14,7 +14,7 @@ A premium dark-themed Expo + React Native app for learning, practicing, and mast
 ## Architecture Overview
 - Expo + React Native + TypeScript running in the bridgeless New Architecture (Hermes) runtime.
 - Nitro `OutputsAudio` (Android) built from source with Oboe provides the default audio path and now shares native symbol timestamps with JS so replay/console scheduling follows the audio clock; Audio API fallback stays behind env toggles for diagnostics.
-- Expo modules remain for flash, torch, and haptics fallbacks; Nitro haptics is preferred where supported.
+- Expo modules remain as fallbacks for flash, torch, and haptics; Android prefers the Nitro dispatcher for all outputs with Expo as the safety net.
 - Developer console exposes manual triggers, telemetry summaries, and exports for latency analysis.
 
 ## Getting Started
@@ -79,8 +79,8 @@ utils/
   morse.ts
 ```
 
-## Roadmap
-- Rewire the torch channel onto the Nitro dispatcher (respect the settings toggle, capture reference logs, then mirror on iOS).
+- Capture fresh torch alignment logs (Play Pattern + receive replay) and mirror the work on iOS once hardware is available.
+- Promote the flash tint configuration into shared theme tokens so both native and JS overlays pull from a single source.
 - Finish the incremental Nitro alignment plan so tone/flash/haptic/torch stay within ~5 ms across Play Pattern sweeps.
 - Harden send keyer classification at higher WPM with adaptive thresholds and regression guards.
 - Restructure the lessons tab into sections/subsections with updated progress tracking.
@@ -88,11 +88,9 @@ utils/
 - Deliver full multi-language support with localized content, per-language keyboards, and QA coverage.
 - Validate Nitro parity on iOS using the bridgeless dev client checklist.
 
-## Known Issues
 - Developer console **Play Pattern** still shows ~30-40 ms average drift between audio and flash/haptics; native scheduling work is ongoing to reach parity.
 - Receive replays can spike by ~160 ms when Nitro falls back to timeline offsets; dispatch tuning is in progress.
 - Send keyer misclassifies dot-leading sequences at higher WPM; classification thresholds are under review.
-- Torch still runs on the Expo fallback until the Nitro rewire ships, so telemetry does not yet include native hardware pulses.
 - Send session verdicts can race the classifier on long holds, producing inconsistent scoring.
 
 ## Troubleshooting
