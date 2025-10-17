@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -50,6 +51,7 @@ object NativeOutputsDispatcher {
   private val activityCallbacksRegistered = AtomicBoolean(false)
   private val overlayBrightnessBoosted = AtomicBoolean(false)
   private val overlayHostMissingLogged = AtomicBoolean(false)
+  private val overlayHostPendingLogged = AtomicBoolean(false)
 
   @Volatile private var currentActivityRef: WeakReference<Activity>? = null
   @Volatile private var currentActivityStrong: Activity? = null
@@ -57,6 +59,8 @@ object NativeOutputsDispatcher {
   @Volatile private var overlayViewRef: WeakReference<ScreenFlasherView>? = null
   @Volatile private var overlayLayoutListenerRef: WeakReference<View.OnLayoutChangeListener>? = null
   @Volatile private var overlayLayoutParentRef: WeakReference<ViewGroup>? = null
+  @Volatile private var overlayHostAttachListenerRef: WeakReference<View.OnAttachStateChangeListener>? = null
+  @Volatile private var overlayHostAttachViewRef: WeakReference<ViewGroup>? = null
   @Volatile private var originalBrightness: Float? = null
   @Volatile private var overlayAvailabilityState = OverlayAvailabilityState.UNKNOWN
   @Volatile private var overlayAvailabilityReason: String? = null
@@ -160,6 +164,14 @@ object NativeOutputsDispatcher {
 
   @JvmStatic
   fun setFlashOverlayState(enabled: Boolean, brightnessPercent: Double): Boolean {
+    val currentState = overlayAvailabilityState
+    val currentReason = overlayAvailabilityReason
+    Log.d(
+      TAG,
+      "[outputs-native] overlay.request enabled=$enabled brightness=${
+        String.format(Locale.US, "%.1f", brightnessPercent)
+      } state=${currentState.name.lowercase(Locale.ROOT)} reason=${currentReason ?: "none"}",
+    )
     if (!enabled) {
       val result = runOnMainSync {
         val previousState = overlayAvailabilityState
@@ -192,11 +204,27 @@ object NativeOutputsDispatcher {
         view?.setIntensity(0f)
         // If the overlay view isn't attached yet we treat this as a no-op reset
         // and preserve the previous availability state so subsequent enable attempts can retry.
+        val attached = view?.isAttachedToWindow == true
+        Log.d(
+          TAG,
+          "[outputs-native] overlay.disable.completed prevState=$previousState prevReason=$previousReason view=${view != null} attached=$attached",
+        )
         true
       }
       return result == true
     }
     val scalar = (brightnessPercent / 100.0).coerceIn(0.0, 1.0).toFloat()
+    if (enabled) {
+      val awaitTimeoutMs = 196L
+      if (!awaitOverlayReady(awaitTimeoutMs)) {
+        Log.w(
+          TAG,
+          "[outputs-native] overlay.enable.await_timeout brightness=${String.format(Locale.US, "%.1f", scalar)} timeoutMs=$awaitTimeoutMs",
+        )
+        recordOverlayAvailability(false, "await_ready_timeout")
+        return false
+      }
+    }
     val result = runOnMainSync {
       val activity = currentActivity()
       if (activity == null) {
@@ -216,20 +244,81 @@ object NativeOutputsDispatcher {
       } else {
         val view = ensureOverlayView(activity)
         if (view != null) {
-          view.setIntensity(scalar)
-          recordOverlayAvailability(true, "ensure_overlay_ready")
-          true
+          val parent = view.parent
+          val host = overlayHostRef?.get()
+          val viewAttached = view.isAttachedToWindow
+          val hostAttached = host?.isAttachedToWindow ?: false
+          Log.d(
+            TAG,
+            "[outputs-native] overlay.enable.state viewAttached=$viewAttached parent=${parent?.javaClass?.simpleName ?: "null"} " +
+              "hostAttached=$hostAttached hostParent=${host?.parent?.javaClass?.simpleName ?: "null"} hostToken=${host?.windowToken}",
+          )
+          if (!viewAttached || parent == null) {
+            Log.w(
+              TAG,
+              "[outputs-native] overlay.enable.not_attached viewAttached=$viewAttached parent=${parent?.javaClass?.simpleName ?: "null"}",
+            )
+            recordOverlayAvailability(false, "view_not_attached")
+            false
+          } else {
+            view.setIntensity(scalar)
+            recordOverlayAvailability(true, "ensure_overlay_ready")
+            true
+          }
         } else {
           recordOverlayAvailability(false, "ensure_overlay_failed")
           false
         }
       }
     }
+    if (result == true) {
+      Log.d(
+        TAG,
+        "[outputs-native] overlay.enable.completed brightness=${String.format(Locale.US, "%.3f", scalar)}",
+      )
+    } else {
+      val debug = getOverlayAvailabilityDebugString()
+      Log.w(
+        TAG,
+        "[outputs-native] overlay.enable.failed brightness=${String.format(Locale.US, "%.3f", scalar)} debug=$debug",
+      )
+    }
     if (result == null) {
       recordOverlayAvailability(false, "main_thread_timeout")
       return false
     }
     return result == true
+  }
+
+  @JvmStatic
+  fun awaitOverlayReady(timeoutMs: Long): Boolean {
+    val clampedTimeout = timeoutMs.coerceAtLeast(0L)
+    val deadline = SystemClock.elapsedRealtime() + clampedTimeout
+    while (SystemClock.elapsedRealtime() <= deadline) {
+      val ready = runOnMainSync {
+        val activity = currentActivity() ?: return@runOnMainSync false
+        val view = ensureOverlayView(activity) ?: return@runOnMainSync false
+        val attached = view.isAttachedToWindow && view.parent === overlayHostRef?.get()
+        val hasSize = view.width > 0 && view.height > 0
+        if (!hasSize) {
+          view.post {
+            updateOverlayBounds(view, view.width, view.height)
+          }
+        }
+        attached && hasSize
+      } ?: false
+      if (ready) {
+        Log.d(TAG, "[outputs-native] overlay.await_ready success timeoutMs=$clampedTimeout")
+        return true
+      }
+      SystemClock.sleep(12)
+    }
+    val debug = getOverlayAvailabilityDebugString()
+    Log.w(
+      TAG,
+      "[outputs-native] overlay.await_ready timeout timeoutMs=$clampedTimeout debug=$debug",
+    )
+    return false
   }
 
   @JvmStatic
@@ -362,6 +451,10 @@ object NativeOutputsDispatcher {
       var view = overlayViewRef?.get()
       if (view != null && view.context !== activity) {
         (view.parent as? ViewGroup)?.removeView(view)
+        Log.d(
+          TAG,
+          "[outputs-native] overlay.ensure.context_mismatch oldContext=${view.context.javaClass.simpleName} activity=${activity::class.java.simpleName}",
+        )
         view = null
       }
       if (view == null) {
@@ -371,17 +464,59 @@ object NativeOutputsDispatcher {
       val currentParent = view!!.parent as? ViewGroup
       if (currentParent !== targetParent) {
         currentParent?.removeView(view)
+      }
+      if (view.parent !== targetParent) {
+        (view.parent as? ViewGroup)?.removeView(view)
         val layoutParams = ViewGroup.LayoutParams(
           ViewGroup.LayoutParams.MATCH_PARENT,
           ViewGroup.LayoutParams.MATCH_PARENT,
         )
+        val addToParent: () -> Unit = {
+          targetParent.addView(view, 0, layoutParams)
+          if (!attachedToHost) {
+            view.bringToFront()
+          }
+        }
+        var attachSuccess = false
+        try {
+          addToParent()
+          attachSuccess = true
+        } catch (error: IllegalStateException) {
+          Log.w(
+            TAG,
+            "[outputs-native] overlay.attach.retry reason=${error.message}",
+          )
+          (view.parent as? ViewGroup)?.removeView(view)
+          try {
+            addToParent()
+            attachSuccess = true
+          } catch (secondError: IllegalStateException) {
+            Log.e(
+              TAG,
+              "[outputs-native] overlay.attach.failed reason=${secondError.message} target=${targetParent.javaClass.simpleName}",
+            )
+            overlayViewRef = null
+            recordOverlayAvailability(false, "attach_failed")
+            return null
+          }
+        }
+        if (!attachSuccess) {
+          overlayViewRef = null
+          recordOverlayAvailability(false, "attach_failed")
+          return null
+        }
         if (attachedToHost) {
-          targetParent.addView(view, 0, layoutParams)
           recordOverlayAvailability(true, "overlay_attached_host")
+          Log.d(
+            TAG,
+            "[outputs-native] overlay.attach host=${targetParent::class.java.simpleName} activity=${activity::class.java.simpleName}",
+          )
         } else {
-          targetParent.addView(view, 0, layoutParams)
-          view.bringToFront()
           recordOverlayAvailability(true, "overlay_attached_decor")
+          Log.w(
+            TAG,
+            "[outputs-native] overlay.attach.decor fallback=${decor::class.java.simpleName} activity=${activity::class.java.simpleName}",
+          )
         }
       } else {
         val reason = if (attachedToHost) {
@@ -389,11 +524,21 @@ object NativeOutputsDispatcher {
         } else {
           "overlay_reused_decor"
         }
+        if (!attachedToHost) {
+          view.bringToFront()
+        }
         recordOverlayAvailability(true, reason)
       }
       if (attachedToHost) {
         ensureOverlayLayout(targetParent, view)
       }
+      val parent = view.parent
+      val host = overlayHostRef?.get()
+      Log.d(
+        TAG,
+        "[outputs-native] overlay.ensure.state viewAttached=${view.isAttachedToWindow} parent=${parent?.javaClass?.simpleName ?: "null"} " +
+          "hostAttached=${host?.isAttachedToWindow ?: false} hostParent=${host?.parent?.javaClass?.simpleName ?: "null"} hostToken=${host?.windowToken}",
+      )
       return view
     }
   }
@@ -401,7 +546,10 @@ object NativeOutputsDispatcher {
   private fun resolveOverlayParent(decor: ViewGroup): Pair<ViewGroup, Boolean> {
     overlayHostRef?.get()?.let { cached ->
       if (cached.parent != null) {
-        return Pair(cached, true)
+        if (cached.isAttachedToWindow) {
+          overlayHostPendingLogged.set(false)
+          return Pair(cached, true)
+        }
       }
       overlayHostRef = null
     }
@@ -409,11 +557,59 @@ object NativeOutputsDispatcher {
     if (host != null) {
       overlayHostRef = WeakReference(host)
       overlayHostMissingLogged.set(false)
-      return Pair(host, true)
+      val attached = host.isAttachedToWindow && host.parent != null
+      if (attached) {
+        overlayHostPendingLogged.set(false)
+        overlayHostAttachListenerRef?.get()?.let { listener ->
+          overlayHostAttachViewRef?.get()?.removeOnAttachStateChangeListener(listener)
+        }
+        overlayHostAttachListenerRef = null
+        overlayHostAttachViewRef = null
+        return Pair(host, true)
+      }
+      if (overlayHostPendingLogged.compareAndSet(false, true)) {
+        Log.w(
+          TAG,
+          "[outputs-native] overlay.host.pending host=${host::class.java.simpleName} attached=${host.isAttachedToWindow} parent=${host.parent?.javaClass?.simpleName ?: "null"}",
+        )
+      }
+      val currentListener = overlayHostAttachListenerRef?.get()
+      val currentView = overlayHostAttachViewRef?.get()
+      if (currentView !== host || currentListener == null) {
+        currentListener?.let { existing ->
+          currentView?.removeOnAttachStateChangeListener(existing)
+        }
+        val listener = object : View.OnAttachStateChangeListener {
+          override fun onViewAttachedToWindow(v: View) {
+            v.removeOnAttachStateChangeListener(this)
+            overlayHostAttachListenerRef = null
+            overlayHostAttachViewRef = null
+            overlayHostPendingLogged.set(false)
+            val activity = currentActivity()
+            if (activity != null) {
+              mainHandler.post {
+                ensureOverlayView(activity)
+              }
+            }
+          }
+
+          override fun onViewDetachedFromWindow(v: View) {}
+        }
+        host.addOnAttachStateChangeListener(listener)
+        overlayHostAttachListenerRef = WeakReference(listener)
+        overlayHostAttachViewRef = WeakReference(host)
+      }
+      return Pair(decor, false)
     }
     if (overlayHostMissingLogged.compareAndSet(false, true)) {
       Log.w(TAG, "[outputs-native] overlay.host.missing fallback=decor_view")
     }
+    overlayHostPendingLogged.set(false)
+    overlayHostAttachListenerRef?.get()?.let { listener ->
+      overlayHostAttachViewRef?.get()?.removeOnAttachStateChangeListener(listener)
+    }
+    overlayHostAttachListenerRef = null
+    overlayHostAttachViewRef = null
     return Pair(decor, false)
   }
 
@@ -444,6 +640,10 @@ object NativeOutputsDispatcher {
         if (overlayHostRef?.get() === parent) {
           overlayHostRef = null
         }
+        Log.d(
+          TAG,
+          "[outputs-native] overlay.detach activity=${activity::class.java.simpleName} parent=${parent?.javaClass?.simpleName}",
+        )
         overlayLayoutListenerRef?.get()?.let { listener ->
           overlayLayoutParentRef?.get()?.removeOnLayoutChangeListener(listener)
         }
@@ -558,12 +758,3 @@ object NativeOutputsDispatcher {
     }
   }
 }
-
-
-
-
-
-
-
-
-

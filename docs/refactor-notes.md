@@ -1,9 +1,15 @@
-﻿### Using This Log
+### Using This Log
 
 - Capture each day's finished work in **Completed (Today)** so anyone skimming the file can see what moved recently.
 - Treat **Next Steps** as the living backlog: rewrite items when priorities shift and remove them only after the work ships.
 - When you pick up a task, copy the relevant bullet into your working notes and expand it with acceptance criteria, links, or test plans.
 - Keep the touchpoint inventory in sync with reality so new contributors always see which surfaces we currently drive.
+
+## Completed (2025-10-17)
+
+- Stabilised Android native flashes after early session exits by guarding `awaitOverlayReady`, falling back to the decor root while the host remounts, and clearing the cached `ScreenFlasherView` whenever attach attempts report a stale parent so Nitro no longer crashes.
+- Added host attach listeners and richer dispatcher telemetry (`overlay.attach.retry`, `overlay.attach.failed`, `view_not_attached`) so JS fallbacks surface clean diagnostics while Nitro rebuilds the overlay.
+- Re-validated receive/keyer flows on-device after the fix�native flashes stay active across repeated bail-outs, JS fallbacks only log transient warnings, and the app remains stable.
 
 ## Completed (2025-10-15)
 
@@ -21,7 +27,7 @@
 
 - Added a reusable React `FlashOverlayHost` wrapper around session, keyer, developer console, and output settings surfaces so the native overlay can inhabit a dedicated background container while the JS fallback stays available for telemetry.
 - Updated `NativeOutputsDispatcher` to locate the host by `nativeID`, cache it between flashes, and mount `ScreenFlasherView` into that background node (with decor-view fallback logging) so native flashes now sit underneath foreground UI instead of above it.
-- Keyer-driven flashes (lesson send/receive, practice keyer, output settings preview) now hit the native overlay + screen-brightness boost path directly—JS overlay stays as a fallback, and slider changes reapply the native brightness scalar in real time.
+- Keyer-driven flashes (lesson send/receive, practice keyer, output settings preview) now hit the native overlay + screen-brightness boost path directly�JS overlay stays as a fallback, and slider changes reapply the native brightness scalar in real time.
 - Added Nitro/JSI hooks so keyer flashes call `NativeOutputsDispatcher` via `OutputsAudio` (JS-only module kept as a fallback); awaiting rebuild/verification to ensure keyer flashes report `nativeOverlay: true` without warnings.
 - JS lookup now falls back to `__turboModuleProxy` before touching `NativeModules`, so the native overlay bridge is resolved as soon as the TurboModule is available (otherwise we keep warning and stay on the JS overlay).
 
@@ -33,7 +39,7 @@
 - Implemented a native `ScreenFlasherView` overlay driven via JNI (`setFlashOverlayState`/`setFlashIntensity`), plumbed `flashHandledNatively` through dispatch events, and taught the JS layer to treat Nitro-controlled flashes as telemetry-only fallbacks.
 - Updated `scripts/analyze-logcat.ps1` to understand `outputs.flashPulse.nativeHandled`, mark native-handled flashes in the symbol queue, and report overlay coverage alongside existing phase stats.
 - Extended overlay telemetry end-to-end: Kotlin logs structured availability transitions, playback dispatch events expose `nativeFlashAvailable`, JS traces emit `outputs.flashPulse.nativeFallback`, the analyzer now reports native availability/fallback summaries, and `OutputsAudio` logs include the dispatcher's availability state for each failure.
-- Hardened the Android overlay host: cached the current `Activity`, added `ScreenFlasherView` intensity logging, and validated 10 / 20 / 30 WPM sweeps (`docs/logs/console-replay-20251014-220656-play-pattern.txt`) with 100 % native coverage (no JS fallback) while keeping brightness boost in sync.
+- Hardened the Android overlay host: cached the current `Activity`, added `ScreenFlasherView` intensity logging, and validated 10?/?20?/?30?WPM sweeps (`docs/logs/console-replay-20251014-220656-play-pattern.txt`) with 100?% native coverage (no JS fallback) while keeping brightness boost in sync.
 - Added a screen brightness boost toggle (settings + dev console) that threads `screenBrightnessBoost` through Nitro so native flashes can temporarily raise display brightness while analyzer coverage reflects `nativeFlashHandled`.
 
 ## Completed (2025-10-13)
@@ -102,10 +108,9 @@
 
 ## Next Steps
 
-- Reproduce and diagnose the "overlay missing after early session exit" regression: instrument `NativeOutputsDispatcher` attach/detach paths, capture `overlay.availability` logs, and confirm `ensureOverlayView` fires when `setFlashOverlayState(true, …)` is called after quitting mid-session.
-- Implement the native `awaitReady(timeout)` handshake so Nitro only reports success once the overlay view is attached and visible; on timeout, fall back to the JS flash just for that playback and surface structured telemetry.
-- Finish exporting `NativeOutputsDispatcher` as a TurboModule so the JS bridge can bind to it directly, keeping the current Nitro path as the preferred implementation and treating the RN module as a fallback.
-- Rerun 10 / 20 / 30 WPM sweeps (torch off, brightness boost on) plus keyer holds to confirm `nativeFlashAvailable=true` across receive + keyer flows, then move on to torch re-enable/testing and the telemetry surfacing work.
+- Extend the native overlay to support configurable flash colour/brightness so the upcoming visual refresh can land without regressing timing or telemetry.
+- Wire the output-settings flash brightness slider through Nitro (and the JS fallback) so user changes immediately affect native pulses across receive, replay, and keyer flows.
+- Re-enable and validate the torch output on the Nitro dispatcher now that overlay lifecycle is stable; ensure fallback telemetry still fires cleanly when hardware is unavailable.
 - Mirror the overlay + brightness boost plumbing on iOS once the Android baseline holds so both platforms expose the same toggle and diagnostics.
 
 ### Deferred: Outputs Testing

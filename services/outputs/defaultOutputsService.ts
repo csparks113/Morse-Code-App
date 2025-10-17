@@ -10,7 +10,7 @@ import { traceOutputs } from './trace';
 import { updateTorchSupport, recordTorchPulse, recordTorchFailure } from '@/store/useOutputsDiagnosticsStore';
 import { recordLatencySample } from '@/store/useOutputsLatencyStore';
 import { createPressCorrelation, createPressTracker, normalizePressTimestamp, type PressCorrelation } from '@/services/latency/pressTracker';
-import { setNativeFlashOverlayState, setNativeScreenBrightnessBoost } from './nativeFlashOverlay';
+import { setNativeFlashOverlayState, setNativeScreenBrightnessBoost, getNativeOverlayDebugString } from './nativeFlashOverlay';
 import type {
   OutputsService,
   FlashPulseOptions,
@@ -294,8 +294,22 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
   let flashActive = false;
   let torchTimeout: ReturnType<typeof setTimeout> | null = null;
   let torchScheduleInfo: TorchScheduleOptions | null = null;
-  let nativeFlashOwned = false;
-  let nativeBrightnessBoostActive = false;
+let nativeFlashOwned = false;
+let nativeBrightnessBoostActive = false;
+
+const logOverlayDebugIfPresent = (event: string, payload?: Record<string, unknown>) => {
+  if (Platform.OS !== 'android') {
+    return;
+  }
+  const debug = getNativeOverlayDebugString();
+  if (!debug) {
+    return;
+  }
+  traceOutputs(event, {
+    overlayDebug: debug,
+    ...(payload ?? {}),
+  });
+};
 
   const shouldWatchdog = contextSource.startsWith('console.');
   let pressWatchdog: ReturnType<typeof setTimeout> | null = null;
@@ -336,6 +350,11 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       }
       stopTone(forcedAt).catch(() => {});
       pressTracker.reset();
+      logOverlayDebugIfPresent('outputs.flash.cutActive', {
+        reason,
+        source: contextSource,
+        metadata: metadata ?? null,
+      });
     }
 
     activePress = null;
@@ -424,6 +443,14 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
       }
       if (!nativeHandled) {
         nativeHandled = setNativeFlashOverlayState(true, brightnessPercent);
+        if (!nativeHandled) {
+          logOverlayDebugIfPresent('outputs.flash.nativeFallback', {
+            source: contextSource,
+            correlationId: activePress?.id ?? null,
+            brightnessPercent,
+            phase: 'enable',
+          });
+        }
       }
       nativeFlashOwned = nativeHandled;
       if (nativeHandled) {
@@ -510,12 +537,21 @@ function createKeyerOutputsHandle(initialOptions: KeyerOutputsOptions, context?:
     flashActive = false;
     const previouslyNative = nativeFlashOwned;
     if (nativeFlashOwned) {
+      const releaseBrightness = resolveFlashBrightnessPercent();
       let cleared = false;
       if (Platform.OS === 'android') {
-        cleared = setOutputsFlashOverlayState(false, resolveFlashBrightnessPercent());
+        cleared = setOutputsFlashOverlayState(false, releaseBrightness);
       }
       if (!cleared) {
-        setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+        const fallbackCleared = setNativeFlashOverlayState(false, releaseBrightness);
+        if (!fallbackCleared) {
+          logOverlayDebugIfPresent('outputs.flash.nativeDisableFailed', {
+            source: contextSource,
+            correlationId: activePress?.id ?? null,
+            brightnessPercent: releaseBrightness,
+            phase: 'disable',
+          });
+        }
       }
       nativeFlashOwned = false;
     }

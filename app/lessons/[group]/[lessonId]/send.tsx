@@ -130,7 +130,7 @@ export default function SendSessionScreen() {
   if (finalSummary) {
     return (
       <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
-        <View
+        <FlashOverlayHost
           style={[
             sessionStyleSheet.container,
             sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'summary' }),
@@ -156,7 +156,7 @@ export default function SendSessionScreen() {
           <View style={[sessionStyleSheet.bottomGroup, { alignItems: 'center' }]}>
             <SessionSummaryContinue onContinue={handleSummaryContinue} onRetry={startSession} />
           </View>
-        </View>
+        </FlashOverlayHost>
       </SafeAreaView>
     );
   }

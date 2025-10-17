@@ -1,4 +1,4 @@
-﻿# Codex Handoff Log
+# Codex Handoff Log
 
 Use this document to capture the single source of truth after each working session. Update the sections below before ending work so future chats can resume without reconstructing context.
 
@@ -8,21 +8,17 @@ Use this document to capture the single source of truth after each working sessi
 - **Owner:** Codex pairing session (update with your initials if another contributor takes over).
 
 ## Latest Update
-- **Summary:** Keyer flashes are back on the native path—Nitro’s `OutputsAudio` now exposes synchronous overlay toggles, `utils/audio.ts` forwards the boolean result, and the keyer service prefers the dispatcher before touching the legacy RN module. The dispatcher tracks JS-owned flashes via `mExternalOverlayActive`, so Nitro clean-up no longer kills the overlay mid-press, and `ScreenFlasherView` reattaches on `onActivityResumed` while remaining input-transparent behind the React tree. Remaining gap: after quitting a session early the next run occasionally reports `nativeFlashAvailable=false`; we need deeper instrumentation around attach/detach to understand the dropout.
+- **Summary:** Stabilised the Android native flash overlay after early-exit dropouts�added an await-ready guard, host attach listeners, and cached view resets so Nitro rebuilds the overlay without crashing. Playback and keyer sessions now stay native; JS fallback only logs transient warnings when the host is still mounting.
 - **Key File Touchpoints:**
-  - `android/app/src/main/java/com/csparks113/MorseCodeApp/NativeOutputsDispatcher.kt`, `ScreenFlasherView.kt`: auto-reattach the overlay on resume, keep it behind the React content, and make the view input-transparent while logging availability.
-  - `outputs-native/android/c++/OutputsAudio.cpp`, `.hpp`: expose `setFlashOverlayState`/`setScreenBrightnessBoost`, introduce `mExternalOverlayActive` to avoid tearing down JS-owned flashes, and guard brightness boost during Nitro clean-up.
-  - `outputs-native/audio.nitro.ts`, `utils/audio.ts`, `services/outputs/defaultOutputsService.ts`: propagate the synchronous return value, prefer the Nitro dispatcher before the RN bridge, and keep the JS overlay purely as telemetry fallback.
-  - Docs (`docs/refactor-notes.md`, `docs/outputs-investigation.md`, this handoff) now reflect the restored keyer path and the remaining intermittent dropout after early session exits.
-- **State:** Keyer + playback flashes run natively on Android with brightness boost intact; we still need instrumentation for the post-quit dropout, the `awaitReady` guard, TurboModule export, telemetry surfacing, and eventual torch/iOS parity.
+  - `android/app/src/main/java/com/csparks113/MorseCodeApp/NativeOutputsDispatcher.kt`: added `awaitOverlayReady`, host attach listeners, cached view resets, and richer logging so Nitro rebuilds the overlay without crashing.
+  - Docs (`docs/refactor-notes.md`, `docs/outputs-investigation.md`, `docs/codex-handoff.md`): captured the stabilised overlay status and queued follow-up work (flash colour/brightness, brightness slider wiring, torch re-enable).
+- **State:** Playback and keyer flashes now stay native on Android after early-exit sessions; next we'll tackle flash colour/brightness customisation, wire the settings slider into Nitro, and prep the torch re-enable before circling back to iOS parity.
 
 ## Next Steps
-1. Reproduce the post-quit dropout, capture dispatcher attach/detach logs (`overlay.availability`, `overlay.external.*`), and confirm whether `setFlashOverlayState(true, …)` is returning false after a premature exit.
-2. Add the native `awaitReady(timeout)` guard so Nitro only reports success once the view is attached/visible; on timeout fall back to the JS flash and emit structured telemetry.
-3. Finish exporting `NativeOutputsDispatcher` as a TurboModule so JS binding no longer depends on the legacy bridge (keep the Nitro path primary).
-4. Surface `nativeFlashAvailable` + failure counts in the developer console diagnostics and update the analyzer output once the dropout issue is understood.
-5. Capture fresh 10/20/30 WPM sweeps (torch off, brightness boost on) plus keyer holds to validate `nativeOverlay:true`, then continue toward torch re-enable and telemetry work.
-6. Mirror the overlay + brightness boost plumbing on iOS once Android is stable, and plan the torch/SOS validation afterwards.
+1. Extend the native overlay to support configurable flash colour/brightness so playback and keyer flows can adopt the refreshed visuals.
+2. Wire the output-settings flash brightness slider through Nitro (and the JS fallback) so user changes immediately affect native pulses.
+3. Re-enable and validate the torch output on the Nitro dispatcher now that overlay lifecycle is stable.
+4. Mirror the overlay + brightness boost plumbing on iOS after the Android work, then resume telemetry surfacing improvements.
 ## Verification
 - `npm run lint` *(fails)* - command timed out after ESLint attempted to parse generated bundle artifacts (`..bundle.js`, `..virtual-entry.bundle.js`), which already trigger thousands of legacy lint errors.
 

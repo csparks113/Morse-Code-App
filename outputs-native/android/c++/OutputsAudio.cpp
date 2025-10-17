@@ -130,6 +130,19 @@ std::string getNativeOverlayAvailabilityDebugString() {
   }
   return std::string();
 }
+
+bool awaitNativeOverlayReady(double timeoutMs) {
+  try {
+    facebook::jni::Environment::ensureCurrentThreadIsAttached();
+    auto& clazz = getNativeDispatcherClass();
+    static auto method = clazz->getStaticMethod<jboolean(jlong)>("awaitOverlayReady");
+    const jboolean result = method(clazz, static_cast<jlong>(timeoutMs));
+    return result == JNI_TRUE;
+  } catch (...) {
+    __android_log_print(ANDROID_LOG_WARN, kTag, "%s overlay.await_ready.failed", kLogPrefix);
+  }
+  return false;
+}
 } // namespace
 
 OutputsAudio::OutputsAudio()
@@ -457,6 +470,14 @@ void OutputsAudio::stopTone() {
 
 bool OutputsAudio::setFlashOverlayState(bool enabled, double brightnessPercent) {
   const double clamped = std::clamp(brightnessPercent, 0.0, 100.0);
+  if (enabled) {
+    constexpr double kAwaitTimeoutMs = 180.0;
+    if (!awaitNativeOverlayReady(kAwaitTimeoutMs)) {
+      logEvent("overlay.await.timeout", "timeout=%.1f", kAwaitTimeoutMs);
+      mNativeOverlayAvailable.store(false, std::memory_order_release);
+      return false;
+    }
+  }
   const bool success = setNativeFlashOverlayState(enabled, clamped);
   if (enabled) {
     mNativeOverlayAvailable.store(success, std::memory_order_release);
