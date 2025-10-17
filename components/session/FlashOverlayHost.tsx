@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import type { Animated } from 'react-native';
+import { View, StyleSheet, StyleProp, ViewStyle, Animated } from 'react-native';
 
 import { theme } from '@/theme/theme';
 
@@ -14,13 +13,14 @@ type FlashOverlayHostProps = {
   contentStyle?: StyleProp<ViewStyle>;
   backgroundColor?: string;
   backgroundNativeID?: string;
-  fallbackOpacity?: Animated.Value | null;
-  fallbackMaxOpacity?: number;
-  fallbackColor?: string;
+  fallbackIntensity?: Animated.Value | null;
+  fallbackBrightnessPercent?: number;
+  fallbackTintColor?: string;
 };
 
 // Default background aligns with the theme so the native overlay brightens the intended surface.
 const DEFAULT_BACKGROUND_COLOR = theme.colors.background;
+const DEFAULT_FALLBACK_TINT = '#FFFFFF';
 
 function FlashOverlayHost({
   children,
@@ -28,12 +28,13 @@ function FlashOverlayHost({
   contentStyle,
   backgroundColor = DEFAULT_BACKGROUND_COLOR,
   backgroundNativeID,
-  fallbackOpacity,
-  fallbackMaxOpacity,
-  fallbackColor,
+  fallbackIntensity,
+  fallbackBrightnessPercent,
+  fallbackTintColor = DEFAULT_FALLBACK_TINT,
 }: FlashOverlayHostProps) {
   const overlayNativeID = backgroundNativeID ?? FLASH_OVERLAY_HOST_NATIVE_ID;
-  const shouldRenderFallback = Boolean(fallbackOpacity);
+  const shouldRenderFallback =
+    fallbackIntensity != null && fallbackBrightnessPercent != null;
 
   return (
     <View style={[styles.root, style]} pointerEvents="box-none">
@@ -42,11 +43,11 @@ function FlashOverlayHost({
         nativeID={overlayNativeID}
         style={[StyleSheet.absoluteFillObject, styles.background, { backgroundColor }]}
       >
-        {shouldRenderFallback && fallbackOpacity ? (
+        {shouldRenderFallback && fallbackIntensity ? (
           <FlashOverlay
-            opacity={fallbackOpacity}
-            maxOpacity={fallbackMaxOpacity}
-            color={fallbackColor}
+            intensity={fallbackIntensity}
+            tintColor={fallbackTintColor}
+            brightnessPercent={fallbackBrightnessPercent ?? 0}
           />
         ) : null}
       </View>

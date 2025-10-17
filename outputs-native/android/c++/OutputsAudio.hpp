@@ -36,6 +36,9 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   void playMorse(const PlaybackRequest& request) override;
   void setSymbolDispatchCallback(const std::optional<std::function<void(const PlaybackDispatchEvent&)>>& callback) override;
   bool setFlashOverlayState(bool enabled, double brightnessPercent);
+  bool setFlashOverlayAppearance(double brightnessPercent, double colorArgb);
+  bool setFlashOverlayOverride(const std::optional<double>& brightnessPercent,
+                               const std::optional<double>& colorArgb);
   void setScreenBrightnessBoost(bool enabled);
   std::optional<std::string> getLatestSymbolInfo() override;
   std::optional<std::string> getScheduledSymbols() override;
@@ -133,6 +136,9 @@ class OutputsAudio final : public HybridOutputsAudioSpec,
   bool mReplayHapticsEnabled;
   bool mReplayTorchEnabled;
   double mReplayFlashBrightnessPercent;
+  int32_t mReplayFlashTintColorArgb;
+  std::optional<double> mReplayFlashOverridePercent;
+  std::optional<int32_t> mReplayFlashOverrideTintArgb;
   std::atomic<bool> mNativeOverlayAvailable;
   std::atomic<bool> mNativeOverlayActive;
   std::atomic<bool> mExternalOverlayActive;

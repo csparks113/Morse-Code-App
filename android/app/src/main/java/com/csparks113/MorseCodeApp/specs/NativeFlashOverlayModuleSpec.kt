@@ -13,6 +13,12 @@ abstract class NativeFlashOverlayModuleSpec(
   abstract fun setFlashOverlayStateSync(enabled: Boolean, brightnessPercent: Double)
 
   @ReactMethod(isBlockingSynchronousMethod = true)
+  abstract fun setFlashOverlayAppearanceSync(brightnessPercent: Double, colorArgb: Double)
+
+  @ReactMethod(isBlockingSynchronousMethod = true)
+  abstract fun setFlashOverlayOverrideSync(brightnessPercent: Double?, colorArgb: Double?)
+
+  @ReactMethod(isBlockingSynchronousMethod = true)
   abstract fun setScreenBrightnessBoostSync(enabled: Boolean)
 
   @ReactMethod(isBlockingSynchronousMethod = true)

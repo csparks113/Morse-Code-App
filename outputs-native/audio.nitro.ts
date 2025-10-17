@@ -27,6 +27,11 @@ export type PlaybackRequest = {
   hapticsEnabled?: boolean;
   torchEnabled?: boolean;
   flashBrightnessPercent?: number;
+  flashTintColorArgb?: number;
+  flashAppearanceOverride?: {
+    brightnessPercent?: number | null;
+    tintColorArgb?: number | null;
+  };
   screenBrightnessBoost?: boolean;
 };
 
@@ -62,6 +67,8 @@ export interface OutputsAudio extends HybridObject<{ android: 'c++' }> {
   playMorse(request: PlaybackRequest): void;
   setSymbolDispatchCallback(callback: ((event: PlaybackDispatchEvent) => void) | null): void;
   setFlashOverlayState?(enabled: boolean, brightnessPercent: number): boolean;
+  setFlashOverlayAppearance?(brightnessPercent: number, colorArgb: number): boolean;
+  setFlashOverlayOverride?(brightnessPercent: number | null, colorArgb: number | null): boolean;
   setScreenBrightnessBoost?(enabled: boolean): void;
   getLatestSymbolInfo?(): string | null;
   getScheduledSymbols?(): string | null;

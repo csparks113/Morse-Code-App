@@ -1,7 +1,7 @@
 import { Animated, Platform, Vibration } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { playMorseCode, stopPlayback, createToneController, setOutputsFlashOverlayState, setOutputsScreenBrightnessBoost } from '@/utils/audio';
+import { playMorseCode, stopPlayback, createToneController, setOutputsFlashOverlayState, setOutputsFlashOverlayAppearance, setOutputsFlashOverlayOverride, setOutputsScreenBrightnessBoost } from '@/utils/audio';
 import type { NativeSymbolTimingContext } from '@/utils/audio';
 import { acquireTorch, releaseTorch, resetTorch, isTorchAvailable, forceTorchOff } from '@/utils/torch';
 import { nowMs, toMonotonicTime } from '@/utils/time';
@@ -22,11 +22,38 @@ import type {
 } from './OutputsService';
 
 const DEFAULT_TONE_HZ = 600;
+const DEFAULT_FLASH_TINT_ARGB = 0xffe6f7ff;
 
 const computeFlashTimings = (durationMs: number) => {
   const fadeMs = Math.min(240, Math.max(120, Math.floor(durationMs * 0.35)));
   const holdMs = Math.max(0, Math.floor(durationMs - fadeMs));
   return { fadeMs, holdMs };
+};
+
+const applyFlashAppearance = (percent: number) => {
+  if (Platform.OS !== 'android') {
+    return;
+  }
+  setOutputsFlashOverlayAppearance(percent, DEFAULT_FLASH_TINT_ARGB);
+};
+
+const applyFlashOverride = (percent: number | null | undefined) => {
+  if (Platform.OS !== 'android') {
+    return;
+  }
+  if (typeof percent !== 'number' || !Number.isFinite(percent)) {
+    setOutputsFlashOverlayOverride(null, null);
+    return;
+  }
+  const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+  setOutputsFlashOverlayOverride(clamped, null);
+};
+
+const clearFlashOverride = () => {
+  if (Platform.OS !== 'android') {
+    return;
+  }
+  setOutputsFlashOverlayOverride(null, null);
 };
 
 const clampToneHz = (value: number) => {
@@ -439,30 +466,27 @@ const logOverlayDebugIfPresent = (event: string, payload?: Record<string, unknow
     let nativeHandled = false;
     if (brightnessPercent > 0) {
       if (Platform.OS === 'android') {
+        applyFlashAppearance(brightnessPercent);
         nativeHandled = setOutputsFlashOverlayState(true, brightnessPercent);
+      } else {
+        nativeHandled = setNativeFlashOverlayState(true, brightnessPercent);
       }
       if (!nativeHandled) {
-        nativeHandled = setNativeFlashOverlayState(true, brightnessPercent);
-        if (!nativeHandled) {
-          logOverlayDebugIfPresent('outputs.flash.nativeFallback', {
-            source: contextSource,
-            correlationId: activePress?.id ?? null,
-            brightnessPercent,
-            phase: 'enable',
-          });
-        }
+        logOverlayDebugIfPresent('outputs.flash.nativeFallback', {
+          source: contextSource,
+          correlationId: activePress?.id ?? null,
+          brightnessPercent,
+          phase: 'enable',
+        });
       }
       nativeFlashOwned = nativeHandled;
       if (nativeHandled) {
         if (options.screenBrightnessBoost && !nativeBrightnessBoostActive) {
-          let boostHandled = false;
-          if (Platform.OS === 'android') {
-            boostHandled = setOutputsScreenBrightnessBoost(true);
-          }
-          if (!boostHandled) {
-            setNativeScreenBrightnessBoost(true);
-          }
-          nativeBrightnessBoostActive = true;
+          const boostHandled =
+            Platform.OS === 'android'
+              ? setOutputsScreenBrightnessBoost(true)
+              : (setNativeScreenBrightnessBoost(true), true);
+          nativeBrightnessBoostActive = !!boostHandled;
         } else if (!options.screenBrightnessBoost && nativeBrightnessBoostActive) {
           if (Platform.OS === 'android') {
             if (!setOutputsScreenBrightnessBoost(false)) {
@@ -496,13 +520,23 @@ const logOverlayDebugIfPresent = (event: string, payload?: Record<string, unknow
         nativeBrightnessBoostActive = false;
       }
     }
-    const latencyMetadata: Record<string, string | number | boolean> = { intensity };
+    const flashPath = nativeHandled ? 'native' : 'fallback';
+    const latencyMetadata: Record<string, string | number | boolean> = {
+      intensity,
+      brightnessScalar: intensity,
+      flashPath,
+      brightnessPercent,
+    };
     if (nativeHandled) {
       latencyMetadata.nativeOverlay = true;
     }
     traceOutputs('keyer.flash.start', {
       latencyMs,
       intensity,
+      brightnessScalar: intensity,
+      brightnessPercent,
+      flashPath,
+      tintColorArgb: DEFAULT_FLASH_TINT_ARGB,
       monotonicTimestampMs: startedAt,
       nativeOverlay: nativeHandled,
     });
@@ -541,17 +575,16 @@ const logOverlayDebugIfPresent = (event: string, payload?: Record<string, unknow
       let cleared = false;
       if (Platform.OS === 'android') {
         cleared = setOutputsFlashOverlayState(false, releaseBrightness);
+      } else {
+        cleared = setNativeFlashOverlayState(false, releaseBrightness);
       }
       if (!cleared) {
-        const fallbackCleared = setNativeFlashOverlayState(false, releaseBrightness);
-        if (!fallbackCleared) {
-          logOverlayDebugIfPresent('outputs.flash.nativeDisableFailed', {
-            source: contextSource,
-            correlationId: activePress?.id ?? null,
-            brightnessPercent: releaseBrightness,
-            phase: 'disable',
-          });
-        }
+        logOverlayDebugIfPresent('outputs.flash.nativeDisableFailed', {
+          source: contextSource,
+          correlationId: activePress?.id ?? null,
+          brightnessPercent: releaseBrightness,
+          phase: 'disable',
+        });
       }
       nativeFlashOwned = false;
     }
@@ -849,9 +882,8 @@ const logOverlayDebugIfPresent = (event: string, payload?: Record<string, unknow
       let cleared = false;
       if (Platform.OS === 'android') {
         cleared = setOutputsFlashOverlayState(false, resolveFlashBrightnessPercent());
-      }
-      if (!cleared) {
-        setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+      } else {
+        cleared = setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
       }
       nativeFlashOwned = false;
     }
@@ -872,6 +904,7 @@ const logOverlayDebugIfPresent = (event: string, payload?: Record<string, unknow
     } catch {
       // ignore
     }
+    clearFlashOverride();
   };
 
   const pressStart = (timestampMs?: number) => {
@@ -935,15 +968,22 @@ const logOverlayDebugIfPresent = (event: string, payload?: Record<string, unknow
 
   const updateOptions = (next: KeyerOutputsOptions) => {
     options = { ...next };
+    const nextBrightness = resolveFlashBrightnessPercent();
+
+    if (Platform.OS === 'android') {
+      applyFlashAppearance(nextBrightness);
+    }
+
     if (options.audioEnabled) {
       toneController.setVolume?.(resolveToneVolume());
-    }
-    if (!options.audioEnabled) {
+    } else {
       stopTone(nowMs()).catch(() => {});
     }
+
     if (!options.hapticsEnabled) {
       stopHaptics(nowMs());
     }
+
     if (!options.lightEnabled) {
       flashActive = false;
       try {
@@ -953,12 +993,10 @@ const logOverlayDebugIfPresent = (event: string, payload?: Record<string, unknow
       }
       flashOpacity.setValue(0);
       if (nativeFlashOwned) {
-        let cleared = false;
         if (Platform.OS === 'android') {
-          cleared = setOutputsFlashOverlayState(false, resolveFlashBrightnessPercent());
-        }
-        if (!cleared) {
-          setNativeFlashOverlayState(false, resolveFlashBrightnessPercent());
+          setOutputsFlashOverlayState(false, nextBrightness);
+        } else {
+          setNativeFlashOverlayState(false, nextBrightness);
         }
         nativeFlashOwned = false;
       }
@@ -972,45 +1010,21 @@ const logOverlayDebugIfPresent = (event: string, payload?: Record<string, unknow
         }
         nativeBrightnessBoostActive = false;
       }
-    } else if (nativeFlashOwned) {
-      const nextBrightness = resolveFlashBrightnessPercent();
-      if (nextBrightness <= 0) {
-        if (Platform.OS === 'android') {
-          if (!setOutputsFlashOverlayState(false, nextBrightness)) {
-            setNativeFlashOverlayState(false, nextBrightness);
-          }
-        } else {
-          setNativeFlashOverlayState(false, nextBrightness);
-        }
-        nativeFlashOwned = false;
+    } else if (nativeFlashOwned && nextBrightness <= 0) {
+      if (Platform.OS === 'android') {
+        setOutputsFlashOverlayState(false, nextBrightness);
       } else {
-        let refreshed = false;
-        if (Platform.OS === 'android') {
-          refreshed = setOutputsFlashOverlayState(true, nextBrightness);
-        }
-        if (!refreshed) {
-          setNativeFlashOverlayState(true, nextBrightness);
-        }
+        setNativeFlashOverlayState(false, nextBrightness);
       }
-      if (options.screenBrightnessBoost && !nativeBrightnessBoostActive) {
-        let boostHandled = false;
-        if (Platform.OS === 'android') {
-          boostHandled = setOutputsScreenBrightnessBoost(true);
-        }
-        if (!boostHandled) {
-          setNativeScreenBrightnessBoost(true);
-        }
-        nativeBrightnessBoostActive = true;
-      } else if (!options.screenBrightnessBoost && nativeBrightnessBoostActive) {
-        if (Platform.OS === 'android') {
-          if (!setOutputsScreenBrightnessBoost(false)) {
-            setNativeScreenBrightnessBoost(false);
-          }
-        } else {
-          setNativeScreenBrightnessBoost(false);
-        }
-        nativeBrightnessBoostActive = false;
-      }
+      nativeFlashOwned = false;
+    }
+
+    if (options.screenBrightnessBoost && nativeFlashOwned && !nativeBrightnessBoostActive) {
+      const boostHandled =
+        Platform.OS === 'android'
+          ? setOutputsScreenBrightnessBoost(true)
+          : (setNativeScreenBrightnessBoost(true), true);
+      nativeBrightnessBoostActive = !!boostHandled;
     } else if (!options.screenBrightnessBoost && nativeBrightnessBoostActive) {
       if (Platform.OS === 'android') {
         if (!setOutputsScreenBrightnessBoost(false)) {
@@ -1021,6 +1035,7 @@ const logOverlayDebugIfPresent = (event: string, payload?: Record<string, unknow
       }
       nativeBrightnessBoostActive = false;
     }
+
     if (!options.torchEnabled && torchActive) {
       disableTorch(nowMs(), { source: contextSource }).catch(() => {});
     }
@@ -1084,13 +1099,14 @@ const defaultOutputsService: OutputsService = {
     }
 
     const nativeFlashHandled = baseMetadata.nativeFlashHandled === true;
-    const nativeFlashAvailabilityRaw = baseMetadata.nativeFlashAvailable;
-    const nativeFlashAvailable =
-      nativeFlashAvailabilityRaw === true
-        ? true
-        : nativeFlashAvailabilityRaw === false
-          ? false
-          : null;
+  const nativeFlashAvailabilityRaw = baseMetadata.nativeFlashAvailable;
+  const nativeFlashAvailable =
+    nativeFlashAvailabilityRaw === true
+      ? true
+      : nativeFlashAvailabilityRaw === false
+        ? false
+        : null;
+  const flashPath = nativeFlashHandled ? 'native' : 'fallback';
 
     if (!enabled) {
       if (pendingFlashPulseTimeout) {
@@ -1119,6 +1135,9 @@ const defaultOutputsService: OutputsService = {
         dispatchPhase,
         correlationId: correlationId ?? null,
         flashIntensity,
+        brightnessScalar: flashIntensity,
+        flashPath: 'native',
+        tintColorArgb: DEFAULT_FLASH_TINT_ARGB,
         ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
         ...(nativeFlashAvailable !== null ? { nativeFlashAvailable } : {}),
       });
@@ -1132,6 +1151,8 @@ const defaultOutputsService: OutputsService = {
         dispatchPhase,
         correlationId: correlationId ?? null,
         flashIntensity,
+        brightnessScalar: flashIntensity,
+        flashPath: 'fallback',
         reason: 'overlay-unavailable',
         ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
       });
@@ -1145,6 +1166,7 @@ const defaultOutputsService: OutputsService = {
         dispatchPhase,
         correlationId: correlationId ?? null,
         timelineOffsetMs: normalizedTimelineOffset,
+        flashPath,
         ...(nativeFlashAvailable !== null ? { nativeFlashAvailable } : {}),
       });
       return;
@@ -1372,18 +1394,21 @@ const defaultOutputsService: OutputsService = {
       }
     }
 
-    const sampleMetadata: Record<string, string | number | boolean> = {
-      durationMs,
-      dispatchPhase,
-      ...baseMetadata,
-      ...(normalizedTimelineOffset != null
-        ? { timelineOffsetMs: normalizedTimelineOffset }
-        : {}),
-      ...(leadMs > 0 ? { leadMs } : {}),
-      schedulingMode,
-      flashIntensity,
-      ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
-    };
+  const sampleMetadata: Record<string, string | number | boolean> = {
+    durationMs,
+    dispatchPhase,
+    ...baseMetadata,
+    ...(normalizedTimelineOffset != null
+      ? { timelineOffsetMs: normalizedTimelineOffset }
+      : {}),
+    ...(leadMs > 0 ? { leadMs } : {}),
+    schedulingMode,
+    flashIntensity,
+    brightnessScalar: flashIntensity,
+    flashPath,
+    tintColorArgb: DEFAULT_FLASH_TINT_ARGB,
+    ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
+  };
     if (audioStartLeadForMetadata > 0) {
       sampleMetadata.audioStartLeadMs = audioStartLeadForMetadata;
     }
@@ -1400,17 +1425,20 @@ const defaultOutputsService: OutputsService = {
       sampleMetadata.audioStartCompensationMs = audioStartCompensationMs;
     }
 
-    traceOutputs('outputs.flashPulse', {
-      enabled,
-      durationMs,
-      source: eventSource,
-      dispatchPhase,
-      correlationId: correlationId ?? null,
-      timelineOffsetMs: normalizedTimelineOffset,
-      schedulingMode,
-      flashIntensity,
-      ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
-      ...(nativeFlashAvailable !== null ? { nativeFlashAvailable } : {}),
+  traceOutputs('outputs.flashPulse', {
+    enabled,
+    durationMs,
+    source: eventSource,
+    dispatchPhase,
+    correlationId: correlationId ?? null,
+    timelineOffsetMs: normalizedTimelineOffset,
+    schedulingMode,
+    flashIntensity,
+    brightnessScalar: flashIntensity,
+    flashPath,
+    tintColorArgb: DEFAULT_FLASH_TINT_ARGB,
+    ...(resolvedBrightnessPercent != null ? { brightnessPercent: resolvedBrightnessPercent } : {}),
+    ...(nativeFlashAvailable !== null ? { nativeFlashAvailable } : {}),
       ...(audioStartLeadForMetadata > 0 ? { audioStartLeadMs: audioStartLeadForMetadata } : {}),
       ...(preScheduleLeadMs > 0 ? { preScheduleLeadMs } : {}),
       ...(audioStartHeadroomMs != null ? { audioStartHeadroomMs } : {}),
@@ -1763,6 +1791,14 @@ const defaultOutputsService: OutputsService = {
     const resolvedFlashBrightness = flashBrightnessPercent ?? 0;
     const resolvedScreenBrightnessBoost = screenBrightnessBoost ?? false;
     const startedAt = nowMs();
+    if (Platform.OS === 'android') {
+      applyFlashAppearance(resolvedFlashBrightness);
+      if (resolvedFlashEnabled && resolvedFlashBrightness > 0) {
+        applyFlashOverride(resolvedFlashBrightness);
+      } else {
+        clearFlashOverride();
+      }
+    }
     traceOutputs('playMorse.start', {
       unitMs,
       length: morse.length,
@@ -1770,6 +1806,7 @@ const defaultOutputsService: OutputsService = {
       audioEnabled: resolvedAudioEnabled,
       audioVolumePercent: resolvedVolumePercent,
       flashEnabled: resolvedFlashEnabled,
+      flashBrightnessPercent: resolvedFlashBrightness,
       hapticsEnabled: resolvedHapticsEnabled,
       torchEnabled: resolvedTorchEnabled,
       screenBrightnessBoost: resolvedScreenBrightnessBoost,
@@ -1895,11 +1932,14 @@ const defaultOutputsService: OutputsService = {
         screenBrightnessBoost: resolvedScreenBrightnessBoost,
       });
       throw error;
+    } finally {
+      clearFlashOverride();
     }
   },
 
   stopMorse() {
     stopPlayback();
+    clearFlashOverride();
   },
 
   createKeyerOutputs(options: KeyerOutputsOptions, context?: KeyerOutputsContext) {

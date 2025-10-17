@@ -39,6 +39,9 @@ constexpr int kDashUnits = 3;
 constexpr int kSymbolGapUnits = 1;
 constexpr double kToneStartLeadMs = 4.0;
 constexpr double kMinDispatchOffsetMs = 12.0;
+constexpr double kPulsePercentOff = 0.0;
+constexpr double kDefaultFlashAppearancePercent = 80.0;
+constexpr int32_t kDefaultFlashTintColorArgb = 0xFFFFFFFF;
 
 inline float clampGain(float value) {
   return std::clamp(value, kMinGain, kMaxGain);
@@ -55,6 +58,30 @@ inline double toMillis(const std::chrono::steady_clock::time_point& timePoint) {
 
 inline char toSymbolChar(PlaybackSymbol symbol) {
   return symbol == PlaybackSymbol::DASH ? '-' : '.';
+}
+
+std::string formatTint(int32_t tint) {
+  std::ostringstream stream;
+  stream << "0x" << std::uppercase << std::hex << std::setfill('0') << std::setw(8)
+         << static_cast<uint32_t>(tint);
+  return stream.str();
+}
+
+std::string formatOptionalDouble(const std::optional<double>& value) {
+  if (!value.has_value()) {
+    return "null";
+  }
+  std::ostringstream stream;
+  stream.setf(std::ios::fixed, std::ios::floatfield);
+  stream << std::setprecision(1) << value.value();
+  return stream.str();
+}
+
+std::string formatOptionalTint(const std::optional<int>& value) {
+  if (!value.has_value()) {
+    return "null";
+  }
+  return formatTint(value.value());
 }
 
 facebook::jni::global_ref<facebook::jni::JClass>& getNativeDispatcherClass() {
@@ -100,6 +127,47 @@ bool setNativeFlashOverlayState(bool enabled, double brightnessPercent) {
     return result == JNI_TRUE;
   } catch (...) {
     __android_log_print(ANDROID_LOG_WARN, kTag, "%s overlay dispatch failed", kLogPrefix);
+    return false;
+  }
+}
+
+bool setNativeFlashOverlayAppearance(double brightnessPercent, int colorArgb) {
+  try {
+    facebook::jni::Environment::ensureCurrentThreadIsAttached();
+    auto& clazz = getNativeDispatcherClass();
+    static auto method =
+        clazz->getStaticMethod<jboolean(jdouble, jint)>("setFlashOverlayAppearance");
+    const jboolean result =
+        method(clazz, static_cast<jdouble>(brightnessPercent), static_cast<jint>(colorArgb));
+    return result == JNI_TRUE;
+  } catch (...) {
+    __android_log_print(ANDROID_LOG_WARN, kTag, "%s appearance dispatch failed", kLogPrefix);
+    return false;
+  }
+}
+
+bool setNativeFlashOverlayOverride(std::optional<double> brightnessPercent,
+                                   std::optional<int> colorArgb) {
+  try {
+    facebook::jni::Environment::ensureCurrentThreadIsAttached();
+    auto& clazz = getNativeDispatcherClass();
+    static auto method =
+        clazz->getStaticMethod<jboolean(jobject, jobject)>("setFlashOverlayOverride");
+    facebook::jni::local_ref<jobject> brightnessArg = nullptr;
+    facebook::jni::local_ref<jobject> tintArg = nullptr;
+    if (brightnessPercent.has_value()) {
+      brightnessArg = facebook::jni::JDouble::valueOf(brightnessPercent.value());
+    }
+    if (colorArgb.has_value()) {
+      tintArg = facebook::jni::JInteger::valueOf(colorArgb.value());
+    }
+    const jboolean result =
+        method(clazz,
+               brightnessArg ? brightnessArg.get() : nullptr,
+               tintArg ? tintArg.get() : nullptr);
+    return result == JNI_TRUE;
+  } catch (...) {
+    __android_log_print(ANDROID_LOG_WARN, kTag, "%s appearance override failed", kLogPrefix);
     return false;
   }
 }
@@ -171,7 +239,10 @@ OutputsAudio::OutputsAudio()
       mReplayFlashEnabled(false),
       mReplayHapticsEnabled(false),
       mReplayTorchEnabled(false),
-      mReplayFlashBrightnessPercent(0.0),
+      mReplayFlashBrightnessPercent(kDefaultFlashAppearancePercent),
+      mReplayFlashTintColorArgb(kDefaultFlashTintColorArgb),
+      mReplayFlashOverridePercent(std::nullopt),
+      mReplayFlashOverrideTintArgb(std::nullopt),
       mNativeOverlayAvailable(false),
       mNativeOverlayActive(false),
       mExternalOverlayActive(false),
@@ -188,6 +259,8 @@ void OutputsAudio::loadHybridMethods() {
   registerHybrids(this, [](Prototype& prototype) {
     prototype.registerHybridMethod("setSymbolDispatchCallback", &OutputsAudio::setSymbolDispatchCallback);
     prototype.registerHybridMethod("setFlashOverlayState", &OutputsAudio::setFlashOverlayState);
+    prototype.registerHybridMethod("setFlashOverlayAppearance", &OutputsAudio::setFlashOverlayAppearance);
+    prototype.registerHybridMethod("setFlashOverlayOverride", &OutputsAudio::setFlashOverlayOverride);
     prototype.registerHybridMethod("setScreenBrightnessBoost", &OutputsAudio::setScreenBrightnessBoost);
   });
 }
@@ -522,6 +595,53 @@ bool OutputsAudio::setFlashOverlayState(bool enabled, double brightnessPercent) 
   return success;
 }
 
+bool OutputsAudio::setFlashOverlayAppearance(double brightnessPercent, double colorArgb) {
+  const double clampedBrightness = std::clamp(brightnessPercent, 0.0, 100.0);
+  const auto tintInt = static_cast<int32_t>(static_cast<int64_t>(colorArgb));
+  const bool success = setNativeFlashOverlayAppearance(clampedBrightness, tintInt);
+  if (success) {
+    mReplayFlashBrightnessPercent = clampedBrightness;
+    mReplayFlashTintColorArgb = tintInt;
+    logEvent("overlay.appearance.persist",
+             "brightness=%.1f tint=0x%08X",
+             clampedBrightness,
+             static_cast<uint32_t>(tintInt));
+  } else {
+    logEvent("overlay.appearance.persist_failed",
+             "brightness=%.1f tint=0x%08X",
+             clampedBrightness,
+             static_cast<uint32_t>(tintInt));
+  }
+  return success;
+}
+
+bool OutputsAudio::setFlashOverlayOverride(const std::optional<double>& brightnessPercent,
+                                           const std::optional<double>& colorArgb) {
+  std::optional<double> clampedBrightness = std::nullopt;
+  if (brightnessPercent.has_value()) {
+    clampedBrightness = std::clamp(brightnessPercent.value(), 0.0, 100.0);
+  }
+  std::optional<int> tintInt = std::nullopt;
+  if (colorArgb.has_value()) {
+    tintInt = static_cast<int32_t>(static_cast<int64_t>(colorArgb.value()));
+  }
+  const bool success = setNativeFlashOverlayOverride(clampedBrightness, tintInt);
+  if (success) {
+    mReplayFlashOverridePercent = clampedBrightness;
+    mReplayFlashOverrideTintArgb = tintInt;
+    logEvent("overlay.appearance.override",
+             "brightness=%s tint=%s",
+             formatOptionalDouble(clampedBrightness).c_str(),
+             formatOptionalTint(tintInt).c_str());
+  } else {
+    logEvent("overlay.appearance.override_failed",
+             "brightness=%s tint=%s",
+             formatOptionalDouble(clampedBrightness).c_str(),
+             formatOptionalTint(tintInt).c_str());
+  }
+  return success;
+}
+
 void OutputsAudio::setScreenBrightnessBoost(bool enabled) {
   mScreenBrightnessBoostEnabled.store(enabled, std::memory_order_release);
   setNativeScreenBrightnessBoost(enabled);
@@ -539,7 +659,7 @@ void OutputsAudio::cancelPlaybackThread(bool join) {
       setNativeTorchEnabled(false);
       const bool externalOverlay = mExternalOverlayActive.load(std::memory_order_acquire);
       if (mNativeOverlayAvailable.load(std::memory_order_relaxed) && !externalOverlay) {
-        setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+        setNativeFlashOverlayState(false, kPulsePercentOff);
         mNativeOverlayActive.store(false, std::memory_order_release);
       }
       if (!externalOverlay) {
@@ -566,7 +686,7 @@ void OutputsAudio::cancelPlaybackThread(bool join) {
   setNativeTorchEnabled(false);
   const bool externalOverlay = mExternalOverlayActive.load(std::memory_order_acquire);
   if (mNativeOverlayAvailable.load(std::memory_order_relaxed) && !externalOverlay) {
-    setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+    setNativeFlashOverlayState(false, kPulsePercentOff);
     mNativeOverlayActive.store(false, std::memory_order_release);
   }
   if (!externalOverlay) {
@@ -657,8 +777,7 @@ void OutputsAudio::playMorse(const PlaybackRequest& request) {
   bool screenBrightnessBoostEnabled =
       request.screenBrightnessBoost.value_or(false) && mReplayFlashEnabled;
   if (mReplayFlashEnabled) {
-    const bool overlayReady =
-        setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+    const bool overlayReady = setNativeFlashOverlayState(false, kPulsePercentOff);
     mNativeOverlayAvailable.store(overlayReady, std::memory_order_release);
     if (!overlayReady) {
       const auto overlayDebug = getNativeOverlayAvailabilityDebugString();
@@ -676,7 +795,7 @@ void OutputsAudio::playMorse(const PlaybackRequest& request) {
   } else {
     mNativeOverlayAvailable.store(false, std::memory_order_release);
     mNativeOverlayActive.store(false, std::memory_order_release);
-    setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+    setNativeFlashOverlayState(false, kPulsePercentOff);
     screenBrightnessBoostEnabled = false;
   }
   mScreenBrightnessBoostEnabled.store(screenBrightnessBoostEnabled, std::memory_order_release);
@@ -846,12 +965,16 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
              audioStartMs,
              startSkewMs,
              batchElapsedMs);
+    const double requestedPulsePercent =
+        mReplayFlashOverridePercent.has_value()
+            ? std::clamp(mReplayFlashOverridePercent.value(), 0.0, 100.0)
+            : std::clamp(mReplayFlashBrightnessPercent, 0.0, 100.0);
     bool overlayActiveForSymbol = false;
     const bool overlayCandidate =
-        mReplayFlashEnabled && mReplayFlashBrightnessPercent > 0.0 &&
+        mReplayFlashEnabled && requestedPulsePercent > 0.0 &&
         mNativeOverlayAvailable.load(std::memory_order_relaxed);
     if (overlayCandidate) {
-      overlayActiveForSymbol = setNativeFlashOverlayState(true, mReplayFlashBrightnessPercent);
+      overlayActiveForSymbol = setNativeFlashOverlayState(true, requestedPulsePercent);
       if (!overlayActiveForSymbol) {
         mNativeOverlayAvailable.store(false, std::memory_order_release);
         const auto overlayDebug = getNativeOverlayAvailabilityDebugString();
@@ -859,13 +982,13 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
           logEvent("overlay.symbol.unavailable",
                    "sequence=%llu brightness=%.1f %s",
                    static_cast<unsigned long long>(sequenceValue),
-                   mReplayFlashBrightnessPercent,
+                   requestedPulsePercent,
                    overlayDebug.c_str());
         } else {
           logEvent("overlay.symbol.unavailable",
                    "sequence=%llu brightness=%.1f",
                    static_cast<unsigned long long>(sequenceValue),
-                   mReplayFlashBrightnessPercent);
+                   requestedPulsePercent);
         }
         if (mScreenBrightnessBoostEnabled.load(std::memory_order_acquire)) {
           mScreenBrightnessBoostEnabled.store(false, std::memory_order_release);
@@ -895,7 +1018,7 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
         isFirstSymbol ? std::nullopt : std::optional<double>(expectedSincePriorMs);
     actualEvent.sincePriorMs = isFirstSymbol ? std::nullopt : std::optional<double>(sincePriorMs);
     actualEvent.flashHandledNatively = overlayActiveForSymbol;
-    if (mReplayFlashEnabled && mReplayFlashBrightnessPercent > 0.0) {
+    if (mReplayFlashEnabled && requestedPulsePercent > 0.0) {
       actualEvent.nativeFlashAvailable =
           mNativeOverlayAvailable.load(std::memory_order_relaxed);
     } else {
@@ -919,7 +1042,7 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
       setNativeTorchEnabled(false);
     }
     if (overlayActiveForSymbol) {
-      setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+      setNativeFlashOverlayState(false, kPulsePercentOff);
       mNativeOverlayActive.store(false, std::memory_order_release);
     }
 
@@ -944,7 +1067,7 @@ void OutputsAudio::runPattern(std::vector<PlaybackSymbol> pattern,
     setNativeTorchEnabled(false);
   }
   if (mNativeOverlayActive.load(std::memory_order_relaxed)) {
-    setNativeFlashOverlayState(false, mReplayFlashBrightnessPercent);
+    setNativeFlashOverlayState(false, kPulsePercentOff);
     mNativeOverlayActive.store(false, std::memory_order_release);
   }
   mScreenBrightnessBoostEnabled.store(false, std::memory_order_release);

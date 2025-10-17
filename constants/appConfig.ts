@@ -35,7 +35,7 @@ export const SETTINGS_LIMITS: Record<
   wpm: { min: 5, max: 60, step: 1 },
   toneHz: { min: 200, max: 1200, step: 10 },
   audioVolumePercent: { min: 0, max: 100, step: 5 },
-  flashBrightnessPercent: { min: 0, max: 100, step: 5 },
+  flashBrightnessPercent: { min: 25, max: 100, step: 5 },
   signalTolerancePercent: { min: 20, max: 60, step: 5 },
   gapTolerancePercent: { min: 30, max: 80, step: 5 },
   flashOffsetMs: { min: -300, max: 300, step: 5 },

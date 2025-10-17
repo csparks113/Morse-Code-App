@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.drawable.ColorDrawable
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
@@ -18,7 +19,9 @@ import android.os.VibratorManager
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.R as ReactR
 import java.lang.ref.WeakReference
 import java.util.Locale
@@ -26,12 +29,22 @@ import java.util.ArrayDeque
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.pow
 
 object NativeOutputsDispatcher {
   private const val TAG = "NativeOutputsDispatcher"
   private const val BRIGHTNESS_BOOST_TARGET = 0.8f
   private const val MAIN_THREAD_TIMEOUT_MS = 120L
   private const val FLASH_OVERLAY_HOST_NATIVE_ID = "flash-overlay-background"
+  private const val DEFAULT_FLASH_BRIGHTNESS_PERCENT = 80.0
+  private const val MIN_FLASH_BRIGHTNESS_PERCENT = 25.0
+  private const val MAX_FLASH_BRIGHTNESS_PERCENT = 100.0
+  private const val BRIGHTNESS_RESPONSE_GAMMA = 0.45f
+  private const val BRIGHTNESS_SCALAR_MIN = 0.25f
+  private const val BRIGHTNESS_SCALAR_MAX = 1.0f
+  private const val DEFAULT_TINT_COLOR = 0xFFFFFFFF.toInt()
+  private const val APPEARANCE_EVENT = "flashAppearanceApplied"
 
   private enum class OverlayAvailabilityState {
     UNKNOWN,
@@ -64,8 +77,18 @@ object NativeOutputsDispatcher {
   @Volatile private var originalBrightness: Float? = null
   @Volatile private var overlayAvailabilityState = OverlayAvailabilityState.UNKNOWN
   @Volatile private var overlayAvailabilityReason: String? = null
+  @Volatile private var overlayBaseBrightnessPercent = DEFAULT_FLASH_BRIGHTNESS_PERCENT
+  @Volatile private var overlayBaseBrightnessScalar =
+    brightnessScalarFromPercent(DEFAULT_FLASH_BRIGHTNESS_PERCENT)
+  @Volatile private var overlayBaseTintColor: Int = DEFAULT_TINT_COLOR
+  @Volatile private var overlayOverrideBrightnessPercent: Double? = null
+  @Volatile private var overlayOverrideBrightnessScalar: Float? = null
+  @Volatile private var overlayOverrideTintColor: Int? = null
+  @Volatile private var overlayAppearanceVersion: Long = 0L
 
   private val overlayLock = Any()
+  private val overlayAppearanceLock = Any()
+  private val overlayReapplyCount = AtomicInteger(0)
 
   private fun recordOverlayAvailability(available: Boolean, reason: String) {
     val newState = if (available) {
@@ -163,13 +186,13 @@ object NativeOutputsDispatcher {
   }
 
   @JvmStatic
-  fun setFlashOverlayState(enabled: Boolean, brightnessPercent: Double): Boolean {
+  fun setFlashOverlayState(enabled: Boolean, pulsePercent: Double): Boolean {
     val currentState = overlayAvailabilityState
     val currentReason = overlayAvailabilityReason
     Log.d(
       TAG,
-      "[outputs-native] overlay.request enabled=$enabled brightness=${
-        String.format(Locale.US, "%.1f", brightnessPercent)
+      "[outputs-native] overlay.request enabled=$enabled pulse=${
+        String.format(Locale.US, "%.1f", pulsePercent)
       } state=${currentState.name.lowercase(Locale.ROOT)} reason=${currentReason ?: "none"}",
     )
     if (!enabled) {
@@ -201,7 +224,7 @@ object NativeOutputsDispatcher {
             )
           }
         }
-        view?.setIntensity(0f)
+        view?.setPulseIntensity(0f)
         // If the overlay view isn't attached yet we treat this as a no-op reset
         // and preserve the previous availability state so subsequent enable attempts can retry.
         val attached = view?.isAttachedToWindow == true
@@ -213,17 +236,15 @@ object NativeOutputsDispatcher {
       }
       return result == true
     }
-    val scalar = (brightnessPercent / 100.0).coerceIn(0.0, 1.0).toFloat()
-    if (enabled) {
-      val awaitTimeoutMs = 196L
-      if (!awaitOverlayReady(awaitTimeoutMs)) {
-        Log.w(
-          TAG,
-          "[outputs-native] overlay.enable.await_timeout brightness=${String.format(Locale.US, "%.1f", scalar)} timeoutMs=$awaitTimeoutMs",
-        )
-        recordOverlayAvailability(false, "await_ready_timeout")
-        return false
-      }
+    val pulseScalar = (pulsePercent / 100.0).coerceIn(0.0, 1.0).toFloat()
+    val awaitTimeoutMs = 196L
+    if (!awaitOverlayReady(awaitTimeoutMs)) {
+      Log.w(
+        TAG,
+        "[outputs-native] overlay.enable.await_timeout pulse=${String.format(Locale.US, "%.3f", pulseScalar)} timeoutMs=$awaitTimeoutMs",
+      )
+      recordOverlayAvailability(false, "await_ready_timeout")
+      return false
     }
     val result = runOnMainSync {
       val activity = currentActivity()
@@ -261,8 +282,13 @@ object NativeOutputsDispatcher {
             recordOverlayAvailability(false, "view_not_attached")
             false
           } else {
-            view.setIntensity(scalar)
-            recordOverlayAvailability(true, "ensure_overlay_ready")
+            view.setPulseIntensity(pulseScalar)
+            val hostParent = overlayHostRef?.get()
+            val debugReason =
+              if (hostParent != null && hostParent === parent) "pulse_host"
+              else if (hostParent == null) "pulse_decor_host_missing"
+              else "pulse_decor_fallback"
+            recordOverlayAvailability(true, debugReason)
             true
           }
         } else {
@@ -274,13 +300,14 @@ object NativeOutputsDispatcher {
     if (result == true) {
       Log.d(
         TAG,
-        "[outputs-native] overlay.enable.completed brightness=${String.format(Locale.US, "%.3f", scalar)}",
+        "[outputs-native] overlay.enable.completed pulse=${String.format(Locale.US, "%.3f", pulseScalar)} " +
+          "userBrightness=${String.format(Locale.US, "%.3f", resolveAppliedBrightnessScalar())}",
       )
     } else {
       val debug = getOverlayAvailabilityDebugString()
       Log.w(
         TAG,
-        "[outputs-native] overlay.enable.failed brightness=${String.format(Locale.US, "%.3f", scalar)} debug=$debug",
+        "[outputs-native] overlay.enable.failed pulse=${String.format(Locale.US, "%.3f", pulseScalar)} debug=$debug",
       )
     }
     if (result == null) {
@@ -319,6 +346,56 @@ object NativeOutputsDispatcher {
       "[outputs-native] overlay.await_ready timeout timeoutMs=$clampedTimeout debug=$debug",
     )
     return false
+  }
+
+  @JvmStatic
+  fun setFlashOverlayAppearance(brightnessPercent: Double, colorArgb: Int): Boolean {
+    val normalizedPercent = normalizeBrightnessPercent(brightnessPercent)
+    val brightnessScalar = brightnessScalarFromPercent(normalizedPercent)
+    val tintColor = colorArgb or 0xFF000000.toInt()
+    synchronized(overlayAppearanceLock) {
+      overlayBaseBrightnessPercent = normalizedPercent
+      overlayBaseBrightnessScalar = brightnessScalar
+      overlayBaseTintColor = tintColor
+      overlayAppearanceVersion += 1
+      overlayReapplyCount.set(0)
+    }
+    val applied = applyAppearanceOnMainThread()
+    emitAppearanceApplied(
+      resolveAppliedBrightnessPercent(),
+      resolveAppliedBrightnessScalar(),
+      resolveAppliedTintColor(),
+      if (applied) "persist_applied" else "persist_cached",
+      applied,
+    )
+    return true
+  }
+
+  @JvmStatic
+  fun setFlashOverlayOverride(brightnessPercent: Double?, colorArgb: Int?): Boolean {
+    val normalizedPercent = brightnessPercent?.let { normalizeBrightnessPercent(it) }
+    val brightnessScalar = normalizedPercent?.let { brightnessScalarFromPercent(it) }
+    val tintColor = colorArgb?.or(0xFF000000.toInt())
+    synchronized(overlayAppearanceLock) {
+      overlayOverrideBrightnessPercent = normalizedPercent
+      overlayOverrideBrightnessScalar = brightnessScalar
+      overlayOverrideTintColor = tintColor
+      overlayAppearanceVersion += 1
+      overlayReapplyCount.set(0)
+    }
+    val applied = applyAppearanceOnMainThread()
+    val source = when {
+      normalizedPercent == null && tintColor == null -> "override_cleared"
+      else -> "override_updated"
+    }
+    emitAppearanceApplied(
+      resolveAppliedBrightnessPercent(),
+      resolveAppliedBrightnessScalar(),
+      resolveAppliedTintColor(),
+      if (applied) source else "${source}_cached",
+      applied,
+    )
+    return true
   }
 
   @JvmStatic
@@ -385,7 +462,7 @@ object NativeOutputsDispatcher {
 
       override fun onActivityPaused(activity: Activity) {
         runOnMainSync {
-          overlayViewRef?.get()?.setIntensity(0f)
+          overlayViewRef?.get()?.setPulseIntensity(0f)
         }
       }
 
@@ -539,6 +616,8 @@ object NativeOutputsDispatcher {
         "[outputs-native] overlay.ensure.state viewAttached=${view.isAttachedToWindow} parent=${parent?.javaClass?.simpleName ?: "null"} " +
           "hostAttached=${host?.isAttachedToWindow ?: false} hostParent=${host?.parent?.javaClass?.simpleName ?: "null"} hostToken=${host?.windowToken}",
       )
+      val backgroundSource = if (attachedToHost) targetParent else parent as? ViewGroup
+      applyOverlayAppearance(view, backgroundSource)
       return view
     }
   }
@@ -653,6 +732,100 @@ object NativeOutputsDispatcher {
         overlayViewRef = null
         recordOverlayAvailability(false, "overlay_detached")
       }
+    }
+  }
+
+  private fun applyAppearanceOnMainThread(): Boolean {
+    val applied = runOnMainSync {
+      val view = overlayViewRef?.get()
+      if (view != null) {
+        val host = overlayHostRef?.get()
+        val parent = view.parent as? ViewGroup
+        val backgroundSource = host ?: parent
+        applyOverlayAppearance(view, backgroundSource)
+        true
+      } else {
+        false
+      }
+    }
+    return applied == true
+  }
+
+  private fun applyOverlayAppearance(view: ScreenFlasherView, host: ViewGroup?) {
+    val brightnessScalar = resolveAppliedBrightnessScalar()
+    val tintColor = resolveAppliedTintColor()
+    val hostName = host?.javaClass?.simpleName
+    view.setTintColor(tintColor)
+    view.setBrightnessScalar(brightnessScalar)
+    view.setHostBackgroundColor(resolveHostBackgroundColor(host), hostName)
+    overlayReapplyCount.incrementAndGet()
+  }
+
+  private fun resolveHostBackgroundColor(host: ViewGroup?): Int? {
+    val background = host?.background ?: return null
+    return if (background is ColorDrawable) background.color else null
+  }
+
+  private fun resolveAppliedBrightnessPercent(): Double {
+    return overlayOverrideBrightnessPercent ?: overlayBaseBrightnessPercent
+  }
+
+  private fun resolveAppliedBrightnessScalar(): Float {
+    return overlayOverrideBrightnessScalar ?: overlayBaseBrightnessScalar
+  }
+
+  private fun resolveAppliedTintColor(): Int {
+    return overlayOverrideTintColor ?: overlayBaseTintColor
+  }
+
+  private fun normalizeBrightnessPercent(percent: Double): Double {
+    if (percent.isNaN() || percent.isInfinite()) {
+      return DEFAULT_FLASH_BRIGHTNESS_PERCENT
+    }
+    return percent.coerceIn(MIN_FLASH_BRIGHTNESS_PERCENT, MAX_FLASH_BRIGHTNESS_PERCENT)
+  }
+
+  private fun brightnessScalarFromPercent(percent: Double): Float {
+    val clamped = normalizeBrightnessPercent(percent)
+    val slider = (clamped / 100.0).coerceIn(0.0, 1.0).toFloat()
+    val curved = slider.toDouble().pow(BRIGHTNESS_RESPONSE_GAMMA.toDouble()).toFloat()
+    val scalar =
+      BRIGHTNESS_SCALAR_MIN + (BRIGHTNESS_SCALAR_MAX - BRIGHTNESS_SCALAR_MIN) * curved
+    return scalar.coerceIn(BRIGHTNESS_SCALAR_MIN, BRIGHTNESS_SCALAR_MAX)
+  }
+
+  private fun emitAppearanceApplied(
+    brightnessPercent: Double,
+    brightnessScalar: Float,
+    tintColor: Int,
+    source: String,
+    applied: Boolean,
+  ) {
+    val context = reactContext ?: return
+    val reapplyCount = overlayReapplyCount.get()
+    Log.d(
+      TAG,
+      "[outputs-native] overlay.appearance.applied brightness=${
+        String.format(Locale.US, "%.1f", brightnessPercent)
+      } scalar=${
+        String.format(Locale.US, "%.3f", brightnessScalar)
+      } tint=${String.format(Locale.US, "0x%08X", tintColor)} source=$source applied=$applied reapplyCount=$reapplyCount frameJank=${reapplyCount > 1}",
+    )
+    try {
+      val map = Arguments.createMap().apply {
+        putDouble("brightnessPercent", brightnessPercent)
+        putDouble("brightnessScalar", brightnessScalar.toDouble())
+        putInt("tintColor", tintColor)
+        putString("source", source)
+        putBoolean("viewApplied", applied)
+        putInt("reapplyCount", reapplyCount)
+        putBoolean("frameJankSuspected", reapplyCount > 1)
+      }
+      context
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit(APPEARANCE_EVENT, map)
+    } catch (error: RuntimeException) {
+      Log.w(TAG, "[outputs-native] overlay.appearance.emit_failed source=$source", error)
     }
   }
 

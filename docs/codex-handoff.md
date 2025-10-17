@@ -1,4 +1,4 @@
-# Codex Handoff Log
+ï»¿# Codex Handoff Log
 
 Use this document to capture the single source of truth after each working session. Update the sections below before ending work so future chats can resume without reconstructing context.
 
@@ -8,17 +8,19 @@ Use this document to capture the single source of truth after each working sessi
 - **Owner:** Codex pairing session (update with your initials if another contributor takes over).
 
 ## Latest Update
-- **Summary:** Stabilised the Android native flash overlay after early-exit dropouts—added an await-ready guard, host attach listeners, and cached view resets so Nitro rebuilds the overlay without crashing. Playback and keyer sessions now stay native; JS fallback only logs transient warnings when the host is still mounting.
+- **Summary:** Delivered configurable flash appearance end-to-end. The native overlay now renders a tinted layer with gamma-mapped brightness, the JS fallback mirrors the same opacity curve, Nitro pulses honour per-symbol brightness (including overrides), and the settings slider clamps to a 25% floor while migrating persisted values.
 - **Key File Touchpoints:**
-  - `android/app/src/main/java/com/csparks113/MorseCodeApp/NativeOutputsDispatcher.kt`: added `awaitOverlayReady`, host attach listeners, cached view resets, and richer logging so Nitro rebuilds the overlay without crashing.
-  - Docs (`docs/refactor-notes.md`, `docs/outputs-investigation.md`, `docs/codex-handoff.md`): captured the stabilised overlay status and queued follow-up work (flash colour/brightness, brightness slider wiring, torch re-enable).
-- **State:** Playback and keyer flashes now stay native on Android after early-exit sessions; next we'll tackle flash colour/brightness customisation, wire the settings slider into Nitro, and prep the torch re-enable before circling back to iOS parity.
+  - `android/app/src/main/java/com/csparks113/MorseCodeApp/ScreenFlasherView.kt`, `NativeOutputsDispatcher.kt`: apply gamma-adjusted tint blending, reuse cached activity/host safely, and log appearance events with brightness telemetry.
+  - `outputs-native/android/c++/OutputsAudio.cpp`: pulse brightness now matches the configured percentage (no more 100% hard code) and exposes override hooks for JS.
+  - `components/session/FlashOverlay.tsx`, `FlashOverlayHost.tsx`, `services/outputs/defaultOutputsService.ts`, `services/outputs/nativeFlashOverlay.ts`, `utils/audio.ts`: mirrored opacity logic for the fallback overlay, threaded brightness/appearance overrides through Nitro + JS, and clamped the slider/storage to the new 25% floor.
+  - Docs (`docs/refactor-notes.md`, `docs/outputs-investigation.md`, `docs/living-spec.md`, `README.md`): captured the new behaviour and repositioned follow-up work.
+- **State:** Send and receive flashes now share the same native brightness curve and respect the settings slider; Nitro logs confirm both paths run at the configured percentage. Torch remains on the fallback path and timing spikes are still visible in receive replays.
 
 ## Next Steps
-1. Extend the native overlay to support configurable flash colour/brightness so playback and keyer flows can adopt the refreshed visuals.
-2. Wire the output-settings flash brightness slider through Nitro (and the JS fallback) so user changes immediately affect native pulses.
-3. Re-enable and validate the torch output on the Nitro dispatcher now that overlay lifecycle is stable.
-4. Mirror the overlay + brightness boost plumbing on iOS after the Android work, then resume telemetry surfacing improvements.
+1. Rewire the torch channel on Nitro (respect the settings toggle, capture reference logs, then mirror on iOS).
+2. Reduce Nitro timing spikes so receive/send Play Pattern sweeps keep tone/flash/haptic/torch within ~5 ms.
+3. Audit the send verdict pipeline once timing stabilises; resolve inconsistent scoring on long presses/high WPM.
+4. Plan the iOS parity pass (overlay, brightness, torch) once Android work lands and hardware is available.
 ## Verification
 - `npm run lint` *(fails)* - command timed out after ESLint attempted to parse generated bundle artifacts (`..bundle.js`, `..virtual-entry.bundle.js`), which already trigger thousands of legacy lint errors.
 

@@ -18,6 +18,8 @@ import { colors, surfaces, spacing, sessionLayoutTheme } from '@/theme/lessonThe
 import { typography, fontWeight } from '@/theme/tokens';
 
 const inputZoneMinHeight = sessionLayoutTheme.inputZone.minHeight;
+const DEFAULT_FLASH_TINT_HEX = '#E6F7FF';
+const DEFAULT_FLASH_TINT_ARGB = 0xffe6f7ff;
 
 export default function PracticeKeyerScreen() {
   const { t } = useTranslation('practice');
@@ -41,10 +43,6 @@ export default function PracticeKeyerScreen() {
     const parsed = Number(toneHzSetting);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 600;
   }, [toneHzSetting]);
-
-  const flashMaxOpacity = React.useMemo(() => {
-    return 0.28 * Math.max(0, Math.min(1, flashBrightnessPercent / 100));
-  }, [flashBrightnessPercent]);
 
   const pressTracker = React.useMemo(() => createPressTracker('practice.keyer'), []);
 
@@ -85,9 +83,9 @@ export default function PracticeKeyerScreen() {
             footerVariant: 'practice',
           }),
         ]}
-        fallbackOpacity={flashOpacity}
-        fallbackColor={colors.text}
-        fallbackMaxOpacity={flashMaxOpacity}
+        fallbackIntensity={flashOpacity}
+        fallbackBrightnessPercent={flashBrightnessPercent}
+        fallbackTintColor={DEFAULT_FLASH_TINT_HEX}
       >
         <View style={sessionStyleSheet.topGroup}>
           <SessionHeader

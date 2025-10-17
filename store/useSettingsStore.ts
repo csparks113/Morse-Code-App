@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   SETTINGS_DEFAULTS,
+  SETTINGS_LIMITS,
   clampSettingValue,
   SettingsLimitKey,
 } from '@/constants/appConfig';
@@ -108,6 +109,14 @@ export const useSettingsStore = create<SettingsState>()(
         flashOffsetMs: state.flashOffsetMs,
         hapticOffsetMs: state.hapticOffsetMs,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const minBrightness = SETTINGS_LIMITS.flashBrightnessPercent.min;
+          if (state.flashBrightnessPercent < minBrightness) {
+            state.flashBrightnessPercent = minBrightness;
+          }
+        }
+      },
     },
   ),
 );

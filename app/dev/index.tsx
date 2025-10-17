@@ -10,6 +10,7 @@ import {
   TextInput,
   Share,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -33,12 +34,14 @@ import {
   type LatencyChannel,
 } from '@/store/useOutputsLatencyStore';
 import FlashOverlayHost from '@/components/session/FlashOverlayHost';
+import { addFlashAppearanceListener } from '@/services/outputs/nativeFlashOverlay';
 import { nowMs } from '@/utils/time';
 import { scheduleMonotonic } from '@/utils/scheduling';
 
 const TIMESTAMP_DECIMALS = 1;
 const EXPORT_LIMIT = 200;
 const DEFAULT_PATTERN = '... --- ...';
+const DEFAULT_FLASH_TINT_HEX = '#E6F7FF';
 type FilterKey = 'all' | 'keyer' | 'replay' | 'torch';
 
 const FILTER_OPTIONS: Array<{
@@ -146,6 +149,31 @@ export default function DeveloperConsoleScreen() {
   const manualWpm = useDeveloperStore((state) => state.manualWpm);
   const setManualWpm = useDeveloperStore((state) => state.setManualWpm);
   const ignorePressState = useDeveloperStore((state) => state.ignorePressState);
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+    const subscription = addFlashAppearanceListener((event) => {
+      useDeveloperStore.getState().appendTrace({
+        event: 'overlay.appearance.applied',
+        timestamp: nowMs(),
+        wallClock: Date.now(),
+        payload: {
+          brightnessPercent: event.brightnessPercent,
+          brightnessScalar: event.brightnessScalar,
+          tintColorArgb: event.tintColor,
+          source: event.source,
+          viewApplied: event.viewApplied,
+          reapplyCount: event.reapplyCount,
+          frameJankSuspected: event.frameJankSuspected ?? false,
+        },
+      });
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const flashOffsetMs = useSettingsStore((state) => state.flashOffsetMs);
   const setFlashOffsetMs = useSettingsStore((state) => state.setFlashOffsetMs);
@@ -590,9 +618,9 @@ export default function DeveloperConsoleScreen() {
           sessionStyleSheet.container,
           sessionContainerPadding(insets, { footerVariant: 'dev' }),
         ]}
-        fallbackOpacity={manualFlashValue}
-        fallbackColor={lessonColors.text}
-        fallbackMaxOpacity={0.28}
+        fallbackIntensity={manualFlashValue}
+        fallbackBrightnessPercent={manualOptions.flashBrightnessPercent}
+        fallbackTintColor={DEFAULT_FLASH_TINT_HEX}
       >
 
         <View style={sessionStyleSheet.topGroup}>

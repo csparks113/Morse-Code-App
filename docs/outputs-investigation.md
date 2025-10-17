@@ -1,13 +1,14 @@
-# Outputs Diagnostics Log
+ï»¿# Outputs Diagnostics Log
 
 ## Current Status (2025-10-17)
-- After adding `awaitOverlayReady`, host attach listeners, and cached view resets, native flashes stay active across replay and keyer sessions—even after early exits—while Nitro gracefully falls back to the decor root when the host is still mounting.
-- Dispatcher logging now includes `overlay.attach.retry`, `overlay.attach.failed`, and `view_not_attached`, giving us clear telemetry whenever we degrade to JS.
-- The JS fallback warning still appears briefly when we clear the cached view, but native coverage returns on the next pulse; torch remains disabled until we rewire it on the Nitro path.
+- Configurable flash brightness/tint now flows end-to-end: Android `ScreenFlasherView` blends the tint with gamma-adjusted brightness, the JS fallback mirrors the overlay, Nitro pulses honour per-symbol brightness (including overrides), and the settings slider clamps to a 25% floor while migrating stored values.
+- Brightness telemetry (`flashIntensity`, `brightnessPercent`, `flashPath`) is logged for both send and receive paths so we can confirm native coverage and spot fallback regressions quickly.
+- Torch remains disabled on Nitro; receive/send flashes are native but still show timing spikes (~160 ms) in `playMorse.nativeOffset.spike`, and send verdict timing continues to rely on the older heuristics.
 ## Immediate Focus
-- Prototype configurable flash colour/brightness on the native overlay (and ScreenFlasherView fallback) so the upcoming visual refresh has a path to ship.
-- Wire the output-settings flash brightness slider through Nitro and confirm fallbacks honour the same setting.
-- Re-enable and validate the torch channel via Nitro now that the overlay lifecycle is stable; capture new reference logs once it's live.
+- Re-enable the torch channel via Nitro dispatch (respect the settings toggle, log availability, and capture a fresh reference run once hardware pulses are native again).
+- Reduce timing spikes by tightening the dispatch schedule and adaptive leads so receive audio/flash gaps no longer blur at 80 ms dot units.
+- Revisit send verdict timing and classification rules after timing fixes land so question outcomes align across edge cases.
+- Queue an iOS parity pass (native overlay + torch) once Android work solidifies.
 ## Archived JS Timer Baseline (2025-10-12)
 - All console replay logs and timeline CSVs from the JS timer era now live in `docs/logs/Archive/js-timer-replay/`; use them only when referencing the retired compensation path.
 - Key findings from that dataset: guard soak forced most pulses into timeline fallback, `scheduleSkewMs` sat in the 80-120 ms band (peaking above 300 ms), and stale receive replays inflated several analyzer means into multi-second territory.

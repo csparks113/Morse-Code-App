@@ -14,8 +14,11 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { theme } from '@/theme/theme';
 import { sessionLayoutTheme } from '@/theme/lessonTheme';
 import { SETTINGS_LIMITS } from '@/constants/appConfig';
+import { setOutputsFlashOverlayAppearance } from '@/utils/audio';
 
 const CARD_BACKGROUND = theme.colors.surface ?? theme.colors.background;
+const DEFAULT_FLASH_TINT_HEX = '#E6F7FF';
+const DEFAULT_FLASH_TINT_ARGB = 0xffe6f7ff;
 
 function SettingSliderCard({
   title,
@@ -163,11 +166,20 @@ export default function OutputSettingsScreen() {
   const previewOptionsRef = React.useRef(previewOptions);
   const keyerHandleRef = React.useRef<KeyerOutputsHandle | null>(null);
   const [flashOpacity, setFlashOpacity] = React.useState<Animated.Value | null>(null);
+  const appearanceDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const flashMaxOpacity = React.useMemo(() => {
-    const scalar = Math.max(0, Math.min(1, flashBrightnessPercent / 100));
-    return 0.28 * scalar;
-  }, [flashBrightnessPercent]);
+  const scheduleNativeAppearance = React.useCallback(
+    (percent: number) => {
+      if (appearanceDebounceRef.current) {
+        clearTimeout(appearanceDebounceRef.current);
+      }
+      appearanceDebounceRef.current = setTimeout(() => {
+        appearanceDebounceRef.current = null;
+        setOutputsFlashOverlayAppearance(percent, DEFAULT_FLASH_TINT_ARGB);
+      }, 80);
+    },
+    [],
+  );
 
   React.useEffect(() => {
     const handle = outputs.createKeyerOutputs(previewOptionsRef.current, { source: 'settings.outputPreview' });
@@ -190,6 +202,16 @@ export default function OutputSettingsScreen() {
     previewOptionsRef.current = previewOptions;
     keyerHandleRef.current?.updateOptions(previewOptions);
   }, [previewOptions]);
+
+  React.useEffect(() => {
+    scheduleNativeAppearance(flashBrightnessPercent);
+    return () => {
+      if (appearanceDebounceRef.current) {
+        clearTimeout(appearanceDebounceRef.current);
+        appearanceDebounceRef.current = null;
+      }
+    };
+  }, [flashBrightnessPercent, scheduleNativeAppearance]);
 
   const applyPreviewOptions = React.useCallback((partial: Partial<typeof previewOptions>) => {
     const next = { ...previewOptionsRef.current, ...partial };
@@ -283,9 +305,9 @@ export default function OutputSettingsScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FlashOverlayHost
         style={styles.container}
-        fallbackOpacity={flashOpacity ?? undefined}
-        fallbackColor={theme.colors.textPrimary}
-        fallbackMaxOpacity={flashMaxOpacity}
+        fallbackIntensity={flashOpacity ?? undefined}
+        fallbackBrightnessPercent={flashBrightnessPercent}
+        fallbackTintColor={DEFAULT_FLASH_TINT_HEX}
       >
         <View style={styles.header}>
           <Pressable

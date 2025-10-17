@@ -37,6 +37,8 @@ import { useSettingsStore } from '../../../../store/useSettingsStore';
 import { buildSessionMeta } from '../../../../session/sessionMeta';
 import { useSendSession, TOTAL_SEND_QUESTIONS } from '../../../../hooks/useSendSession';
 
+const DEFAULT_FLASH_TINT_HEX = '#E6F7FF';
+
 export default function SendSessionScreen() {
   const insets = useSafeAreaInsets();
   const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
@@ -63,10 +65,6 @@ export default function SendSessionScreen() {
     const parsed = Number(toneHzSetting);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 600;
   }, [toneHzSetting]);
-
-  const flashMaxOpacity = React.useMemo(() => {
-    return 0.28 * Math.max(0, Math.min(1, flashBrightnessPercent / 100));
-  }, [flashBrightnessPercent]);
 
   const {
     started,
@@ -169,9 +167,9 @@ export default function SendSessionScreen() {
           sessionStyleSheet.container,
           sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'standard' }),
         ]}
-        fallbackOpacity={flashOpacity}
-        fallbackColor={colors.text}
-        fallbackMaxOpacity={flashMaxOpacity}
+        fallbackIntensity={flashOpacity}
+        fallbackBrightnessPercent={flashBrightnessPercent}
+        fallbackTintColor={DEFAULT_FLASH_TINT_HEX}
       >
         <View style={sessionStyleSheet.topGroup}>
           <SessionHeader

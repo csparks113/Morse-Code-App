@@ -1,4 +1,4 @@
-### Using This Log
+ï»¿### Using This Log
 
 - Capture each day's finished work in **Completed (Today)** so anyone skimming the file can see what moved recently.
 - Treat **Next Steps** as the living backlog: rewrite items when priorities shift and remove them only after the work ships.
@@ -9,7 +9,8 @@
 
 - Stabilised Android native flashes after early session exits by guarding `awaitOverlayReady`, falling back to the decor root while the host remounts, and clearing the cached `ScreenFlasherView` whenever attach attempts report a stale parent so Nitro no longer crashes.
 - Added host attach listeners and richer dispatcher telemetry (`overlay.attach.retry`, `overlay.attach.failed`, `view_not_attached`) so JS fallbacks surface clean diagnostics while Nitro rebuilds the overlay.
-- Re-validated receive/keyer flows on-device after the fix—native flashes stay active across repeated bail-outs, JS fallbacks only log transient warnings, and the app remains stable.
+- Re-validated receive/keyer flows on-device after the fix-native flashes stay active across repeated bail-outs, JS fallbacks only log transient warnings, and the app remains stable.
+- Landed configurable flash appearance end-to-end: `ScreenFlasherView` now renders a tinted overlay with gamma-mapped brightness, the JS fallback mirrors the same opacity curve, Nitro pulses honour per-symbol brightness (including overrides), and the settings slider clamps to a 25% floor while upgrading existing installs.
 
 ## Completed (2025-10-15)
 
@@ -27,7 +28,7 @@
 
 - Added a reusable React `FlashOverlayHost` wrapper around session, keyer, developer console, and output settings surfaces so the native overlay can inhabit a dedicated background container while the JS fallback stays available for telemetry.
 - Updated `NativeOutputsDispatcher` to locate the host by `nativeID`, cache it between flashes, and mount `ScreenFlasherView` into that background node (with decor-view fallback logging) so native flashes now sit underneath foreground UI instead of above it.
-- Keyer-driven flashes (lesson send/receive, practice keyer, output settings preview) now hit the native overlay + screen-brightness boost path directly—JS overlay stays as a fallback, and slider changes reapply the native brightness scalar in real time.
+- Keyer-driven flashes (lesson send/receive, practice keyer, output settings preview) now hit the native overlay + screen-brightness boost path directlyâ€”JS overlay stays as a fallback, and slider changes reapply the native brightness scalar in real time.
 - Added Nitro/JSI hooks so keyer flashes call `NativeOutputsDispatcher` via `OutputsAudio` (JS-only module kept as a fallback); awaiting rebuild/verification to ensure keyer flashes report `nativeOverlay: true` without warnings.
 - JS lookup now falls back to `__turboModuleProxy` before touching `NativeModules`, so the native overlay bridge is resolved as soon as the TurboModule is available (otherwise we keep warning and stay on the JS overlay).
 
@@ -108,10 +109,10 @@
 
 ## Next Steps
 
-- Extend the native overlay to support configurable flash colour/brightness so the upcoming visual refresh can land without regressing timing or telemetry.
-- Wire the output-settings flash brightness slider through Nitro (and the JS fallback) so user changes immediately affect native pulses across receive, replay, and keyer flows.
-- Re-enable and validate the torch output on the Nitro dispatcher now that overlay lifecycle is stable; ensure fallback telemetry still fires cleanly when hardware is unavailable.
-- Mirror the overlay + brightness boost plumbing on iOS once the Android baseline holds so both platforms expose the same toggle and diagnostics.
+- Rewire the torch channel on Nitro: honour the settings toggle, surface availability telemetry, and capture fresh logcat references once hardware pulses ride the native dispatcher again.
+- Tackle replay/send timing drift by tightening native scheduling (eliminate the 160-320 ms spikes) and smoothing JS fallbacks so gaps no longer blur in Play Pattern sweeps.
+- Audit the send verdict pipeline to resolve inconsistent question scoring (dot/dash classification edge cases, deferred verdict timing) after timing fixes land.
+- Plan the iOS parity pass after Android torch + timing settle; mirror the native overlay/brightness work and bring Nitro outputs online once hardware is available.
 
 ### Deferred: Outputs Testing
 

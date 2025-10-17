@@ -24,6 +24,22 @@ class FlashOverlayModule(reactContext: ReactApplicationContext) :
   }
 
   @ReactMethod(isBlockingSynchronousMethod = true)
+  override fun setFlashOverlayAppearanceSync(brightnessPercent: Double, colorArgb: Double) {
+    NativeOutputsDispatcher.setFlashOverlayAppearance(
+      brightnessPercent,
+      colorArgb.toLong().toInt(),
+    )
+  }
+
+  @ReactMethod(isBlockingSynchronousMethod = true)
+  override fun setFlashOverlayOverrideSync(brightnessPercent: Double?, colorArgb: Double?) {
+    NativeOutputsDispatcher.setFlashOverlayOverride(
+      brightnessPercent,
+      colorArgb?.toLong()?.toInt(),
+    )
+  }
+
+  @ReactMethod(isBlockingSynchronousMethod = true)
   override fun setScreenBrightnessBoostSync(enabled: Boolean) {
     NativeOutputsDispatcher.setScreenBrightnessBoost(enabled)
   }

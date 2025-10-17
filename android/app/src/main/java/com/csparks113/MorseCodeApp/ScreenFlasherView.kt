@@ -8,22 +8,23 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.View
 import android.view.MotionEvent
-import kotlin.math.max
-import kotlin.math.min
+import android.os.Looper
 
 class ScreenFlasherView @JvmOverloads constructor(
   context: Context,
   attrs: AttributeSet? = null,
 ) : View(context, attrs) {
 
-  private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = Color.WHITE
+  @Volatile private var pulseIntensity: Float = 0f
+  @Volatile private var userBrightness: Float = DEFAULT_BRIGHTNESS_SCALAR
+  @Volatile private var tintColor: Int = DEFAULT_TINT_COLOR
+  @Volatile private var backgroundColor: Int = DEFAULT_BACKGROUND_COLOR
+  @Volatile private var fallbackBackgroundLogged = false
+  private val overlayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = DEFAULT_TINT_COLOR
     alpha = 0
     style = Paint.Style.FILL
   }
-
-  @Volatile
-  private var intensity: Float = 0f
 
   init {
     setWillNotDraw(false)
@@ -34,39 +35,107 @@ class ScreenFlasherView @JvmOverloads constructor(
     visibility = INVISIBLE
   }
 
-  fun setIntensity(percentScalar: Float) {
-    val clamped = max(0f, min(1f, percentScalar))
-    if (clamped == intensity) {
-      return
-    }
-    intensity = clamped
-    val alpha = (clamped * 255f).toInt().coerceIn(0, 255)
-    paint.alpha = alpha
-    visibility = if (alpha > 0) VISIBLE else INVISIBLE
-    Log.d(
-      TAG,
-      "overlay.intensity clamped=$clamped alpha=$alpha visibility=$visibility " +
-        "attached=$isAttachedToWindow size=${width}x$height",
-    )
-    if (isAttachedToWindow) {
-      postInvalidateOnAnimation()
+  fun setPulseIntensity(percentScalar: Float) {
+    val clamped = percentScalar.coerceIn(0f, 1f)
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+      applyPulseIntensity(clamped)
     } else {
-      invalidate()
+      post { applyPulseIntensity(clamped) }
+    }
+  }
+
+  fun setBrightnessScalar(brightnessScalar: Float) {
+    val clamped = brightnessScalar.coerceIn(MIN_BRIGHTNESS_SCALAR, MAX_BRIGHTNESS_SCALAR)
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+      applyBrightnessScalar(clamped)
+    } else {
+      post { applyBrightnessScalar(clamped) }
+    }
+  }
+
+  fun setTintColor(color: Int) {
+    val normalized = color or 0xFF000000.toInt()
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+      applyTintColor(normalized)
+    } else {
+      post { applyTintColor(normalized) }
+    }
+  }
+
+  fun setHostBackgroundColor(color: Int?, hostName: String?) {
+    val resolved = color ?: run {
+      if (!fallbackBackgroundLogged) {
+        Log.i(
+          TAG,
+          "overlay.background.unknown host=${hostName ?: "unknown"} default=#000000",
+        )
+      }
+      fallbackBackgroundLogged = true
+      DEFAULT_BACKGROUND_COLOR
+    }
+    val normalized = resolved or 0xFF000000.toInt()
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+      applyBackgroundColor(normalized)
+    } else {
+      post { applyBackgroundColor(normalized) }
     }
   }
 
   override fun onDraw(canvas: Canvas) {
     super.onDraw(canvas)
-    if (intensity <= 0f) {
+    val blendFactor = (pulseIntensity * userBrightness).coerceIn(0f, 1f)
+    if (blendFactor <= 0f) {
       return
     }
-    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+    val alpha = (blendFactor * 255f).toInt().coerceIn(0, 255)
+    overlayPaint.color = tintColor or 0xFF000000.toInt()
+    overlayPaint.alpha = alpha
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), overlayPaint)
   }
 
   override fun onTouchEvent(event: MotionEvent?): Boolean {
     return false
   }
+
+  private fun applyPulseIntensity(clamped: Float) {
+    if (clamped == pulseIntensity) {
+      return
+    }
+    pulseIntensity = clamped
+    visibility = if (pulseIntensity > 0f && userBrightness > 0f) VISIBLE else INVISIBLE
+    invalidate()
+  }
+
+  private fun applyBrightnessScalar(brightness: Float) {
+    if (brightness == userBrightness) {
+      return
+    }
+    userBrightness = brightness
+    visibility = if (pulseIntensity > 0f && userBrightness > 0f) VISIBLE else INVISIBLE
+    invalidate()
+  }
+
+  private fun applyTintColor(color: Int) {
+    if (color == tintColor) {
+      return
+    }
+    tintColor = color
+    invalidate()
+  }
+
+  private fun applyBackgroundColor(color: Int) {
+    if (color == backgroundColor) {
+      return
+    }
+    backgroundColor = color
+    invalidate()
+  }
   companion object {
     private const val TAG = "ScreenFlasherView"
+    private const val DEFAULT_TINT_COLOR = 0xFFFFFFFF.toInt()
+    private const val DEFAULT_BACKGROUND_COLOR = Color.BLACK
+    private const val DEFAULT_BRIGHTNESS_SCALAR = 0.8f
+    private const val MIN_BRIGHTNESS_SCALAR = 0.25f
+    private const val MAX_BRIGHTNESS_SCALAR = 1.0f
   }
 }

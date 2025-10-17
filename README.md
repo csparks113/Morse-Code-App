@@ -1,4 +1,4 @@
-# Morse Code Master
+﻿# Morse Code Master
 
 A premium dark-themed Expo + React Native app for learning, practicing, and mastering Morse code.
 
@@ -8,6 +8,7 @@ A premium dark-themed Expo + React Native app for learning, practicing, and mast
 - Real-time latency telemetry (tone, flash, haptic, torch) surfaced in developer mode.
 - Adjustable WPM, tone frequency, and per-channel toggles.
 - Progress tracking with Zustand + AsyncStorage persistence.
+- Native screen flash overlay with configurable tint/brightness (25%–100%) across receive, send, practice, and settings previews.
 - Expo Router navigation and lesson challenges.
 
 ## Architecture Overview
@@ -79,7 +80,8 @@ utils/
 ```
 
 ## Roadmap
-- Finish the incremental Nitro alignment plan (native keyer input, timestamp propagation, optional native flash/torch) so tone/flash/haptic/torch stay within ~5 ms.
+- Rewire the torch channel onto the Nitro dispatcher (respect the settings toggle, capture reference logs, then mirror on iOS).
+- Finish the incremental Nitro alignment plan so tone/flash/haptic/torch stay within ~5 ms across Play Pattern sweeps.
 - Harden send keyer classification at higher WPM with adaptive thresholds and regression guards.
 - Restructure the lessons tab into sections/subsections with updated progress tracking.
 - Expand practice modes (Timing/Target/Custom) once the outputs orchestrator and telemetry guardrails are in place.
@@ -88,7 +90,10 @@ utils/
 
 ## Known Issues
 - Developer console **Play Pattern** still shows ~30-40 ms average drift between audio and flash/haptics; native scheduling work is ongoing to reach parity.
+- Receive replays can spike by ~160 ms when Nitro falls back to timeline offsets; dispatch tuning is in progress.
 - Send keyer misclassifies dot-leading sequences at higher WPM; classification thresholds are under review.
+- Torch still runs on the Expo fallback until the Nitro rewire ships, so telemetry does not yet include native hardware pulses.
+- Send session verdicts can race the classifier on long holds, producing inconsistent scoring.
 
 ## Troubleshooting
 - If the dev client hangs on splash, ensure Metro is running and `adb reverse tcp:8081 tcp:8081` is active.

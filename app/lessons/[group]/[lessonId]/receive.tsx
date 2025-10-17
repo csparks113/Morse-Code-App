@@ -34,6 +34,7 @@ import { useSettingsStore } from '../../../../store/useSettingsStore';
 import { buildSessionMeta } from '../../../../session/sessionMeta';
 import { useReceiveSession, TOTAL_RECEIVE_QUESTIONS } from '../../../../hooks/useReceiveSession';
 
+const DEFAULT_FLASH_TINT_HEX = '#E6F7FF';
 export default function ReceiveSessionScreen() {
   const insets = useSafeAreaInsets();
   const { group, lessonId } = useLocalSearchParams<{ group: string; lessonId: string }>();
@@ -65,10 +66,6 @@ export default function ReceiveSessionScreen() {
   const screenBrightnessBoost = useSettingsStore((s) => s.screenBrightnessBoost ?? false);
   const flashOffsetMs = useSettingsStore((s) => s.flashOffsetMs ?? 0);
   const hapticOffsetMs = useSettingsStore((s) => s.hapticOffsetMs ?? 0);
-
-  const flashMaxOpacity = React.useMemo(() => {
-    return 0.28 * Math.max(0, Math.min(1, flashBrightnessPercent / 100));
-  }, [flashBrightnessPercent]);
 
   const {
     started,
@@ -165,9 +162,9 @@ export default function ReceiveSessionScreen() {
     <SafeAreaView style={sessionStyleSheet.safe} edges={[]}>
       <FlashOverlayHost
         style={[sessionStyleSheet.container, sessionContainerPadding(insets, { topStep: sessionLayoutTheme.footer.topPaddingStep, footerVariant: 'summary' })]}
-        fallbackOpacity={flashOpacity}
-        fallbackColor={colors.text}
-        fallbackMaxOpacity={flashMaxOpacity}
+        fallbackIntensity={flashOpacity}
+        fallbackBrightnessPercent={flashBrightnessPercent}
+        fallbackTintColor={DEFAULT_FLASH_TINT_HEX}
       >
         {/* --- TOP (fixed): header + progress --- */}
         <View style={sessionStyleSheet.topGroup}>

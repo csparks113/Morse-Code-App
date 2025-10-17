@@ -50,6 +50,12 @@ import { nowMs, toMonotonicTime } from '@/utils/time';
 import type { PlaybackSymbolContext } from '@/services/outputs/OutputsService';
 import { traceOutputs } from '@/services/outputs/trace';
 import { scheduleMonotonic } from '@/utils/scheduling';
+import {
+  setNativeFlashOverlayAppearance,
+  setNativeFlashOverlayOverride,
+  setNativeFlashOverlayState,
+  setNativeScreenBrightnessBoost,
+} from '@/services/outputs/nativeFlashOverlay';
 
 
 type NitroModulesExports = typeof import('react-native-nitro-modules') & {
@@ -1459,44 +1465,103 @@ export async function playMorseCode(code: string, unitMsArg?: number, opts: Play
 }
 
 export function setOutputsFlashOverlayState(enabled: boolean, brightnessPercent: number): boolean {
-  if (!shouldPreferNitroOutputs()) {
-    return false;
-  }
-  const outputsAudio = loadOutputsAudio();
-  if (!outputsAudio || typeof outputsAudio.setFlashOverlayState !== 'function') {
-    return false;
-  }
-  try {
-    const result = outputsAudio.setFlashOverlayState(enabled, brightnessPercent);
-    if (typeof result === 'boolean') {
-      return result;
+  let handled = false;
+  if (shouldPreferNitroOutputs()) {
+    const outputsAudio = loadOutputsAudio();
+    if (outputsAudio && typeof outputsAudio.setFlashOverlayState === 'function') {
+      try {
+        const result = outputsAudio.setFlashOverlayState(enabled, brightnessPercent);
+        handled = typeof result === 'boolean' ? result : true;
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[outputs] nitro setFlashOverlayState error', error);
+        }
+      }
     }
-    return true;
-  } catch (error) {
-    if (__DEV__) {
-      console.warn('[outputs] nitro setFlashOverlayState error', error);
-    }
-    return false;
   }
+  if (!handled) {
+    handled = setNativeFlashOverlayState(enabled, brightnessPercent);
+  }
+  return handled;
+}
+
+export function setOutputsFlashOverlayAppearance(
+  brightnessPercent: number,
+  colorArgb: number,
+): boolean {
+  let handled = false;
+  if (shouldPreferNitroOutputs()) {
+    const outputsAudio = loadOutputsAudio();
+    if (outputsAudio && typeof outputsAudio.setFlashOverlayAppearance === 'function') {
+      try {
+        const result = outputsAudio.setFlashOverlayAppearance(brightnessPercent, colorArgb);
+        handled = typeof result === 'boolean' ? result : true;
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[outputs] nitro setFlashOverlayAppearance error', error);
+        }
+      }
+    }
+  }
+  if (!handled) {
+    handled = setNativeFlashOverlayAppearance(brightnessPercent, colorArgb);
+  }
+  return handled;
+}
+
+export function setOutputsFlashOverlayOverride(
+  brightnessPercent: number | null | undefined,
+  colorArgb: number | null | undefined,
+): boolean {
+  const normalizedPercent =
+    brightnessPercent == null ? null : Math.max(0, Math.min(100, brightnessPercent));
+  const tint = colorArgb == null ? null : colorArgb >>> 0;
+  let handled = false;
+  if (shouldPreferNitroOutputs()) {
+    const outputsAudio = loadOutputsAudio();
+    if (outputsAudio && typeof outputsAudio.setFlashOverlayOverride === 'function') {
+      try {
+        const result = outputsAudio.setFlashOverlayOverride(normalizedPercent, tint);
+        handled = typeof result === 'boolean' ? result : true;
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[outputs] nitro setFlashOverlayOverride error', error);
+        }
+      }
+    }
+  }
+  if (!handled) {
+    handled = setNativeFlashOverlayOverride(normalizedPercent, tint);
+  }
+  return handled;
 }
 
 export function setOutputsScreenBrightnessBoost(enabled: boolean): boolean {
-  if (!shouldPreferNitroOutputs()) {
-    return false;
-  }
-  const outputsAudio = loadOutputsAudio();
-  if (!outputsAudio || typeof outputsAudio.setScreenBrightnessBoost !== 'function') {
-    return false;
-  }
-  try {
-    outputsAudio.setScreenBrightnessBoost(enabled);
-    return true;
-  } catch (error) {
-    if (__DEV__) {
-      console.warn('[outputs] nitro setScreenBrightnessBoost error', error);
+  let handled = false;
+  if (shouldPreferNitroOutputs()) {
+    const outputsAudio = loadOutputsAudio();
+    if (outputsAudio && typeof outputsAudio.setScreenBrightnessBoost === 'function') {
+      try {
+        outputsAudio.setScreenBrightnessBoost(enabled);
+        handled = true;
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[outputs] nitro setScreenBrightnessBoost error', error);
+        }
+      }
     }
-    return false;
   }
+  if (!handled) {
+    try {
+      setNativeScreenBrightnessBoost(enabled);
+      handled = true;
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('[outputs] native setScreenBrightnessBoost error', error);
+      }
+    }
+  }
+  return handled;
 }
 
 export async function playTextAsMorse(text: string, opts: PlayOpts = {}) {
